@@ -1,0 +1,28 @@
+Plak de volgende dingen in node.js
+
+
+Opstarten:
+
+1. cd "C:\Users\Daan Feitz\recept-tool"
+
+2. node server.js
+
+
+Afsluiten:
+
+Druk op: Ctrl + c
+of
+taskkill /F /IM node.exe
+
+
+Server URL:
+http://localhost:3000/
+
+
+Authenticatie toevoegen (chatgpt vragen)
+sqlite -> postgresql / mysql
+set up github repo connect to heroku
+
+
+
+

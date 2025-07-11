@@ -1,0 +1,600 @@
+/* style.css */
+
+/* Reset en basisopmaak */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #f8f9fa;
+  color: #2d3436;
+}
+
+/* Container voor de hele pagina */
+.container {
+  width: 95%;
+  max-width: 1200px;
+  margin: 32px auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 8px 24px rgba(149, 157, 165, 0.1);
+}
+
+/* TAB navigatie */
+.nav-tabs {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  padding-left: 0;
+  margin: 0 0 24px 0;
+  border-bottom: 2px solid #edf2f7;
+  gap: 8px;
+}
+
+.nav-tabs li a {
+  display: inline-block;
+  padding: 12px 24px;
+  text-decoration: none;
+  color: #64748b;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  background-color: transparent;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.nav-tabs li a:hover {
+  color: #63D671;
+  background-color: #f7fdf7;
+}
+
+.nav-tabs li a.active {
+  background-color: #fff;
+  font-weight: 600;
+  color: #63D671;
+  border-bottom: 3px solid #63D671;
+}
+
+/* Tab content */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Hero-stijl (Tab 1) */
+.hero-header {
+  background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
+  padding: 48px 32px;
+  border-radius: 16px;
+  text-align: center;
+  margin-bottom: 32px;
+  box-shadow: 0 8px 32px rgba(99, 214, 113, 0.15);
+}
+
+.hero-header h1 {
+  margin: 0;
+  font-size: 2.5em;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: white;
+  letter-spacing: -0.5px;
+}
+
+.hero-header p {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1em;
+}
+
+/* Hero-filters en zoeken */
+.hero-filters {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 32px auto;
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: 1000px;
+}
+
+.hero-search {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 24px 0;
+  flex-wrap: wrap;
+  width: 100%;
+  align-items: center;
+}
+
+.hero-search input {
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  width: 100%;
+  max-width: 400px;
+}
+
+.hero-search input:focus {
+  outline: none;
+  border-color: #63D671;
+  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
+}
+
+/* Tijd en Random styling */
+.hero-random {
+  width: 100%;
+  text-align: center;
+  margin: 32px 0;
+}
+
+.hero-random .time-select-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.hero-random .time-select-container select {
+  margin: 0;
+}
+
+.hero-random button {
+  background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 16px 32px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(99, 214, 113, 0.25);
+  transition: all 0.2s ease;
+}
+
+.hero-random button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(99, 214, 113, 0.3);
+}
+
+/* Buttons */
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 100px;
+  transition: all 0.2s ease;
+}
+
+.green-btn {
+  background-color: #63D671;
+  color: white;
+  box-shadow: 0 2px 8px rgba(99, 214, 113, 0.25);
+}
+
+.green-btn:hover {
+  background-color: #4ac858;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 214, 113, 0.3);
+}
+
+.pink-btn {
+  background-color: #FC425D;
+  color: white;
+  box-shadow: 0 2px 8px rgba(252, 66, 93, 0.25);
+}
+
+.pink-btn:hover {
+  background-color: #fb2845;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(252, 66, 93, 0.3);
+}
+
+/* Formulier spacing voor 'Voeg een recept toe' */
+.add-recipe-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 600px;
+  margin: 32px auto;
+  padding: 24px;
+}
+
+#voegReceptToe h2 {
+  text-align: center;
+  margin-bottom: 32px;
+  color: #333;
+}
+
+#addRecipeForm > div {
+  display: grid;
+  grid-template-columns: 120px minmax(200px, 400px);
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+#addRecipeForm label {
+  font-weight: 500;
+  color: #333;
+}
+
+#addRecipeForm input,
+#addRecipeForm select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+#addRecipeForm input:focus,
+#addRecipeForm select:focus {
+  outline: none;
+  border-color: #63D671;
+  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
+}
+
+#addRecipeForm button[type="submit"] {
+  margin-top: 24px;
+  width: 200px;
+  align-self: center;
+  padding: 12px 24px;
+  font-size: 16px;
+}
+
+/* Verbeterde dropdown styling voor alle tabs */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2363D671' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding: 10px 40px 10px 16px;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+  font-size: 14px;
+  color: #2d3436;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+select:hover {
+  border-color: #63D671;
+  background-color: #f7fdf7;
+}
+
+select:focus {
+  outline: none;
+  border-color: #63D671;
+  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
+}
+
+/* Hero filters (Kies een recept tab) */
+.hero-filters select {
+  min-width: 160px;
+  max-width: 200px;
+}
+
+/* Kleinere actieknoppen in overzicht tabel */
+.action-buttons button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.overview-table th:last-child,
+.overview-table td:last-child {
+  width: 120px;
+}
+
+/* Vernieuw overzicht knop spacing */
+#overzichtRecepten button:first-child {
+  margin-bottom: 32px;
+}
+
+/* Tabel container aanpassingen */
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(149, 157, 165, 0.1);
+  margin-top: 32px;
+  overflow-x: auto;
+}
+
+/* Basis tabel styling */
+.overview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+/* Headers styling */
+.overview-table th {
+  background-color: #63D671;
+  color: white;
+  font-weight: 600;
+  padding: 12px 16px;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* Cel styling */
+.overview-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #edf2f7;
+  vertical-align: middle;
+}
+
+/* Kolom breedtes */
+.overview-table th:nth-child(1),
+.overview-table td:nth-child(1) {
+  width: 20%;
+}
+
+.overview-table th:nth-child(2),
+.overview-table td:nth-child(2) {
+  width: 35%;
+}
+
+.overview-table th:nth-child(3),
+.overview-table td:nth-child(3),
+.overview-table th:nth-child(4),
+.overview-table td:nth-child(4),
+.overview-table th:nth-child(5),
+.overview-table td:nth-child(5) {
+  width: 15%;
+}
+
+/* Details rij styling */
+.details-row td {
+  padding: 0 16px 12px 16px !important;
+  background-color: #f8f9fa;
+}
+
+.details-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+}
+
+/* Tijd select styling */
+.time-select {
+  min-width: 140px;
+  max-width: 160px;
+}
+
+/* Actieknoppen container */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Actieknoppen styling */
+.action-buttons button {
+  min-width: 80px;
+  height: 32px;
+  padding: 0 16px;
+  font-size: 13px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hover effect voor rijen */
+.overview-table tr:hover td {
+  background-color: #f7fdf7;
+}
+
+/* Selectbox styling in tabel */
+.overview-table select {
+  width: 100%;
+  min-width: 120px;
+  padding: 8px 32px 8px 12px;
+  font-size: 13px;
+}
+
+/* Media query aanpassingen */
+@media screen and (max-width: 768px) {
+  .container {
+    padding: 20px;
+    margin: 16px auto;
+  }
+
+  .hero-header {
+    padding: 32px 20px;
+  }
+
+  .hero-header h1 {
+    font-size: 2em;
+  }
+
+  #addRecipeForm > div {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .hero-filters select {
+    min-width: 140px;
+  }
+
+  .overview-table {
+    font-size: 13px;
+  }
+  
+  .details-content {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .action-buttons {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .action-buttons button {
+    min-width: 70px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .hero-random button {
+    font-size: 15px;
+    padding: 10px 25px;
+    min-width: 140px;
+  }
+
+  select {
+    min-width: 160px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .container {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .hero-header {
+    border-radius: 8px;
+    padding: 24px 16px;
+  }
+
+  .hero-random button {
+    width: 100%;
+    max-width: 280px;
+  }
+}
+
+/* Zoekknop styling */
+.hero-search button {
+  background-color: #FC7042;
+  color: white;
+}
+
+.hero-search button:hover {
+  background-color: #FC425D;
+}
+
+/* Tabel styling */
+.overview-table th {
+  background-color: #63D671;
+  color: white;
+}
+
+/* Actieknoppen in tabel */
+.action-buttons .green-btn {
+  background-color: #96FC42;
+  color: #333;
+  border: 1px solid #63A771;
+}
+
+.action-buttons .green-btn:hover {
+  background-color: #43FD68;
+}
+
+.action-buttons .pink-btn {
+  background-color: #FC425D;
+  color: white;
+}
+
+.action-buttons .pink-btn:hover {
+  background-color: #FC7042;
+}
+
+/* Container die de kaarten naast elkaar kan zetten */
+.recipe-cards-container {
+  display: flex;          /* Zet kaarten naast elkaar */
+  flex-wrap: wrap;        /* Nieuwe rij als er geen ruimte meer is */
+  gap: 16px;              /* Ruimte tussen kaarten */
+  margin-top: 16px;
+}
+
+/* Individuele kaart-styling */
+.recipe-card {
+  flex: 1 1 250px;        /* Minimale breedte 250px, groeit als er ruimte is */
+  background: #ffffff;
+  border: 2px solid #63D671;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(99, 214, 113, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.recipe-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(99, 214, 113, 0.15);
+}
+
+.recipe-card h3 {
+  margin: 0 0 12px;
+  color: #63D671;
+  font-size: 1.2em;
+}
+
+.recipe-card p a {
+  color: #FC425D;         /* Of een andere kleur die je wilt */
+  text-decoration: none;
+}
+
+.recipe-card p a:hover {
+  text-decoration: underline;
+}
+
+.recipe-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  margin-top: 20px;
+}
+
+.recipe-card li {
+  margin-bottom: 8px; /* Extra ruimte tussen items */
+  display: flex;
+  align-items: center;
+  gap: 6px; /* Ruimte tussen icon en tekst */
+}
+
+.recipe-card li i {
+  color: #63D671; /* Icon in groene kleur */
+}
+
+#calorieMulti {
+  min-width: 200px;
+  height: auto; 
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#calorieMulti:focus {
+  border-color: #63D671;
+  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
+}

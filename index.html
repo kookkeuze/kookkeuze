@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Recepten Tool</title>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+  />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+
+    <!-- Tabs (navigatie) -->
+    <ul class="nav-tabs">
+      <li><a href="#kiesRecept" class="tab-link active">Kies een recept</a></li>
+      <li><a href="#voegReceptToe" class="tab-link">Voeg een recept toe</a></li>
+      <li><a href="#overzichtRecepten" class="tab-link">Overzicht recepten</a></li>
+    </ul>
+
+    <!-- TAB 1: KIES EEN RECEPT -->
+    <div id="kiesRecept" class="tab-content active">
+      <div class="hero-header">
+        <h1>WAT ETEN WE VANDAAG?</h1>
+        <p>Niet meer nadenken over wat je gaat eten, laat hier je keuze aan de tool over!</p>
+      </div>
+
+      <!-- Filter dropdowns -->
+      <div class="hero-filters">
+        <select id="dishType">
+          <option>Soort gerecht</option>
+          <option>Kip</option>
+          <option>Rund</option>
+          <option>Varken</option>
+          <option>Brood</option>
+          <option>Hartig</option>
+          <option>Hartige taart</option>
+          <option>Ovenschotel</option>
+          <option>Pasta</option>
+          <option>Rijst</option>
+          <option>Soep</option>
+          <option>Taart &amp; cake</option>
+          <option>Vegetarisch</option>
+          <option>Vis</option>
+          <option>Wraps</option>
+          <option>Zoet</option>
+        </select>
+
+        <select id="mealCategory">
+          <option>Menugang</option>
+          <option>Bakken</option>
+          <option>Dessert</option>
+          <option>Dressings, sauzen & dips</option>
+          <option>Drinken</option>
+          <option>Hoofdgerecht</option>
+          <option>Lunch</option>
+          <option>Ontbijt</option>
+          <option>Salade</option>
+          <option>Snacks</option>
+        </select>
+
+        <select id="mealType">
+          <option>Doel gerecht</option>
+          <option>Sporten</option>
+          <option>Normaal</option>
+          <option>Cheaten</option>
+        </select>
+
+        <select id="timeRequired">
+          <option>Tijd</option>
+          <option>Onder de 30 minuten</option>
+          <option>30 - 45 minuten</option>
+          <option>45 minuten - 1 uur</option>
+          <option>1 - 2 uur</option>
+          <option>langer dan 2 uur</option>
+        </select>
+
+        <!-- Enkelvoudig dropdown voor calorieRange -->
+        <select id="calorieRange">
+          <option>Calorieën</option>
+          <option>Onder 100</option>
+          <option>Onder 200</option>
+          <option>Onder 300</option>
+          <option>Onder 400</option>
+          <option>Onder 500</option>
+          <option>Onder 600</option>
+          <option>Onder 700</option>
+          <option>Onder 800</option>
+          <option>Onder 900</option>
+          <option>Onder 1000</option>
+          <option>Boven 1000</option>
+        </select>
+      </div> <!-- /hero-filters -->
+
+      <!-- Zoekveld en knop -->
+      <div class="hero-search">
+        <input type="text" id="searchTerm" placeholder="Zoek bijvoorbeeld op 'asperges' of 'appeltaart'"/>
+        <button id="searchBtn" class="pink-btn">ZOEK RECEPTEN</button>
+      </div>
+
+      <!-- Random recept button -->
+      <div class="hero-random">
+        <button id="randomBtn" class="green-btn">Random</button>
+      </div>
+
+      <hr />
+      <!-- Resultaat van zoeken/random -->
+      <div id="result"></div>
+    </div>
+
+    <!-- TAB 2: VOEG EEN RECEPT TOE -->
+    <div id="voegReceptToe" class="tab-content">
+      <h2>Nieuw recept toevoegen</h2>
+      <form id="addRecipeForm">
+        <div>
+          <label for="title">Titel:</label>
+          <input id="title" type="text" required />
+        </div>
+        <div>
+          <label for="url">URL:</label>
+          <input id="url" type="url" required />
+        </div>
+        <div>
+          <label for="dishTypeNew">Soort gerecht:</label>
+          <select id="dishTypeNew">
+            <option>maak een keuze</option>
+            <option>Kip</option>
+            <option>Rund</option>
+            <option>Varken</option>
+            <option>Brood</option>
+            <option>Hartig</option>
+            <option>Hartige taart</option>
+            <option>Ovenschotel</option>
+            <option>Pasta</option>
+            <option>Rijst</option>
+            <option>Soep</option>
+            <option>Taart &amp; cake</option>
+            <option>Vegetarisch</option>
+            <option>Vis</option>
+            <option>Wraps</option>
+            <option>Zoet</option>
+          </select>
+        </div>
+        <div>
+          <label for="mealCategoryNew">Menugang:</label>
+          <select id="mealCategoryNew">
+            <option>maak een keuze</option>
+            <option>Bakken</option>
+            <option>Dessert</option>
+            <option>Dressings, sauzen & dips</option>
+            <option>Drinken</option>
+            <option>Hoofdgerecht</option>
+            <option>Lunch</option>
+            <option>Ontbijt</option>
+            <option>Salade</option>
+            <option>Snacks</option>
+          </select>
+        </div>
+        <div>
+          <label for="mealTypeNew">Doel gerecht:</label>
+          <select id="mealTypeNew">
+            <option>maak een keuze</option>
+            <option>Sporten</option>
+            <option>Normaal</option>
+            <option>Cheaten</option>
+          </select>
+        </div>
+        <div>
+          <label for="timeRequiredNew">Tijd:</label>
+          <select id="timeRequiredNew">
+            <option>maak een keuze</option>
+            <option>Onder de 30 minuten</option>
+            <option>30 - 45 minuten</option>
+            <option>45 minuten - 1 uur</option>
+            <option>1 - 2 uur</option>
+            <option>langer dan 2 uur</option>
+          </select>
+        </div>
+        <div>
+          <label for="caloriesNew">Calorieën (per persoon):</label>
+          <input id="caloriesNew" type="number" placeholder="bijv. 450" />
+        </div>
+       
+        <button type="submit" class="pink-btn">Toevoegen</button>
+      </form>
+      <div id="addMessage"></div>
+    </div>
+
+    <!-- TAB 3: OVERZICHT RECEPTEN -->
+    <div id="overzichtRecepten" class="tab-content">
+      <h2>Overzicht van alle recepten</h2>
+      <button id="refreshOverview" class="green-btn">Vernieuw overzicht</button>
+
+      <div class="table-container">
+        <table class="overview-table">
+          <thead>
+            <tr>
+              <th>Titel</th>
+              <th>URL</th>
+              <th>Soort</th>
+              <th>Menugang</th>
+              <th>Doel gerecht:</th>
+              <th>Tijd</th>
+              <th>Calorieën</th>
+              <th>Bewerken</th>
+              <th>Verwijderen</th>
+            </tr>
+          </thead>
+          <tbody id="allRecipes">
+            <!-- Dynamische rijen komen hier -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="index.js"></script>
+  </div> <!-- /container -->
+</body>
+</html>
