@@ -656,20 +656,22 @@ select:focus {
 @media (max-width:767px){
   /* oude tab-balk verbergen, dropdown tonen */
   .nav-tabs            { display:none; }
-  .mobile-nav{
+.mobile-nav{
     display:block;
     width:100%;
-    padding:8px 44px 8px 0;          
-    border:none;                    
-    border-bottom:3px solid #63D671; 
+    padding:8px 44px 8px 0;
+    border:none;                          /* géén grijze of ronde rand */
+    border-bottom:3px solid #63D671;      /* groene underline blijft */
     background:transparent;
-    color:#63D671;
+    color:#2d3436;                        /* zwarte/donkere tekst */
     font-size:17px;
     font-weight:600;
     text-align:left;
     appearance:none;
-    background-image:none;          
-  }
+    background-image:none;                /* standaard pijltje weg */
+    border-radius:0;                      
+}
+
 
   .dropdown-icon{
     display:inline-block;
@@ -691,3 +693,17 @@ select:focus {
   .mobile-nav-wrap { margin-bottom: 16px; }  /* ruimte onder dropdown */
 }
 
+/* link-stijl voor “Vernieuw het overzicht” */
+.refresh-link{
+  color:#FC425D;              /* rood */
+  text-decoration:underline;
+  font-weight:600;
+  cursor:pointer;
+  background:none;
+  border:none;
+  padding:0;
+}
+
+.refresh-link:hover{
+  color:#fb2845;              /* iets donkerder rood bij hover */
+}
