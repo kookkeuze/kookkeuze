@@ -1,4 +1,4 @@
-/* style.css */
+/* styles.css */
 
 /* Reset en basisopmaak */
 * {
@@ -261,6 +261,7 @@ button {
 /* Verbeterde dropdown styling voor alle tabs */
 select {
   appearance: none;
+  background-color: #ffffff;                    /* <— altijd wit   */
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2363D671' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 12px center;
@@ -399,9 +400,6 @@ select:focus {
   padding: 0 16px;
   font-size: 13px;
   border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* Hover effect voor rijen */
@@ -444,7 +442,7 @@ select:focus {
   .overview-table {
     font-size: 13px;
   }
-  
+
   .details-content {
     flex-wrap: wrap;
     gap: 12px;
@@ -474,10 +472,54 @@ select:focus {
 }
 
 @media screen and (max-width: 480px) {
+
+  /* ---- MOBIELE OVERRIDES ---- */
   .container {
     width: 100%;
     margin: 0;
     border-radius: 0;
+  }
+
+  /* dropdowns & inputs volle breedte */
+  .hero-filters select,
+  .hero-search select,
+  .hero-search input {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* buttons volle breedte en gelijke stijl */
+  .hero-search button,
+  .hero-random button {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 12px;
+    padding: 14px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  }
+
+  .hero-search button {
+    background-color: #FC425D;    /* rood */
+  }
+
+  .hero-search button:hover {
+    background-color: #FC7042;
+  }
+
+  .hero-random button {
+    background-color: #63D671;    /* groen */
+  }
+
+  .hero-random button:hover {
+    background-color: #4ac858;
+  }
+
+  /* dropdowns krijgen geen max/min beperking */
+  .hero-filters select {
+    min-width: 100%;
+    max-width: 100%;
   }
 
   .hero-header {
@@ -491,7 +533,7 @@ select:focus {
   }
 }
 
-/* Zoekknop styling */
+/* Zoekknop styling (desktop) */
 .hero-search button {
   background-color: #FC7042;
   color: white;
@@ -529,15 +571,15 @@ select:focus {
 
 /* Container die de kaarten naast elkaar kan zetten */
 .recipe-cards-container {
-  display: flex;          /* Zet kaarten naast elkaar */
+  display: flex;
   flex-wrap: wrap;        /* Nieuwe rij als er geen ruimte meer is */
-  gap: 16px;              /* Ruimte tussen kaarten */
+  gap: 16px;
   margin-top: 16px;
 }
 
 /* Individuele kaart-styling */
 .recipe-card {
-  flex: 1 1 250px;        /* Minimale breedte 250px, groeit als er ruimte is */
+  flex: 1 1 250px;
   background: #ffffff;
   border: 2px solid #63D671;
   border-radius: 12px;
@@ -558,7 +600,7 @@ select:focus {
 }
 
 .recipe-card p a {
-  color: #FC425D;         /* Of een andere kleur die je wilt */
+  color: #FC425D;
   text-decoration: none;
 }
 
@@ -574,19 +616,19 @@ select:focus {
 }
 
 .recipe-card li {
-  margin-bottom: 8px; /* Extra ruimte tussen items */
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
-  gap: 6px; /* Ruimte tussen icon en tekst */
+  gap: 6px;
 }
 
 .recipe-card li i {
-  color: #63D671; /* Icon in groene kleur */
+  color: #63D671;
 }
 
 #calorieMulti {
   min-width: 200px;
-  height: auto; 
+  height: auto;
   border: 2px solid #e2e8f0;
   border-radius: 8px;
   padding: 10px;
