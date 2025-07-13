@@ -669,5 +669,15 @@ select:focus {
     position:absolute; right:26px; top:calc(50% - 9px);   /* centreer verticaal */
     color:#63D671; font-size:18px; pointer-events:none;
   }
+
+  
+}
+
+/* om de icon-positionering te behouden nu het select buiten .container staat */
+.mobile-nav-wrap { position: relative; }
+
+@media (max-width:767px){
+  /* mobile-nav blijft block (bestaande regels) */
+  .mobile-nav-wrap { margin-bottom: 16px; }  /* ruimte onder dropdown */
 }
 
