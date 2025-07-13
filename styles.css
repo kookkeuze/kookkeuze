@@ -527,6 +527,15 @@ select:focus {
     padding: 24px 16px;
   }
 
+   .hero-header h1 {
+    font-size: 1.3em;      
+    line-height: 1.2;
+  }
+
+  .hero-header p  {
+    font-size: 0.85em;     
+  }
+
   .hero-random button {
     width: 100%;
     max-width: 280px;
