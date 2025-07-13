@@ -649,3 +649,25 @@ select:focus {
   border-color: #63D671;
   box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
 }
+
+/* ===== mobiele dropdown-menu ===== */
+.mobile-nav, .dropdown-icon { display:none; }
+
+@media (max-width:767px){
+  /* oude tab-balk verbergen, dropdown tonen */
+  .nav-tabs            { display:none; }
+  .mobile-nav          { 
+    display:block; width:100%; 
+    padding:12px 44px 12px 16px;   /* ruimte links & voor icoon rechts */
+    border:2px solid #e2e8f0; border-radius:8px;
+    font-size:15px; background:#fff; color:#2d3436;
+    appearance:none;               /* iOS clean look */
+    background-image:none;         /* eigen icoon gebruiken */
+  }
+  .dropdown-icon{
+    display:inline-block;
+    position:absolute; right:26px; top:calc(50% - 9px);   /* centreer verticaal */
+    color:#63D671; font-size:18px; pointer-events:none;
+  }
+}
+

@@ -4,6 +4,9 @@
 const tabLinks = document.querySelectorAll('.tab-link');
 const tabContents = document.querySelectorAll('.tab-content');
 
+/* ▼▼▼ NIEUW ▼▼▼ */
+const navDropdown = document.getElementById('navDropdown');
+
 tabLinks.forEach(link => {
   link.addEventListener('click', (e) => {
     e.preventDefault();
@@ -18,13 +21,27 @@ tabLinks.forEach(link => {
       targetContent.classList.add('active');
     }
 
+    /* -- sync dropdown met geklikte tab --- */
+    if (navDropdown) navDropdown.value = targetId;
+
     if (targetId === '#overzichtRecepten') {
       fetchAllRecipes();
     }
   });
 });
 
-// ---- FILTERS & ZOEKEN (TAB 1) ----
+/* -- dropdown verandert tab -- */
+if (navDropdown) {
+  navDropdown.addEventListener('change', (e) => {
+    const targetHref = e.target.value;
+    document.querySelector(`.nav-tabs a[href="${targetHref}"]`).click();
+  });
+  /* startwaarde bij load */
+  const active = document.querySelector('.tab-link.active');
+  if (active) navDropdown.value = active.getAttribute('href');
+}
+
+/* ---- FILTERS & ZOEKEN (TAB 1) ---- */
 const dishTypeSelect = document.getElementById('dishType');
 const mealCategorySelect = document.getElementById('mealCategory');
 const mealTypeSelect = document.getElementById('mealType');
@@ -119,12 +136,11 @@ function showRecipes(recipeArray) {
     html += `
       <div class="recipe-card">
         <h3>${r.title}</h3>
-<p>
-  <a href="${r.url}" target="_blank" class="ext-link">
-    Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i>
-  </a>
-</p>
-
+        <p>
+          <a href="${r.url}" target="_blank" class="ext-link">
+            Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i>
+          </a>
+        </p>
 
         <ul>
           <li><i class="fa fa-thermometer-half"></i> <strong>Soort:</strong> ${r.dish_type || '-'}</li>
