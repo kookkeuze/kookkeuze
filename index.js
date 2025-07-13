@@ -119,9 +119,10 @@ function showRecipes(recipeArray) {
     html += `
       <div class="recipe-card">
         <h3>${r.title}</h3>
-        <p>
-          <a href="${r.url}" target="_blank" style="color:#FC425D;">${r.url}</a>
-        </p>
+<p>
+  <a href="${r.url}" target="_blank" style="color:#FC425D;">Bekijk&nbsp;recept</a>
+</p>
+
         <ul>
           <li><i class="fa fa-thermometer-half"></i> <strong>Soort:</strong> ${r.dish_type || '-'}</li>
           <li><i class="fas fa-utensils"></i> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
