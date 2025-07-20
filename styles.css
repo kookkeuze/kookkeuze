@@ -707,3 +707,227 @@ select:focus {
 .refresh-link:hover{
   color:#fb2845;              /* iets donkerder rood bij hover */
 }
+
+/* ══════════════ TOP-BAR ══════════════ */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.topbar .logo {
+  font-size: 22px;
+  font-weight: 700;
+  color: #63D671;       /* zelfde groen */
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #63D671;
+  cursor: pointer;
+}
+
+/* ══════════════ MODAL OVERLAY ══════════════ */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal.hidden { display: none; }
+
+.modal-content {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 32px 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.15);
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #999;
+  cursor: pointer;
+}
+
+/* Tabs boven het formulier */
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 8px 0;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.auth-tab.active {
+  background: linear-gradient(135deg,#63D671 0%,#4ac858 100%);
+  color: #fff;
+}
+
+.auth-pane      { display: none; }
+.auth-pane.active { display: block; }
+
+/* Meldingen */
+.auth-msg { margin-top: 16px; font-weight: 600; }
+.auth-msg.error  { color:#FC425D; }
+.auth-msg.success{ color:#63D671; }
+
+
+.logged-msg {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #63D671;               /* zelfde groen */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- Logged-in pane ---------- */
+.logged-pane {
+  text-align: center;
+  padding: 16px 12px 28px;
+}
+
+.success-icon {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: #63d671;                 /* huisstijl-groen */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.success-icon i {
+  font-size: 36px;
+  color: #fff;
+}
+
+.logged-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #222;
+}
+
+.logged-sub {
+  font-size: 1rem;
+  line-height: 1.45;
+  margin-bottom: 24px;
+  color: #444;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 12px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: #ff4b6e;                 /* feller roze/rood */
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform .15s;
+}
+.logout-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* ---------- AUTH COMMON ---------- */
+.auth-title   { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; color:#063; }
+.auth-sub     { font-size: .95rem; color:#555; margin-bottom: 24px; }
+.auth-form    { display:flex; flex-direction:column; gap:16px; }
+
+.auth-label   { font-size:.9rem; font-weight:600; color:#222; margin-bottom:4px; }
+.input-wrap   { position:relative; }
+.input-wrap input {
+  width:100%; padding:12px 40px 12px 14px;
+  background:#f5f5f5; border:none; border-radius:8px;
+}
+.input-wrap i {
+  position:absolute; right:14px; top:50%; transform:translateY(-50%);
+  color:#999; pointer-events:none;
+}
+
+.primary-btn {
+  padding:12px 0; border:none; border-radius:10px;
+  font-size:1rem; font-weight:600; color:#fff;
+  background:#5fd46d;         
+  box-shadow:0 8px 18px rgba(7,148,110,.35);
+  cursor:pointer; transition:.15s;
+}
+.primary-btn:hover { transform:translateY(-2px); }
+
+.primary-btn.alt   { 
+  background:#5fd46d;  
+  box-shadow: 0 8px 18px rgba(79,107,255,.35); }
+
+.ghost-btn {
+  background:none; border:none; color:#5fd46d; 
+  font-weight:600; cursor:pointer; padding:0; margin-left:4px;
+}
+.ghost-btn:hover { text-decoration:underline; }
+
+.auth-switch {
+  margin-top:28px; font-size:.9rem; color:#333;
+  display:flex; justify-content:center; align-items:center; gap:4px;
+}
+
+/* 1. Close-icoon beter uitlijnen */
+.modal-close {
+  top: 12px;          /* i.p.v. 16px → iets hoger */
+  right: 12px;        /* i.p.v. 16px → iets dichter op de rand */
+  font-size: 22px;    /* net iets groter voor visuele balans */
+}
+
+/* 2. Meer lucht in het auth-scherm */
+.auth-pane {
+  /* overal extra binnenmarge */
+  padding: 20px 24px 32px;
+}
+
+/* hoofd-titels & subtitels iets verder uit elkaar */
+.auth-title  { margin-bottom: 10px; }
+.auth-sub    { margin-bottom: 28px; }
+
+/* labels → iets meer afstand tot veld eronder */
+.auth-label  { margin-bottom: 6px; }
+
+/* input-blokken onderling ruimer */
+.auth-form   { gap: 24px; }            /* was 16px */
+
+/* knop lossere bovenmarge t.o.v. laatste veld */
+.primary-btn { margin-top: 8px; }
+
+/* tekstlink-switch extra ruimte erboven */
+.auth-switch { margin-top: 32px; }
+
+

@@ -14,7 +14,102 @@
 </head>
 
 <body>
+<!-- TOP-BAR  -->
+<header class="topbar">
+  <span class="logo">Kookkeuze</span>
+
+  <!-- knop met FontAwesome-icoon -->
+  <button id="authBtn" class="icon-btn" aria-label="Inloggen of registreren">
+    <i class="fas fa-user-circle"></i>
+  </button>
+</header>
+
+<!-- MODAL -->
+<div id="authModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-content">
+    <button id="closeAuth" class="modal-close" aria-label="Sluiten">
+      <i class="fas fa-times"></i>
+    </button>
+
+<!-- === GELOGD-IN PANE (NIEUW) === -->
+<div id="loggedInPane" class="auth-pane logged-pane">
+  <div class="success-icon">
+    <i class="fas fa-check"></i>
+  </div>
+
+  <h2 class="logged-title">Je bent ingelogd</h2>
+  <p class="logged-sub">
+    Je kunt nu beginnen met het maken van je eigen recepten­database.<br />
+    Klik op <strong>“Voeg een recept toe”</strong> om te starten!
+  </p>
+
+  <button id="logoutBtn" class="logout-btn">Uitloggen</button>
+</div>
+
+
+
+<!-- === INLOGPANE (NIEUW) === -->
+<div id="loginPane" class="auth-pane active">
+  <h2 class="auth-title">Welkom terug!</h2>
+  <p class="auth-sub">Log in om verder te gaan.</p>
+
+  <form id="login-form" class="auth-form">
+    <label for="login-email" class="auth-label">E-mailadres</label>
+    <div class="input-wrap">
+      <input type="email" id="login-email" placeholder="Vul je e-mail in" required>
+      <i class="fas fa-envelope"></i>
+    </div>
+
+    <label for="login-password" class="auth-label">Wachtwoord</label>
+    <div class="input-wrap">
+      <input type="password" id="login-password" placeholder="Vul je wachtwoord in" required>
+      <i class="fas fa-lock"></i>
+    </div>
+
+    <button type="submit" class="primary-btn">Log in</button>
+  </form>
+
+  <p class="auth-switch">
+    Nog geen account?
+    <button class="ghost-btn" data-target="registerPane">Registreren</button>
+  </p>
+</div>
+
+
+<!-- === REGISTRERENPANE (NIEUW) === -->
+<div id="registerPane" class="auth-pane">
+  <h2 class="auth-title">Account aanmaken</h2>
+  <p class="auth-sub">Vul je gegevens in om te starten.</p>
+
+  <form id="register-form" class="auth-form">
+    <label for="register-email" class="auth-label">E-mailadres</label>
+    <div class="input-wrap">
+      <input type="email" id="register-email" placeholder="Vul je e-mail in" required>
+      <i class="fas fa-envelope"></i>
+    </div>
+
+    <label for="register-password" class="auth-label">Wachtwoord</label>
+    <div class="input-wrap">
+      <input type="password" id="register-password" placeholder="Kies een wachtwoord" required>
+      <i class="fas fa-lock"></i>
+    </div>
+
+    <button type="submit" class="primary-btn alt">Registreren</button>
+  </form>
+
+<p class="auth-switch">
+    Al een account?
+    <button class="ghost-btn" data-target="loginPane">Log in</button>
+  </p>
+</div>
+  <div id="authMessage" class="auth-msg"></div>
+
+  </div>          
+</div>           
+
   <div class="container">
+
+
 
 <!-- mobiele dropdown-navigatie -->
 <div class="mobile-nav-wrap">
