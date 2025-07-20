@@ -1,25 +1,34 @@
-// server.js
+// server.js – volledige versie (20-07-2025)
 const express    = require('express');
 const bodyParser = require('body-parser');
 const cors       = require('cors');
 const path       = require('path');
 
+// eerst app & PORT (belangrijk voor CORS hieronder)
+const app  = express();
+const PORT = process.env.PORT || 3000;
+
 // --- NIEUW: auth libs -------------------------------------------------------
 const bcrypt     = require('bcrypt');
 const jwt        = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme‑in‑prod';
+const JWT_SECRET = process.env.JWT_SECRET || 'changeme-in-prod';
 // ---------------------------------------------------------------------------
 
-app.use(cors({
+/* -------------------- CORS -------------------- */
+const corsOptions = {
   origin: [
     'https://kookkeuze.nl',   // productie-frontend
     'http://localhost:3000'   // lokaal testen
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false          // <- laat op true staan als je cookies gebruikt
-}));
+  credentials: false,
+  optionsSuccessStatus: 204
+};
 
+app.use(cors(corsOptions));           // geldt voor alle routes
+app.options('*', cors(corsOptions));  // pre-flight respostas
+/* ---------------------------------------------- */
 
 const {
   getRecipes,
@@ -27,12 +36,9 @@ const {
   addRecipe,
   updateRecipe,
   deleteRecipe,
-  addUser,          // ← nieuw
-  getUserByEmail    // ← nieuw
+  addUser,
+  getUserByEmail
 } = require('./database');
-
-const app  = express();
-const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 
@@ -44,15 +50,15 @@ app.use(express.static(path.join(__dirname, '/')));
 app.post('/api/register', (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    return res.status(400).json({ error: 'E‑mail en wachtwoord zijn verplicht.' });
+    return res.status(400).json({ error: 'E-mail en wachtwoord zijn verplicht.' });
   }
 
   getUserByEmail(email, (err, existing) => {
-    if (err)   return res.status(500).json({ error: 'DB‑fout.' });
+    if (err)   return res.status(500).json({ error: 'DB-fout.' });
     if (existing) return res.status(409).json({ error: 'Gebruiker bestaat al.' });
 
     bcrypt.hash(password, 10, (err, hash) => {
-      if (err) return res.status(500).json({ error: 'Hash‑fout.' });
+      if (err) return res.status(500).json({ error: 'Hash-fout.' });
 
       addUser(email, hash, (err) => {
         if (err) return res.status(500).json({ error: 'Opslaan mislukt.' });
@@ -66,11 +72,11 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    return res.status(400).json({ error: 'E‑mail en wachtwoord zijn verplicht.' });
+    return res.status(400).json({ error: 'E-mail en wachtwoord zijn verplicht.' });
   }
 
   getUserByEmail(email, (err, user) => {
-    if (err)   return res.status(500).json({ error: 'DB‑fout.' });
+    if (err)   return res.status(500).json({ error: 'DB-fout.' });
     if (!user) return res.status(401).json({ error: 'Onbekend account.' });
 
     bcrypt.compare(password, user.password_hash, (err, same) => {
@@ -83,7 +89,7 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-// 3. Middleware – stopt gedecodeerde token in req.user (optioneel)
+// 3. Middleware – zet gedecodeerde token in req.user
 function authenticate(req, _res, next) {
   const auth = req.headers.authorization;      // verwacht: "Bearer <token>"
   if (auth) {
@@ -97,7 +103,7 @@ function authenticate(req, _res, next) {
 app.use(authenticate);
 // ===========================================================================
 
-// ===================== RECEPT‑API ==========================================
+// ===================== RECEPT-API ==========================================
 // 1. Haal (gefilterde) recepten op
 app.get('/api/recipes', (req, res) => {
   const {
@@ -170,7 +176,6 @@ app.post('/api/recipes', (req, res) => {
     calories
   } = req.body;
 
-
   if (!title || !url) {
     return res.status(400).json({ error: 'Titel en URL zijn verplicht.' });
   }
@@ -183,7 +188,7 @@ app.post('/api/recipes', (req, res) => {
     meal_type,
     time_required,
     calories,
-    user_id: req.user.id        
+    user_id: req.user.id
   }, (err, result) => {
     if (err) {
       return res.status(500).json({ error: 'Er ging iets mis bij het opslaan van het recept.' });
