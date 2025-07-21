@@ -189,5 +189,41 @@ module.exports = {
   getRandomRecipe,
   addRecipe,
   updateRecipe,
-  deleteRecipe
+  deleteRecipe,
+  addUser,
+  getUserByEmail
 };
+
+// Gebruikers tabel aanmaken
+db.run(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+// Gebruiker toevoegen
+function addUser(email, passwordHash, callback) {
+  const query = 'INSERT INTO users (email, password_hash) VALUES (?, ?)';
+  db.run(query, [email, passwordHash], function(err) {
+    if (err) {
+      console.error('Fout bij toevoegen gebruiker:', err);
+      return callback(err);
+    }
+    callback(null, { id: this.lastID });
+  });
+}
+
+// Gebruiker ophalen op basis van email
+function getUserByEmail(email, callback) {
+  const query = 'SELECT * FROM users WHERE email = ?';
+  db.get(query, [email], (err, row) => {
+    if (err) {
+      console.error('Fout bij ophalen gebruiker:', err);
+      return callback(err);
+    }
+    callback(null, row);
+  });
+}
