@@ -1,7 +1,7 @@
 // index.js — volledig bestand (20-07-2025)
 
 /* ========= API-basis & token-helper ========= */
-const API_BASE = 'http://localhost:3000';   // lokale backend server
+const API_BASE = window.location.origin;   // gebruik dezelfde origin als de frontend
 
 const authHeaders = () => {
   const t = localStorage.getItem('token');
