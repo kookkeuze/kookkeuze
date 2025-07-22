@@ -194,19 +194,30 @@ app.post('/api/recipes', (req, res) => {
     return res.status(400).json({ error: 'Titel en URL zijn verplicht.' });
   }
 
+  // Convert "maak een keuze" to null
+  const cleanDishType = dish_type === 'maak een keuze' ? null : dish_type;
+  const cleanMealCategory = meal_category === 'maak een keuze' ? null : meal_category;
+  const cleanMealType = meal_type === 'maak een keuze' ? null : meal_type;
+  const cleanTimeRequired = time_required === 'maak een keuze' ? null : time_required;
+
+  console.log('Adding recipe for user:', req.user.id);
+  console.log('Recipe data:', { title, url, cleanDishType, cleanMealCategory, cleanMealType, cleanTimeRequired, calories });
+
   addRecipe({
     title,
     url,
-    dish_type,
-    meal_category,
-    meal_type,
-    time_required,
+    dish_type: cleanDishType,
+    meal_category: cleanMealCategory,
+    meal_type: cleanMealType,
+    time_required: cleanTimeRequired,
     calories,
     user_id: req.user.id
   }, (err, result) => {
     if (err) {
+      console.error('Error adding recipe:', err);
       return res.status(500).json({ error: 'Er ging iets mis bij het opslaan van het recept.' });
     }
+    console.log('Recipe added successfully with ID:', result.id);
     res.json({ message: 'Recept toegevoegd!', id: result.id });
   });
 });

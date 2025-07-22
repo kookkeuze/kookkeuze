@@ -21,9 +21,21 @@ db.run(`
     meal_type TEXT,
     time_required TEXT,
     meal_category TEXT,
-    calories INTEGER
+    calories INTEGER,
+    user_id INTEGER
   )
-`);
+`, (err) => {
+  if (err) {
+    console.error('Error creating recipes table:', err);
+  } else {
+    // Add user_id column if it doesn't exist
+    db.run(`ALTER TABLE recipes ADD COLUMN user_id INTEGER`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding user_id column:', err);
+      }
+    });
+  }
+});
 
 /**
  * Interpreteer één calorieRange-waarde.
