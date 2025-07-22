@@ -211,6 +211,10 @@ app.post('/api/recipes', (req, res) => {
 
 // 4. Recept bijwerken
 app.put('/api/recipes/:id', (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om recepten bij te werken.' });
+  }
+
   const recipeId = req.params.id;
   const {
     title,
@@ -244,6 +248,10 @@ app.put('/api/recipes/:id', (req, res) => {
 
 // 5. Recept verwijderen
 app.delete('/api/recipes/:id', (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om recepten te verwijderen.' });
+  }
+
   const recipeId = req.params.id;
 
   deleteRecipe(recipeId, (err) => {
