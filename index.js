@@ -58,6 +58,12 @@ const resultDiv           = document.getElementById('result');
 
 /* — Zoekknop — */
 document.getElementById('searchBtn').addEventListener('click', () => {
+  // Controleer of gebruiker ingelogd is
+  if (!localStorage.getItem('token')) {
+    resultDiv.innerHTML = '<p>Log in om recepten te zoeken.</p>';
+    return;
+  }
+
   const params = {};
   if (dishTypeSelect.value      !== 'Soort gerecht') params.dish_type     = dishTypeSelect.value;
   if (mealCategorySelect.value  !== 'Menugang')      params.meal_category = mealCategorySelect.value;
@@ -77,6 +83,12 @@ document.getElementById('searchBtn').addEventListener('click', () => {
 
 /* — Random recept — */
 document.getElementById('randomBtn').addEventListener('click', () => {
+  // Controleer of gebruiker ingelogd is
+  if (!localStorage.getItem('token')) {
+    resultDiv.innerHTML = '<p>Log in om een random recept te krijgen.</p>';
+    return;
+  }
+
   const params = {};
   if (dishTypeSelect.value      !== 'Soort gerecht') params.dish_type     = dishTypeSelect.value;
   if (mealCategorySelect.value  !== 'Menugang')      params.meal_category = mealCategorySelect.value;
@@ -163,6 +175,12 @@ const refreshBtn    = document.getElementById('refreshBtn');
 if (refreshBtn) refreshBtn.addEventListener('click', fetchAllRecipes);
 
 function fetchAllRecipes() {
+  // Controleer of gebruiker ingelogd is
+  if (!localStorage.getItem('token')) {
+    allRecipesDiv.innerHTML = `<tr><td colspan="9">Log in om je recepten te bekijken.</td></tr>`;
+    return;
+  }
+
   fetch(`${API_BASE}/api/recipes`)
     .then(r => r.json())
     .then(showAllRecipes)
@@ -277,6 +295,10 @@ localStorage.removeItem('token');
 resetForms();
 updateAuthUI();
 authModal.classList.add('hidden');
+
+// Leeg de receptenlijst en zoekresultaten
+allRecipesDiv.innerHTML = `<tr><td colspan="9">Log in om je recepten te bekijken.</td></tr>`;
+resultDiv.innerHTML = '';
 
 });
 

@@ -63,6 +63,12 @@ function getRecipes(filters, callback) {
   let query = 'SELECT * FROM recipes WHERE 1=1';
   const params = [];
 
+  // Alleen recepten van de ingelogde gebruiker
+  if (filters.user_id) {
+    query += ' AND user_id = ?';
+    params.push(filters.user_id);
+  }
+
   // dish_type
   if (filters.dish_type && filters.dish_type !== 'maak een keuze') {
     query += ' AND dish_type = ?';
@@ -121,14 +127,15 @@ function addRecipe(recipe, callback) {
     meal_type,
     time_required,
     meal_category,
-    calories
+    calories,
+    user_id
   } = recipe;
 
   const query = `
-    INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
-  db.run(query, [title, url, dish_type, meal_type, time_required, meal_category, calories],
+  db.run(query, [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id],
     function (err) {
       if (err) {
         console.error('Fout bij invoegen recept:', err);

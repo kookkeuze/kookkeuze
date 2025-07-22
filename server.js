@@ -115,13 +115,19 @@ app.get('/api/recipes', (req, res) => {
     calorieRange
   } = req.query;
 
+  // Alleen recepten van ingelogde gebruiker ophalen
+  if (!req.user) {
+    return res.json([]); // Geen recepten als niet ingelogd
+  }
+
   getRecipes({
     dish_type,
     meal_category,
     meal_type,
     time_required,
     search,
-    calorieRange
+    calorieRange,
+    user_id: req.user.id
   }, (err, rows) => {
     if (err) {
       return res.status(500).json({ error: 'Er is iets misgegaan met het ophalen.' });
@@ -141,13 +147,19 @@ app.get('/api/recipes/random', (req, res) => {
     calorieRange
   } = req.query;
 
+  // Alleen random recept van ingelogde gebruiker
+  if (!req.user) {
+    return res.json({ message: 'Geen resultaten gevonden.' });
+  }
+
   getRandomRecipe({
     dish_type,
     meal_category,
     meal_type,
     time_required,
     search,
-    calorieRange
+    calorieRange,
+    user_id: req.user.id
   }, (err, recipe) => {
     if (err) {
       console.error('Error bij random recept:', err);
