@@ -11,7 +11,23 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
-// Tabel aanmaken
+// Eerst users tabel aanmaken
+db.run(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`, (err) => {
+  if (err) {
+    console.error('Error creating users table:', err);
+  } else {
+    console.log('Users table created/verified');
+  }
+});
+
+// Dan recipes tabel aanmaken MET user_id vanaf het begin
 db.run(`
   CREATE TABLE IF NOT EXISTS recipes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,16 +38,35 @@ db.run(`
     time_required TEXT,
     meal_category TEXT,
     calories INTEGER,
-    user_id INTEGER
+    user_id INTEGER,
+    FOREIGN KEY (user_id) REFERENCES users (id)
   )
 `, (err) => {
   if (err) {
     console.error('Error creating recipes table:', err);
   } else {
-    // Add user_id column if it doesn't exist
-    db.run(`ALTER TABLE recipes ADD COLUMN user_id INTEGER`, (err) => {
-      if (err && !err.message.includes('duplicate column name')) {
-        console.error('Error adding user_id column:', err);
+    console.log('Recipes table created/verified');
+    
+    // Controleer of user_id kolom bestaat, zo niet voeg toe
+    db.all("PRAGMA table_info(recipes)", (err, columns) => {
+      if (err) {
+        console.error('Error checking table info:', err);
+        return;
+      }
+      
+      const hasUserIdColumn = columns.some(col => col.name === 'user_id');
+      console.log('Table columns:', columns.map(c => c.name));
+      console.log('Has user_id column:', hasUserIdColumn);
+      
+      if (!hasUserIdColumn) {
+        console.log('Adding user_id column...');
+        db.run(`ALTER TABLE recipes ADD COLUMN user_id INTEGER`, (err) => {
+          if (err) {
+            console.error('Error adding user_id column:', err);
+          } else {
+            console.log('user_id column added successfully');
+          }
+        });
       }
     });
   }
@@ -75,10 +110,13 @@ function getRecipes(filters, callback) {
   let query = 'SELECT * FROM recipes WHERE 1=1';
   const params = [];
 
+  console.log('getRecipes called with filters:', filters);
+
   // Alleen recepten van de ingelogde gebruiker
   if (filters.user_id) {
     query += ' AND user_id = ?';
     params.push(filters.user_id);
+    console.log('Added user_id filter:', filters.user_id);
   }
 
   // dish_type
@@ -112,14 +150,16 @@ function getRecipes(filters, callback) {
     query += buildSingleCalorieCondition(filters.calorieRange);
   }
 
-  console.log('Query:', query);
-  console.log('Params:', params);
+  console.log('Final query:', query);
+  console.log('Query params:', params);
+  
   db.all(query, params, (err, rows) => {
     if (err) {
       console.error('Fout in getRecipes:', err);
       return callback(err);
     }
     console.log('Found rows:', rows.length);
+    console.log('Rows data:', rows);
     callback(null, rows);
   });
 }
@@ -146,16 +186,23 @@ function addRecipe(recipe, callback) {
     user_id
   } = recipe;
 
+  console.log('addRecipe called with:', recipe);
+
   const query = `
     INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
+  
+  console.log('Insert query:', query);
+  console.log('Insert params:', [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id]);
+  
   db.run(query, [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id],
     function (err) {
       if (err) {
         console.error('Fout bij invoegen recept:', err);
         return callback(err);
       }
+      console.log('Recipe inserted with ID:', this.lastID);
       callback(null, { id: this.lastID });
     }
   );
@@ -206,26 +253,6 @@ function deleteRecipe(id, callback) {
   });
 }
 
-module.exports = {
-  getRecipes,
-  getRandomRecipe,
-  addRecipe,
-  updateRecipe,
-  deleteRecipe,
-  addUser,
-  getUserByEmail
-};
-
-// Gebruikers tabel aanmaken
-db.run(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
-
 // Gebruiker toevoegen
 function addUser(email, passwordHash, callback) {
   const query = 'INSERT INTO users (email, password_hash) VALUES (?, ?)';
@@ -234,6 +261,7 @@ function addUser(email, passwordHash, callback) {
       console.error('Fout bij toevoegen gebruiker:', err);
       return callback(err);
     }
+    console.log('User added with ID:', this.lastID);
     callback(null, { id: this.lastID });
   });
 }
@@ -249,3 +277,13 @@ function getUserByEmail(email, callback) {
     callback(null, row);
   });
 }
+
+module.exports = {
+  getRecipes,
+  getRandomRecipe,
+  addRecipe,
+  updateRecipe,
+  deleteRecipe,
+  addUser,
+  getUserByEmail
+};
