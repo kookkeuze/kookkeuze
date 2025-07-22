@@ -43,7 +43,12 @@ const {
 app.use(bodyParser.json());
 
 // Statische bestanden serveren
-app.use(express.static(path.join(__dirname, '/')));
+app.use(express.static(path.join(__dirname)));
+
+// Serve index.html for root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // ====================== AUTH ===============================================
 // 1. Registreren
