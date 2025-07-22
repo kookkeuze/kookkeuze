@@ -120,6 +120,7 @@ app.get('/api/recipes', (req, res) => {
     return res.json([]); // Geen recepten als niet ingelogd
   }
 
+  console.log('User requesting recipes:', req.user);
   getRecipes({
     dish_type,
     meal_category,
@@ -132,6 +133,7 @@ app.get('/api/recipes', (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'Er is iets misgegaan met het ophalen.' });
     }
+    console.log('Returning recipes:', rows);
     res.json(rows);
   });
 });

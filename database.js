@@ -100,11 +100,14 @@ function getRecipes(filters, callback) {
     query += buildSingleCalorieCondition(filters.calorieRange);
   }
 
+  console.log('Query:', query);
+  console.log('Params:', params);
   db.all(query, params, (err, rows) => {
     if (err) {
       console.error('Fout in getRecipes:', err);
       return callback(err);
     }
+    console.log('Found rows:', rows.length);
     callback(null, rows);
   });
 }
