@@ -97,12 +97,16 @@ app.post('/api/login', (req, res) => {
 // 3. Middleware – zet gedecodeerde token in req.user
 function authenticate(req, _res, next) {
   const auth = req.headers.authorization;      // verwacht: "Bearer <token>"
+  console.log('🔍 Auth header:', auth);
   if (auth) {
     const [, token] = auth.split(' ');
+    console.log('🔍 Token extracted:', token ? 'Token found' : 'No token');
     try {
       req.user = jwt.verify(token, JWT_SECRET);
+      console.log('🔍 User decoded:', req.user);
     } catch { /* ongeldige token -> ga anoniem verder */ }
   }
+  console.log('🔍 Final req.user:', req.user);
   next();
 }
 app.use(authenticate);

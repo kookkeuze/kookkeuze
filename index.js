@@ -5,6 +5,7 @@ const API_BASE = window.location.origin;   // gebruik dezelfde origin als de fro
 
 const authHeaders = () => {
   const t = localStorage.getItem('token');
+  console.log('🔍 Token from localStorage:', t ? 'Token exists' : 'No token');
   return t ? { Authorization: `Bearer ${t}` } : {};
 };
 
@@ -143,6 +144,7 @@ const addMessageDiv = document.getElementById('addMessage');
 
 addRecipeForm.addEventListener('submit', e => {
   e.preventDefault();
+  console.log('🔍 Adding recipe, auth headers:', authHeaders());
   const cal = document.getElementById('caloriesNew').value.trim();
   const bodyData = {
     title:         document.getElementById('title').value,
@@ -153,6 +155,7 @@ addRecipeForm.addEventListener('submit', e => {
     time_required: document.getElementById('timeRequiredNew').value,
     calories:      cal ? parseInt(cal, 10) : null
   };
+  console.log('🔍 Recipe data being sent:', bodyData);
 
   fetch(`${API_BASE}/api/recipes`, {
     method: 'POST',
@@ -180,6 +183,7 @@ function fetchAllRecipes() {
     allRecipesDiv.innerHTML = `<tr><td colspan="9">Log in om je recepten te bekijken.</td></tr>`;
     return;
   }
+  console.log('🔍 Fetching recipes with headers:', authHeaders());
 
   fetch(`${API_BASE}/api/recipes`)
     .then(r => r.json())
