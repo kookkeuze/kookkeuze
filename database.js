@@ -117,6 +117,8 @@ function getRecipes(filters, callback) {
     query += ' AND user_id = ?';
     params.push(filters.user_id);
     console.log('Added user_id filter:', filters.user_id);
+  } else {
+    console.log('⚠️ No user_id provided in filters!');
   }
 
   // dish_type
@@ -159,7 +161,9 @@ function getRecipes(filters, callback) {
       return callback(err);
     }
     console.log('Found rows:', rows.length);
-    console.log('Rows data:', rows);
+    if (rows.length > 0) {
+      console.log('Sample row:', rows[0]);
+    }
     callback(null, rows);
   });
 }
