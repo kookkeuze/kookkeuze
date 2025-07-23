@@ -97,16 +97,19 @@ app.post('/api/login', (req, res) => {
 // 3. Middleware – zet gedecodeerde token in req.user
 function authenticate(req, _res, next) {
   const auth = req.headers.authorization;      // verwacht: "Bearer <token>"
-  console.log('🔍 Auth header:', auth);
+  console.log('🔍 Auth header:', auth ? 'Bearer token present' : 'No auth header');
   if (auth) {
     const [, token] = auth.split(' ');
     console.log('🔍 Token extracted:', token ? 'Token found' : 'No token');
     try {
       req.user = jwt.verify(token, JWT_SECRET);
-      console.log('🔍 User decoded:', req.user);
-    } catch { /* ongeldige token -> ga anoniem verder */ }
+      console.log('🔍 User decoded successfully, ID:', req.user.id);
+    } catch (err) { 
+      console.log('🔍 Token verification failed:', err.message);
+      /* ongeldige token -> ga anoniem verder */ 
+    }
   }
-  console.log('🔍 Final req.user:', req.user);
+  console.log('🔍 Final req.user:', req.user ? `User ID: ${req.user.id}` : 'No user');
   next();
 }
 app.use(authenticate);
@@ -126,10 +129,12 @@ app.get('/api/recipes', (req, res) => {
 
   // Alleen recepten van ingelogde gebruiker ophalen
   if (!req.user) {
+    console.log('❌ No user authenticated for /api/recipes');
     return res.json([]); // Geen recepten als niet ingelogd
   }
 
-  console.log('User requesting recipes:', req.user);
+  console.log('✅ User requesting recipes, ID:', req.user.id);
+  console.log('✅ Query filters:', { dish_type, meal_category, meal_type, time_required, search, calorieRange });
   getRecipes({
     dish_type,
     meal_category,
@@ -140,9 +145,14 @@ app.get('/api/recipes', (req, res) => {
     user_id: req.user.id
   }, (err, rows) => {
     if (err) {
+      console.error('❌ Database error in getRecipes:', err);
       return res.status(500).json({ error: 'Er is iets misgegaan met het ophalen.' });
     }
-    console.log('Returning recipes:', rows);
+    console.log('✅ Returning recipes count:', rows.length);
+    if (rows.length > 0) {
+      console.log('✅ Sample recipe:', { id: rows[0].id, title: rows[0].title, user_id: rows[0].user_id });
+      console.log('✅ All recipe IDs:', rows.map(r => r.id));
+    }
     res.json(rows);
   });
 });
@@ -186,6 +196,7 @@ app.get('/api/recipes/random', (req, res) => {
 // 3. Nieuw recept
 app.post('/api/recipes', (req, res) => {
   if (!req.user) {
+    console.log('❌ No user authenticated for POST /api/recipes');
     return res.status(401).json({ error: 'Je moet ingelogd zijn om recepten toe te voegen.' });
   }
 
@@ -200,6 +211,7 @@ app.post('/api/recipes', (req, res) => {
   } = req.body;
 
   if (!title || !url) {
+    console.log('❌ Missing title or URL');
     return res.status(400).json({ error: 'Titel en URL zijn verplicht.' });
   }
 
@@ -209,8 +221,8 @@ app.post('/api/recipes', (req, res) => {
   const cleanMealType = meal_type === 'maak een keuze' ? null : meal_type;
   const cleanTimeRequired = time_required === 'maak een keuze' ? null : time_required;
 
-  console.log('Adding recipe for user:', req.user.id);
-  console.log('Recipe data:', { title, url, cleanDishType, cleanMealCategory, cleanMealType, cleanTimeRequired, calories });
+  console.log('✅ Adding recipe for user ID:', req.user.id);
+  console.log('✅ Recipe data:', { title, url, cleanDishType, cleanMealCategory, cleanMealType, cleanTimeRequired, calories });
 
   addRecipe({
     title,
@@ -223,10 +235,10 @@ app.post('/api/recipes', (req, res) => {
     user_id: req.user.id
   }, (err, result) => {
     if (err) {
-      console.error('Error adding recipe:', err);
+      console.error('❌ Error adding recipe:', err);
       return res.status(500).json({ error: 'Er ging iets mis bij het opslaan van het recept.' });
     }
-    console.log('Recipe added successfully with ID:', result.id);
+    console.log('✅ Recipe added successfully with ID:', result.id);
     res.json({ message: 'Recept toegevoegd!', id: result.id });
   });
 });
