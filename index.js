@@ -65,6 +65,8 @@ document.getElementById('searchBtn').addEventListener('click', () => {
     return;
   }
 
+  console.log('🔍 Searching with token:', localStorage.getItem('token') ? 'Token exists' : 'No token');
+  
   const params = {};
   if (dishTypeSelect.value      !== 'Soort gerecht') params.dish_type     = dishTypeSelect.value;
   if (mealCategorySelect.value  !== 'Menugang')      params.meal_category = mealCategorySelect.value;
@@ -76,9 +78,14 @@ document.getElementById('searchBtn').addEventListener('click', () => {
   if (searchTerm) params.search = searchTerm;
 
   const qs = new URLSearchParams(params).toString();
-  fetch(`${API_BASE}/api/recipes?` + qs)
+  fetch(`${API_BASE}/api/recipes?` + qs, {
+    headers: authHeaders()
+  })
     .then(r => r.json())
-    .then(showRecipes)
+    .then(data => {
+      console.log('🔍 Search response:', data);
+      showRecipes(data);
+    })
     .catch(console.error);
 });
 
@@ -98,9 +105,12 @@ document.getElementById('randomBtn').addEventListener('click', () => {
   if (calorieRangeSelect.value  !== 'Calorieën')     params.calorieRange  = calorieRangeSelect.value;
 
   const qs = new URLSearchParams(params).toString();
-  fetch(`${API_BASE}/api/recipes/random?` + qs)
+  fetch(`${API_BASE}/api/recipes/random?` + qs, {
+    headers: authHeaders()
+  })
     .then(r => r.json())
     .then(d => {
+      console.log('🔍 Random response:', d);
       if (!d || d.message === 'Geen resultaten gevonden.') {
         resultDiv.innerHTML = '<p>Geen resultaten gevonden.</p>';
       } else {
@@ -164,12 +174,21 @@ addRecipeForm.addEventListener('submit', e => {
   })
     .then(r => r.json())
     .then(d => {
+      console.log('✅ Add recipe response:', d);
       addMessageDiv.innerHTML = d.error
         ? `<p style="color:red;">${d.error}</p>`
         : `<p style="color:green;">${d.message} (ID: ${d.id})</p>`;
-      if (!d.error) addRecipeForm.reset();
+      if (!d.error) {
+        addRecipeForm.reset();
+        // Automatisch overzicht verversen na toevoegen
+        console.log('✅ Recipe added successfully, refreshing overview...');
+        fetchAllRecipes();
+      }
     })
-    .catch(console.error);
+    .catch(err => {
+      console.error('❌ Error adding recipe:', err);
+      addMessageDiv.innerHTML = `<p style="color:red;">Er ging iets fout: ${err.message}</p>`;
+    });
 });
 
 /* ========= OVERZICHT RECEPTEN (TAB 3) ========= */
@@ -185,10 +204,22 @@ function fetchAllRecipes() {
   }
   console.log('🔍 Fetching recipes with headers:', authHeaders());
 
-  fetch(`${API_BASE}/api/recipes`)
+  fetch(`${API_BASE}/api/recipes`, {
+    headers: authHeaders()
+  })
     .then(r => r.json())
-    .then(showAllRecipes)
-    .catch(console.error);
+    .then(data => {
+      console.log('🔍 Fetch all recipes response:', data);
+      console.log('🔍 Number of recipes received:', data.length);
+      if (data.length > 0) {
+        console.log('🔍 Recipe IDs received:', data.map(r => r.id));
+      }
+      showAllRecipes(data);
+    })
+    .catch(err => {
+      console.error('❌ Error fetching recipes:', err);
+      allRecipesDiv.innerHTML = `<tr><td colspan="9">Fout bij ophalen recepten: ${err.message}</td></tr>`;
+    });
 }
 
 function showAllRecipes(recipes) {
