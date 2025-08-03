@@ -10,15 +10,19 @@ const pool = new Pool({
 // Test database connection
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
-    console.error('Database connection error:', err);
+    console.error('❌ Database connection error:', err);
+    console.error('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
+    console.error('💡 Voor lokale ontwikkeling, stel DATABASE_URL in of gebruik een lokale PostgreSQL database');
   } else {
-    console.log('Verbonden met PostgreSQL database.');
+    console.log('✅ Verbonden met PostgreSQL database.');
   }
 });
 
 // Database tabellen aanmaken
 async function initializeDatabase() {
   try {
+    console.log('🔧 Initializing database tables...');
+    
     // Users tabel
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -28,7 +32,7 @@ async function initializeDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('Users table created/verified');
+    console.log('✅ Users table created/verified');
 
     // Recipes tabel
     await pool.query(`
@@ -45,15 +49,27 @@ async function initializeDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('Recipes table created/verified');
+    console.log('✅ Recipes table created/verified');
+
+    // Check if tables have data
+    const userCount = await pool.query('SELECT COUNT(*) FROM users');
+    const recipeCount = await pool.query('SELECT COUNT(*) FROM recipes');
+    console.log(`📊 Database status: ${userCount.rows[0].count} users, ${recipeCount.rows[0].count} recipes`);
 
   } catch (err) {
-    console.error('Error initializing database:', err);
+    console.error('❌ Error initializing database:', err);
+    console.error('Full error details:', err);
   }
 }
 
-// Initialize database tables
-initializeDatabase();
+// Initialize database tables (only if connection is available)
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.log('⚠️ Database not available for initialization, will initialize when needed');
+  } else {
+    initializeDatabase();
+  }
+});
 
 /**
  * Interpreteer één calorieRange-waarde.
@@ -253,10 +269,13 @@ function addUser(email, passwordHash, callback) {
   const query = 'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id';
   pool.query(query, [email, passwordHash], (err, result) => {
     if (err) {
-      console.error('Fout bij toevoegen gebruiker:', err);
+      console.error('❌ Fout bij toevoegen gebruiker:', err);
+      if (err.code === 'ECONNREFUSED') {
+        return callback(new Error('Database connection failed. Check your DATABASE_URL.'));
+      }
       return callback(err);
     }
-    console.log('User added with ID:', result.rows[0].id);
+    console.log('✅ User added with ID:', result.rows[0].id);
     callback(null, { id: result.rows[0].id });
   });
 }
@@ -266,7 +285,10 @@ function getUserByEmail(email, callback) {
   const query = 'SELECT * FROM users WHERE email = $1';
   pool.query(query, [email], (err, result) => {
     if (err) {
-      console.error('Fout bij ophalen gebruiker:', err);
+      console.error('❌ Fout bij ophalen gebruiker:', err);
+      if (err.code === 'ECONNREFUSED') {
+        return callback(new Error('Database connection failed. Check your DATABASE_URL.'));
+      }
       return callback(err);
     }
     callback(null, result.rows[0]);
