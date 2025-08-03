@@ -1,76 +1,59 @@
-// database.js
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+// database.js - PostgreSQL versie
+const { Pool } = require('pg');
 
-const dbPath = path.join(__dirname, 'recipes.db');
-const db = new sqlite3.Database(dbPath, (err) => {
+// Database connection configuratie
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/recipes',
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// Test database connection
+pool.query('SELECT NOW()', (err, res) => {
   if (err) {
-    console.error('Fout bij openen database:', err);
+    console.error('Database connection error:', err);
   } else {
-    console.log('Verbonden met SQLite-database.');
+    console.log('Verbonden met PostgreSQL database.');
   }
 });
 
-// Eerst users tabel aanmaken
-db.run(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`, (err) => {
-  if (err) {
-    console.error('Error creating users table:', err);
-  } else {
+// Database tabellen aanmaken
+async function initializeDatabase() {
+  try {
+    // Users tabel
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
     console.log('Users table created/verified');
-  }
-});
 
-// Dan recipes tabel aanmaken MET user_id vanaf het begin
-db.run(`
-  CREATE TABLE IF NOT EXISTS recipes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    url TEXT NOT NULL,
-    dish_type TEXT,
-    meal_type TEXT,
-    time_required TEXT,
-    meal_category TEXT,
-    calories INTEGER,
-    user_id INTEGER,
-    FOREIGN KEY (user_id) REFERENCES users (id)
-  )
-`, (err) => {
-  if (err) {
-    console.error('Error creating recipes table:', err);
-  } else {
+    // Recipes tabel
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS recipes (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        url TEXT NOT NULL,
+        dish_type VARCHAR(100),
+        meal_type VARCHAR(100),
+        time_required VARCHAR(100),
+        meal_category VARCHAR(100),
+        calories INTEGER,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
     console.log('Recipes table created/verified');
-    
-    // Controleer of user_id kolom bestaat, zo niet voeg toe
-    db.all("PRAGMA table_info(recipes)", (err, columns) => {
-      if (err) {
-        console.error('Error checking table info:', err);
-        return;
-      }
-      
-      const hasUserIdColumn = columns.some(col => col.name === 'user_id');
-      console.log('Table columns:', columns.map(c => c.name));
-      console.log('Has user_id column:', hasUserIdColumn);
-      
-      if (!hasUserIdColumn) {
-        console.log('Adding user_id column...');
-        db.run(`ALTER TABLE recipes ADD COLUMN user_id INTEGER`, (err) => {
-          if (err) {
-            console.error('Error adding user_id column:', err);
-          } else {
-            console.log('user_id column added successfully');
-          }
-        });
-      }
-    });
+
+  } catch (err) {
+    console.error('Error initializing database:', err);
   }
-});
+}
+
+// Initialize database tables
+initializeDatabase();
 
 /**
  * Interpreteer één calorieRange-waarde.
@@ -109,13 +92,15 @@ function buildSingleCalorieCondition(range) {
 function getRecipes(filters, callback) {
   let query = 'SELECT * FROM recipes WHERE 1=1';
   const params = [];
+  let paramIndex = 1;
 
   console.log('getRecipes called with filters:', filters);
 
   // Alleen recepten van de ingelogde gebruiker
   if (filters.user_id) {
-    query += ' AND user_id = ?';
+    query += ` AND user_id = $${paramIndex}`;
     params.push(filters.user_id);
+    paramIndex++;
     console.log('Added user_id filter:', filters.user_id);
   } else {
     console.log('⚠️ No user_id provided in filters!');
@@ -123,28 +108,33 @@ function getRecipes(filters, callback) {
 
   // dish_type
   if (filters.dish_type && filters.dish_type !== 'maak een keuze') {
-    query += ' AND dish_type = ?';
+    query += ` AND dish_type = $${paramIndex}`;
     params.push(filters.dish_type);
+    paramIndex++;
   }
   // meal_category
   if (filters.meal_category && filters.meal_category !== 'maak een keuze') {
-    query += ' AND meal_category = ?';
+    query += ` AND meal_category = $${paramIndex}`;
     params.push(filters.meal_category);
+    paramIndex++;
   }
   // meal_type
   if (filters.meal_type && filters.meal_type !== 'maak een keuze') {
-    query += ' AND meal_type = ?';
+    query += ` AND meal_type = $${paramIndex}`;
     params.push(filters.meal_type);
+    paramIndex++;
   }
   // time_required
   if (filters.time_required && filters.time_required !== 'maak een keuze') {
-    query += ' AND time_required = ?';
+    query += ` AND time_required = $${paramIndex}`;
     params.push(filters.time_required);
+    paramIndex++;
   }
   // Zoeken in titel
   if (filters.search) {
-    query += ' AND title LIKE ?';
+    query += ` AND title ILIKE $${paramIndex}`;
     params.push(`%${filters.search}%`);
+    paramIndex++;
   }
 
   // Eén calorieRange => buildSingleCalorieCondition
@@ -155,16 +145,16 @@ function getRecipes(filters, callback) {
   console.log('Final query:', query);
   console.log('Query params:', params);
   
-  db.all(query, params, (err, rows) => {
+  pool.query(query, params, (err, result) => {
     if (err) {
       console.error('Fout in getRecipes:', err);
       return callback(err);
     }
-    console.log('Found rows:', rows.length);
-    if (rows.length > 0) {
-      console.log('Sample row:', rows[0]);
+    console.log('Found rows:', result.rows.length);
+    if (result.rows.length > 0) {
+      console.log('Sample row:', result.rows[0]);
     }
-    callback(null, rows);
+    callback(null, result.rows);
   });
 }
 
@@ -194,20 +184,21 @@ function addRecipe(recipe, callback) {
 
   const query = `
     INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING id
   `;
   
   console.log('Insert query:', query);
   console.log('Insert params:', [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id]);
   
-  db.run(query, [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id],
-    function (err) {
+  pool.query(query, [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id],
+    (err, result) => {
       if (err) {
         console.error('Fout bij invoegen recept:', err);
         return callback(err);
       }
-      console.log('Recipe inserted with ID:', this.lastID);
-      callback(null, { id: this.lastID });
+      console.log('Recipe inserted with ID:', result.rows[0].id);
+      callback(null, { id: result.rows[0].id });
     }
   );
 }
@@ -225,10 +216,10 @@ function updateRecipe(id, updatedData, callback) {
 
   const query = `
     UPDATE recipes
-    SET title = ?, url = ?, dish_type = ?, meal_type = ?, time_required = ?, meal_category = ?, calories = ?
-    WHERE id = ?
+    SET title = $1, url = $2, dish_type = $3, meal_type = $4, time_required = $5, meal_category = $6, calories = $7
+    WHERE id = $8
   `;
-  db.run(query, [
+  pool.query(query, [
     title,
     url,
     dish_type,
@@ -237,7 +228,7 @@ function updateRecipe(id, updatedData, callback) {
     meal_category,
     calories,
     id
-  ], function (err) {
+  ], (err) => {
     if (err) {
       console.error('Fout bij updaten recept:', err);
       return callback(err);
@@ -247,8 +238,8 @@ function updateRecipe(id, updatedData, callback) {
 }
 
 function deleteRecipe(id, callback) {
-  const query = 'DELETE FROM recipes WHERE id = ?';
-  db.run(query, [id], function (err) {
+  const query = 'DELETE FROM recipes WHERE id = $1';
+  pool.query(query, [id], (err) => {
     if (err) {
       console.error('Fout bij verwijderen recept:', err);
       return callback(err);
@@ -259,26 +250,26 @@ function deleteRecipe(id, callback) {
 
 // Gebruiker toevoegen
 function addUser(email, passwordHash, callback) {
-  const query = 'INSERT INTO users (email, password_hash) VALUES (?, ?)';
-  db.run(query, [email, passwordHash], function(err) {
+  const query = 'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id';
+  pool.query(query, [email, passwordHash], (err, result) => {
     if (err) {
       console.error('Fout bij toevoegen gebruiker:', err);
       return callback(err);
     }
-    console.log('User added with ID:', this.lastID);
-    callback(null, { id: this.lastID });
+    console.log('User added with ID:', result.rows[0].id);
+    callback(null, { id: result.rows[0].id });
   });
 }
 
 // Gebruiker ophalen op basis van email
 function getUserByEmail(email, callback) {
-  const query = 'SELECT * FROM users WHERE email = ?';
-  db.get(query, [email], (err, row) => {
+  const query = 'SELECT * FROM users WHERE email = $1';
+  pool.query(query, [email], (err, result) => {
     if (err) {
       console.error('Fout bij ophalen gebruiker:', err);
       return callback(err);
     }
-    callback(null, row);
+    callback(null, result.rows[0]);
   });
 }
 
