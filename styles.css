@@ -77,7 +77,6 @@ body {
   display: block;
 }
 
-
 /* Hero-stijl (Tab 1) */
 .hero-header {
   background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
@@ -751,6 +750,9 @@ select:focus {
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 2000;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .modal.hidden { display: none; }
@@ -761,8 +763,11 @@ select:focus {
   padding: 32px 40px;
   width: 100%;
   max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 12px 40px rgba(0,0,0,.15);
   position: relative;
+  margin: auto;
 }
 
 .modal-close {
@@ -922,6 +927,28 @@ select:focus {
   padding: 20px 24px 32px;
 }
 
+/* Responsive modal aanpassingen */
+@media screen and (max-width: 480px) {
+  .modal {
+    padding: 10px;
+  }
+  
+  .modal-content {
+    padding: 24px 20px;
+    max-width: 100%;
+    border-radius: 12px;
+  }
+  
+  .auth-pane {
+    padding: 16px 20px 24px;
+  }
+  
+  .modal-close {
+    top: 8px;
+    right: 8px;
+    font-size: 20px;
+  }
+}
 /* hoofd-titels & subtitels iets verder uit elkaar */
 .auth-title  { margin-bottom: 10px; }
 .auth-sub    { margin-bottom: 28px; }
