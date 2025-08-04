@@ -973,4 +973,58 @@ select:focus {
 /* tekstlink-switch extra ruimte erboven */
 .auth-switch { margin-top: 32px; }
 
+/* === HOE WERKT HET === */
+.how-works{
+  /* lucht om het hele blok */
+  padding-inline: clamp(16px,4vw,64px);
+  max-width: 1200px;                   
+  margin: 64px auto;                     
+}
+.how-works h2{
+  text-align:center;
+  font-size:2rem;
+  margin-bottom:48px;
+  font-weight:800;
+  color:#2d3436;
+  font-family:'Inter',sans-serif; /* sluit aan bij bestaande font */ 
+}
 
+.step{
+  display:grid;
+  grid-template-columns:80px 1fr 320px; /* nummer | tekst | afbeelding */
+  gap:32px;
+  align-items:center;
+  margin-bottom:96px;
+}
+.step:nth-child(even) .step-text{order:3;}
+.step:nth-child(even) .step-img {order:2;}
+
+.step-number{
+  font-size:3rem;
+  font-weight:700;
+  color:#63D671;          /* huisstijl-groen */
+}
+
+.step-text p{
+  font-size:1.1rem;
+  line-height:1.4;
+}
+
+.step-img img{
+  width:100%;
+  border-radius:16px;
+  box-shadow:0 8px 24px rgba(0,0,0,.08);
+}
+
+/* Mobile: alles onder elkaar */
+@media(max-width:768px){
+  .step{
+    grid-template-columns:1fr;
+    text-align:center;
+  }
+  .step:nth-child(even) .step-text,
+  .step:nth-child(even) .step-img{order:initial;}
+  .step-number{margin-bottom:16px;}
+
+  .how-works{ padding-inline: 24px; }
+}
