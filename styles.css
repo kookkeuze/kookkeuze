@@ -1013,88 +1013,122 @@ select:focus {
 /* tekstlink-switch extra ruimte erboven */
 .auth-switch { margin-top: 32px; }
 
-/* === HOE WERKT HET === */
+/* === HOE WERKT HET (nieuw) === */
 .how-works{
-  /* lucht om het hele blok */
   padding-inline: clamp(16px,4vw,64px);
-  max-width: 1200px;                   
-  margin: 64px auto;                     
+  max-width: 1200px;
+  margin: 64px auto;
 }
 .how-works h2{
   text-align:center;
-  font-size:2rem;
   margin-bottom:48px;
   font-weight:800;
   color:#2d3436;
-  font-family:'Inter',sans-serif; /* sluit aan bij bestaande font */ 
-}
+  font-family:'Inter',sans-serif;
+    font-size: clamp(2.2rem, 2.4vw, 3rem);
+    line-height: 1.15;
+  }
 
+/* desktop/tablet: foto links, tekst rechts */
 .step{
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  grid-template-areas:
-    "num img"
-    "num text";            /* tekst begint onder de foto, niet onder het nummer */
-  align-items: start;
-  column-gap: 32px;
-  row-gap: 20px;
-  margin-bottom: 72px;
-}
-
-/* Areas toewijzen */
-.step-text   { grid-area: text; }
-.step-img    { grid-area: img; }
-
-
-.step:nth-child(even) .step-text{order:3;}
-.step:nth-child(even) .step-img {order:2;}
-
-.step-number{
-  grid-area: num; 
-  font-size: 3.5rem;       /* pas evt. aan */
-  line-height: 1;
-  font-weight: 800;
-  color: #63D671;
+  display:flex;
+  align-items:flex-start;
+  gap: clamp(16px, 3vw, 32px);
+  margin-bottom: 56px;
 }
 
 .step-text p{
-  font-size:1.1rem;
-  line-height:1.4;
+    font-size: clamp(1.15rem, 1.1vw, 1.35rem); /* body groter */
+    line-height: 1.55;
 }
 
+.step-img{
+  /* foto schaalt automatisch kleiner tot het niet meer past */
+  flex: 0 1 clamp(200px, 32vw, 420px);
+}
 .step-img img{
   width:100%;
+  height:auto;
+  display:block;
   border-radius:16px;
   box-shadow:0 8px 24px rgba(0,0,0,.08);
 }
 
-@media (min-width: 768px){
-  .step-text p{
-    font-size: 1.2rem;     /* groter */
-    font-weight: 700;      /* dikker */
-    line-height: 1.5;
+.step-content{
+  flex: 1 1 420px;
+  min-width: 260px;
+}
+
+ .step-number{
+  display: inline-block;
+  font-weight: 800;
+  line-height: 1;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #fff;          /* witte achtergrond */
+  color: #2dbd6a;            /* groene tekst */
+  border: 2px solid #2dbd6a; /* subtiele groene rand */
+  margin: 0 0 10px 0;
+  font-size: clamp(1.8rem, 1.2vw, 1.6rem);
+}
+
+.step-number::before{
+  content: "Stap ";
+}
+
+.step-text p{
+  font-size:1.8rem;
+  line-height:1.5;
+  margin:0;
+}
+
+@media (max-width: 860px){
+  .step{
+    flex-direction: column;
+    gap: 14px;             
+    margin-bottom: 80px;   
+  }
+  .step-content{ flex: 1 1 100px; }
+  .step-img{
+    order: 2;
+    width: 100%;
+    max-width: 100%;
     margin: 0;
   }
+  .step-text p{ margin: 0; }
 }
 
-/* Mobile: alles onder elkaar */
-@media (max-width: 767px){
-  .step{
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "num"
-      "img"
-      "text";
+/* CTA onder het stappenplan */
+.cta-wrap{
+  text-align: left;
+  margin-top: 16px;          /* desktop */
+}
+.start-btn{
+  display: inline-block;
+  text-decoration: none;
+  padding: 16px 28px;
+  border-radius: 12px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(99,214,113,.25);
+  transition: transform .15s, box-shadow .15s;
+  font-size: 1.8rem;
+}
+.start-btn:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(99,214,113,.3);
+}
+
+/* iets meer marge op telefoon */
+@media (max-width: 860px){
+  .cta-wrap{ 
+    margin-top: 24px;
     text-align: center;
-    gap: 16px;
   }
-  .step-number{ margin-bottom: 8px; }
-
-
-
-  .step:nth-child(even) .step-text,
-  .step:nth-child(even) .step-img{order:initial;}
-  .step-number{margin-bottom:8px;}
-
-  .how-works{ padding-inline: 24px; }
+  
+.start-btn{
+  font-size: 2rem;
 }
+}
+

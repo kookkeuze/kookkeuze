@@ -1,11 +1,10 @@
 // index.js — volledig bestand (20-07-2025)
 
 /* ========= API-basis & token-helper ========= */
-const API_BASE = window.location.origin;   // gebruik dezelfde origin als de frontend
+const API_BASE = 'https://kookkeuze-api.onrender.com';   // backend op Render
 
 const authHeaders = () => {
   const t = localStorage.getItem('token');
-  console.log('🔍 Token from localStorage:', t ? 'Token exists' : 'No token');
   return t ? { Authorization: `Bearer ${t}` } : {};
 };
 
@@ -59,14 +58,6 @@ const resultDiv           = document.getElementById('result');
 
 /* — Zoekknop — */
 document.getElementById('searchBtn').addEventListener('click', () => {
-  // Controleer of gebruiker ingelogd is
-  if (!localStorage.getItem('token')) {
-    resultDiv.innerHTML = '<p>Log in om recepten te zoeken.</p>';
-    return;
-  }
-
-  console.log('🔍 Searching with token:', localStorage.getItem('token') ? 'Token exists' : 'No token');
-  
   const params = {};
   if (dishTypeSelect.value      !== 'Soort gerecht') params.dish_type     = dishTypeSelect.value;
   if (mealCategorySelect.value  !== 'Menugang')      params.meal_category = mealCategorySelect.value;
@@ -78,25 +69,14 @@ document.getElementById('searchBtn').addEventListener('click', () => {
   if (searchTerm) params.search = searchTerm;
 
   const qs = new URLSearchParams(params).toString();
-  fetch(`${API_BASE}/api/recipes?` + qs, {
-    headers: authHeaders()
-  })
+  fetch(`${API_BASE}/api/recipes?` + qs)
     .then(r => r.json())
-    .then(data => {
-      console.log('🔍 Search response:', data);
-      showRecipes(data);
-    })
+    .then(showRecipes)
     .catch(console.error);
 });
 
 /* — Random recept — */
 document.getElementById('randomBtn').addEventListener('click', () => {
-  // Controleer of gebruiker ingelogd is
-  if (!localStorage.getItem('token')) {
-    resultDiv.innerHTML = '<p>Log in om een random recept te krijgen.</p>';
-    return;
-  }
-
   const params = {};
   if (dishTypeSelect.value      !== 'Soort gerecht') params.dish_type     = dishTypeSelect.value;
   if (mealCategorySelect.value  !== 'Menugang')      params.meal_category = mealCategorySelect.value;
@@ -105,12 +85,9 @@ document.getElementById('randomBtn').addEventListener('click', () => {
   if (calorieRangeSelect.value  !== 'Calorieën')     params.calorieRange  = calorieRangeSelect.value;
 
   const qs = new URLSearchParams(params).toString();
-  fetch(`${API_BASE}/api/recipes/random?` + qs, {
-    headers: authHeaders()
-  })
+  fetch(`${API_BASE}/api/recipes/random?` + qs)
     .then(r => r.json())
     .then(d => {
-      console.log('🔍 Random response:', d);
       if (!d || d.message === 'Geen resultaten gevonden.') {
         resultDiv.innerHTML = '<p>Geen resultaten gevonden.</p>';
       } else {
@@ -154,7 +131,6 @@ const addMessageDiv = document.getElementById('addMessage');
 
 addRecipeForm.addEventListener('submit', e => {
   e.preventDefault();
-  console.log('🔍 Adding recipe, auth headers:', authHeaders());
   const cal = document.getElementById('caloriesNew').value.trim();
   const bodyData = {
     title:         document.getElementById('title').value,
@@ -165,7 +141,6 @@ addRecipeForm.addEventListener('submit', e => {
     time_required: document.getElementById('timeRequiredNew').value,
     calories:      cal ? parseInt(cal, 10) : null
   };
-  console.log('🔍 Recipe data being sent:', bodyData);
 
   fetch(`${API_BASE}/api/recipes`, {
     method: 'POST',
@@ -174,21 +149,12 @@ addRecipeForm.addEventListener('submit', e => {
   })
     .then(r => r.json())
     .then(d => {
-      console.log('✅ Add recipe response:', d);
       addMessageDiv.innerHTML = d.error
         ? `<p style="color:red;">${d.error}</p>`
         : `<p style="color:green;">${d.message} (ID: ${d.id})</p>`;
-      if (!d.error) {
-        addRecipeForm.reset();
-        // Automatisch overzicht verversen na toevoegen
-        console.log('✅ Recipe added successfully, refreshing overview...');
-        fetchAllRecipes();
-      }
+      if (!d.error) addRecipeForm.reset();
     })
-    .catch(err => {
-      console.error('❌ Error adding recipe:', err);
-      addMessageDiv.innerHTML = `<p style="color:red;">Er ging iets fout: ${err.message}</p>`;
-    });
+    .catch(console.error);
 });
 
 /* ========= OVERZICHT RECEPTEN (TAB 3) ========= */
@@ -197,29 +163,10 @@ const refreshBtn    = document.getElementById('refreshBtn');
 if (refreshBtn) refreshBtn.addEventListener('click', fetchAllRecipes);
 
 function fetchAllRecipes() {
-  // Controleer of gebruiker ingelogd is
-  if (!localStorage.getItem('token')) {
-    allRecipesDiv.innerHTML = `<tr><td colspan="9">Log in om je recepten te bekijken.</td></tr>`;
-    return;
-  }
-  console.log('🔍 Fetching recipes with headers:', authHeaders());
-
-  fetch(`${API_BASE}/api/recipes`, {
-    headers: authHeaders()
-  })
+  fetch(`${API_BASE}/api/recipes`)
     .then(r => r.json())
-    .then(data => {
-      console.log('🔍 Fetch all recipes response:', data);
-      console.log('🔍 Number of recipes received:', data.length);
-      if (data.length > 0) {
-        console.log('🔍 Recipe IDs received:', data.map(r => r.id));
-      }
-      showAllRecipes(data);
-    })
-    .catch(err => {
-      console.error('❌ Error fetching recipes:', err);
-      allRecipesDiv.innerHTML = `<tr><td colspan="9">Fout bij ophalen recepten: ${err.message}</td></tr>`;
-    });
+    .then(showAllRecipes)
+    .catch(console.error);
 }
 
 function showAllRecipes(recipes) {
@@ -331,10 +278,6 @@ resetForms();
 updateAuthUI();
 authModal.classList.add('hidden');
 
-// Leeg de receptenlijst en zoekresultaten
-allRecipesDiv.innerHTML = `<tr><td colspan="9">Log in om je recepten te bekijken.</td></tr>`;
-resultDiv.innerHTML = '';
-
 });
 
 /* — Registreren — */
@@ -379,7 +322,7 @@ document.getElementById('login-form').addEventListener('submit', async e => {
       resetForms();                 // velden leeg
       updateAuthUI();
       authModal.classList.add('hidden');
-    } else {
+    } else {  
       showMsg(data.message || 'Inloggen mislukt.', false);
     }
   } catch (err) {
@@ -400,6 +343,21 @@ authBtn.addEventListener('click', () => {
 
 closeAuth .addEventListener('click', () => authModal.classList.add('hidden'));
 window.addEventListener('click', e => { if (e.target === authModal) authModal.classList.add('hidden'); });
+
+/* CTA onder stappen: "Ik wil beginnen!" opent de login/registratie */
+const startNow = document.getElementById('startNow');
+if (startNow) {
+  startNow.addEventListener('click', (e) => {
+    e.preventDefault();
+    resetForms();
+    authModal.classList.remove('hidden');     // toon modal
+
+    // Wil je direct het registratie-tabje tonen?
+    // registerPane.classList.add('active');
+    // loginPane.classList.remove('active');
+  });
+}
+
 
 /* ========= GHOST-LINKS SWITCH ========= */
 document.querySelectorAll('.ghost-btn').forEach(btn => {
