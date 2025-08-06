@@ -561,7 +561,6 @@ select:focus {
 
   .hero-random button {
     width: 100%;
-    max-width: 280px;
   }
 }
 
@@ -1059,17 +1058,18 @@ select:focus {
   min-width: 260px;
 }
 
- .step-number{
-  display: inline-block;
-  font-weight: 800;
-  line-height: 1;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: #fff;          /* witte achtergrond */
-  color: #2dbd6a;            /* groene tekst */
-  border: 2px solid #2dbd6a; /* subtiele groene rand */
-  margin: 0 0 10px 0;
-  font-size: clamp(1.8rem, 1.2vw, 1.6rem);
+.step-number {
+    display: inline-block;
+    font-weight: 700;
+    line-height: 1;
+    padding: 16px 34px;
+    border-radius: 999px;
+    background: #fff;
+    color: #2dbd6a;
+    border: 0px solid #2dbd6a;
+    margin: 0 0 10px 0;
+    box-shadow: 0 0 10px 0px #b4b4b4;
+    font-size: clamp(1.8rem, 1.2vw, 1.6rem);
 }
 
 .step-number::before{
@@ -1077,7 +1077,7 @@ select:focus {
 }
 
 .step-text p{
-  font-size:1.8rem;
+  font-size:1.4rem;
   line-height:1.5;
   margin:0;
 }
@@ -1088,8 +1088,14 @@ select:focus {
     gap: 14px;             
     margin-bottom: 80px;   
   }
-  .step-content{ flex: 1 1 100px; }
-  .step-img{
+  .step-content { 
+    
+    flex: 1 1 100px;
+    text-align:center;
+  }
+  
+  
+    .step-img{
     order: 2;
     width: 100%;
     max-width: 100%;
@@ -1130,5 +1136,18 @@ select:focus {
 .start-btn{
   font-size: 2rem;
 }
+}
+
+/* Alleen "Hoe werkt het?" tonen bij actieve tab #kiesRecept */
+#hoeWerktHet { 
+  display: none; 
+}
+
+.container:has(#kiesRecept.tab-content.active) + #hoeWerktHet {
+  display: block;
+}
+
+.container:has(#kiesRecept.tab-content.active) ~ #hoeWerktHet {
+  display: block;
 }
 
