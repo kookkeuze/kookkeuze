@@ -69,7 +69,9 @@ document.getElementById('searchBtn').addEventListener('click', () => {
   if (searchTerm) params.search = searchTerm;
 
   const qs = new URLSearchParams(params).toString();
-  fetch(`${API_BASE}/api/recipes?` + qs)
+  fetch(`${API_BASE}/api/recipes?` + qs, {
+    headers: authHeaders() // ✅ JWT meesturen
+  })
     .then(r => r.json())
     .then(showRecipes)
     .catch(console.error);
@@ -85,7 +87,9 @@ document.getElementById('randomBtn').addEventListener('click', () => {
   if (calorieRangeSelect.value  !== 'Calorieën')     params.calorieRange  = calorieRangeSelect.value;
 
   const qs = new URLSearchParams(params).toString();
-  fetch(`${API_BASE}/api/recipes/random?` + qs)
+  fetch(`${API_BASE}/api/recipes/random?` + qs, {
+    headers: authHeaders() // ✅ JWT meesturen
+  })
     .then(r => r.json())
     .then(d => {
       if (!d || d.message === 'Geen resultaten gevonden.') {
@@ -163,7 +167,9 @@ const refreshBtn    = document.getElementById('refreshBtn');
 if (refreshBtn) refreshBtn.addEventListener('click', fetchAllRecipes);
 
 function fetchAllRecipes() {
-  fetch(`${API_BASE}/api/recipes`)
+  fetch(`${API_BASE}/api/recipes`, {
+    headers: authHeaders() // ✅ JWT meesturen
+  })
     .then(r => r.json())
     .then(showAllRecipes)
     .catch(console.error);
