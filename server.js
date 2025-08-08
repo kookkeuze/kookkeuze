@@ -17,8 +17,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'changeme-in-prod';
 /* -------------------- CORS -------------------- */
 const corsOptions = {
   origin: [
-    'https://kookkeuze.nl',   // productie-frontend
-    'http://localhost:3000'   // lokaal testen
+    'https://kookkeuze.nl',
+    'https://www.kookkeuze.nl',
+    'http://localhost:3000' // voor lokaal testen
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
