@@ -1,7 +1,7 @@
 // index.js — volledig bestand (20-07-2025)
 
 /* ========= API-basis & token-helper ========= */
-const API_BASE = 'https://kookkeuze-api.onrender.com';   // backend op Render
+const API_BASE = 'https://kookkeuze.onrender.com';   // backend op Render
 
 const authHeaders = () => {
   const t = localStorage.getItem('token');
