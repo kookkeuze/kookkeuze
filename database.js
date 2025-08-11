@@ -308,6 +308,45 @@ function getUserByEmail(email, callback) {
   });
 }
 
+// ----- Email verification helpers -----
+async function setVerificationToken(email, token, expires) {
+  const q = `
+    UPDATE users
+       SET verification_token = $1,
+           token_expires      = $2,
+           is_verified        = FALSE
+     WHERE email = $3
+     RETURNING id
+  `;
+  const res = await pool.query(q, [token, expires, email]);
+  return res.rows[0];
+}
+
+async function getUserByVerificationToken(token) {
+  const q = `
+    SELECT id, email, token_expires, is_verified
+      FROM users
+     WHERE verification_token = $1
+     LIMIT 1
+  `;
+  const res = await pool.query(q, [token]);
+  return res.rows[0];
+}
+
+async function verifyUserById(userId) {
+  const q = `
+    UPDATE users
+       SET is_verified = TRUE,
+           verification_token = NULL,
+           token_expires = NULL
+     WHERE id = $1
+     RETURNING id
+  `;
+  const res = await pool.query(q, [userId]);
+  return res.rows[0];
+}
+
+
 module.exports = {
   getRecipes,
   getRandomRecipe,
@@ -315,5 +354,8 @@ module.exports = {
   updateRecipe,
   deleteRecipe,
   addUser,
-  getUserByEmail
+  getUserByEmail,
+  setVerificationToken,          
+  getUserByVerificationToken,    
+  verifyUserById                
 };
