@@ -201,7 +201,7 @@ app.get('/api/verify', async (req, res) => {
 
     // JWT aanmaken en redirect naar frontend voor auto-login
     const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '12h' });
-    return res.redirect(`${FRONTEND_URL}/auth/callback?token=${jwtToken}`);
+    return res.redirect(`${FRONTEND_URL}/?token=${jwtToken}`);
   } catch (err) {
     console.error('❌ Verify error:', err);
     res.status(500).json({ error: 'Serverfout bij verifiëren.' });
