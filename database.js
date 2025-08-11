@@ -1,4 +1,4 @@
-// database.js - PostgreSQL versie
+// database.js - PostgreSQL versie (met e-mailverificatie velden)
 const { Pool } = require('pg');
 
 // Database connection configuratie
@@ -33,6 +33,19 @@ async function initializeDatabase() {
       )
     `);
     console.log('✅ Users table created/verified');
+
+    // 🔁 Nieuwe/ontbrekende kolommen voor e-mailverificatie + index
+    await pool.query(`
+      ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS verification_token TEXT,
+        ADD COLUMN IF NOT EXISTS token_expires TIMESTAMP
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_users_verification_token
+      ON users (verification_token)
+    `);
+    console.log('✅ Email verification columns/index ensured');
 
     // Recipes tabel
     await pool.query(`
