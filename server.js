@@ -104,7 +104,7 @@ app.post('/api/register', (req, res) => {
           const verifyUrl = `${APP_BASE_URL}/api/verify?token=${token}`;
 
           await transporter.sendMail({
-            from: `"Kookkeuze" <no-reply@kookkeuze.nl>`,
+            from: `"Kookkeuze" <kookkeuze@gmail.com>`,
             to: email,
             subject: 'Bevestig je e-mailadres',
             text: `Welkom bij Kookkeuze! Klik op deze link om je e-mailadres te bevestigen: ${verifyUrl}`,
