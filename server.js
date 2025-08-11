@@ -1,12 +1,11 @@
-// server.js – met e-mailverificatie
+// server.js – met e-mailverificatie + auto-login redirect
 const express    = require('express');
 const bodyParser = require('body-parser');
 const cors       = require('cors');
 const path       = require('path');
-const crypto     = require('crypto');          // 🔐 token
-const nodemailer = require('nodemailer');      // ✉️ mail
+const crypto     = require('crypto');
+const nodemailer = require('nodemailer');
 
-// eerst app & PORT (belangrijk voor CORS hieronder)
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
@@ -19,16 +18,18 @@ const JWT_SECRET = process.env.JWT_SECRET || 'changeme-in-prod';
 /*
   Vereiste ENV variabelen (Render / .env):
   - JWT_SECRET
-  - APP_BASE_URL          (bv. https://kookkeuze.nl of je Render URL)
-  - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS  (Postmark/SendGrid/SMTP)
+  - APP_BASE_URL          (bv. https://kookkeuze.onrender.com)
+  - FRONTEND_URL          (bv. https://kookkeuze.nl)
+  - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
 */
-const APP_BASE_URL = process.env.APP_BASE_URL || `http://localhost:${PORT}`;
+const APP_BASE_URL  = process.env.APP_BASE_URL  || `http://localhost:${PORT}`;
+const FRONTEND_URL  = process.env.FRONTEND_URL  || 'http://localhost:3000';
 
 // Nodemailer transporter
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '587', 10),
-  secure: false, // true bij poort 465
+  secure: false, // 587 = STARTTLS
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS
@@ -40,7 +41,7 @@ const corsOptions = {
   origin: [
     'https://kookkeuze.nl',
     'https://www.kookkeuze.nl',
-    'http://localhost:3000' // voor lokaal testen
+    'http://localhost:3000' // lokaal testen
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -59,7 +60,7 @@ const {
   deleteRecipe,
   addUser,
   getUserByEmail,
-  // 👇 helpers toegevoegd in database.js stap 1
+  // helpers uit database.js
   setVerificationToken,
   getUserByVerificationToken,
   verifyUserById
@@ -74,6 +75,69 @@ app.use(express.static(path.join(__dirname)));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+/* -------------------- Email template -------------------- */
+// Pas kleuren/logo hieronder aan jouw huisstijl aan
+function verificationEmailHtml(verifyUrl) {
+  const PRIMARY   = '#6C63FF'; // <- kleur aanpassen
+  const TEXT_DARK = '#222222';
+  const LOGO_URL  = 'https://kookkeuze.nl/logo.png'; // <- logo-URL aanpassen
+
+  return `
+  <!doctype html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="color-scheme" content="light only">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Bevestig je e-mailadres</title>
+  </head>
+  <body style="margin:0;background:${PRIMARY};padding:32px 12px;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+           style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.08);">
+      <tr>
+        <td style="background:${PRIMARY};padding:24px 24px 0;">
+          <img src="${LOGO_URL}" alt="Kookkeuze" style="height:28px;display:block;">
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:24px 24px 0;">
+          <h1 style="margin:0 0 8px 0;font-size:36px;line-height:1.1;color:${TEXT_DARK};">
+            Bevestig je e-mailadres
+          </h1>
+          <hr style="border:none;border-top:1px solid #eee;margin:16px 0;">
+          <p style="margin:0 0 16px 0;color:#444;font-size:16px;line-height:1.6;">
+            Welkom bij Kookkeuze! Klik op de knop hieronder om je e-mailadres te bevestigen.
+          </p>
+          <p style="margin:24px 0;">
+            <a href="${verifyUrl}"
+               style="display:inline-block;background:${PRIMARY};color:#fff;text-decoration:none;
+                      padding:14px 22px;border-radius:10px;font-weight:bold;">
+              E-mailadres bevestigen
+            </a>
+          </p>
+          <p style="margin:0 0 8px 0;color:#666;font-size:14px;">
+            Werkt de knop niet? Kopieer en plak deze link in je browser:
+          </p>
+          <p style="margin:0 0 24px 0;color:#4a4a4a;font-size:13px;word-break:break-all;">
+            <a href="${verifyUrl}" style="color:${PRIMARY};text-decoration:underline;">${verifyUrl}</a>
+          </p>
+          <p style="margin:0 0 4px 0;color:#888;font-size:12px;line-height:1.6;">
+            Heb jij dit niet aangevraagd? Negeer deze e-mail.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:20px 24px 28px;color:#8a8a8a;font-size:12px;">
+          © ${new Date().getFullYear()} Kookkeuze — Samen koken, beter kiezen.
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+  `;
+}
+/* ------------------------------------------------------- */
 
 // ====================== AUTH ===============================================
 // 1. Registreren (met e-mailverificatie)
@@ -100,21 +164,14 @@ app.post('/api/register', (req, res) => {
 
           await setVerificationToken(email, token, expires);
 
-          // Link direct naar API (geen frontend nodig)
           const verifyUrl = `${APP_BASE_URL}/api/verify?token=${token}`;
 
           await transporter.sendMail({
-            from: `"Kookkeuze" <kookkeuze@gmail.com>`,
+            from: `"Kookkeuze" <kookkeuze@gmail.com>`, // <- afzender (gecontroleerde sender)
             to: email,
             subject: 'Bevestig je e-mailadres',
-            text: `Welkom bij Kookkeuze! Klik op deze link om je e-mailadres te bevestigen: ${verifyUrl}`,
-            html: `
-              <p>Welkom bij Kookkeuze!</p>
-              <p>Klik op de knop hieronder om je e-mailadres te bevestigen:</p>
-              <p><a href="${verifyUrl}" style="background:#4ac858;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;">E-mailadres bevestigen</a></p>
-              <p>Of kopieer deze link in je browser: ${verifyUrl}</p>
-              <p>Let op: deze link verloopt over 24 uur.</p>
-            `
+            html: verificationEmailHtml(verifyUrl),
+            text: `Welkom bij Kookkeuze! Bevestig je e-mail via: ${verifyUrl}`
           });
 
           res.json({ message: 'Registratie gelukt! Check je e-mail om te bevestigen.' });
@@ -127,7 +184,7 @@ app.post('/api/register', (req, res) => {
   });
 });
 
-// 1b. Verify-endpoint
+// 1b. Verify-endpoint (zet verified en redirect met JWT naar frontend)
 app.get('/api/verify', async (req, res) => {
   try {
     const { token } = req.query;
@@ -141,9 +198,10 @@ app.get('/api/verify', async (req, res) => {
     }
 
     await verifyUserById(user.id);
-    // Eventueel redirect naar frontend met melding:
-    // return res.redirect(`${APP_BASE_URL}/?verified=1`);
-    return res.json({ message: 'E-mailadres bevestigd. Je kunt nu inloggen.' });
+
+    // JWT aanmaken en redirect naar frontend voor auto-login
+    const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '12h' });
+    return res.redirect(`${FRONTEND_URL}/auth/callback?token=${jwtToken}`);
   } catch (err) {
     console.error('❌ Verify error:', err);
     res.status(500).json({ error: 'Serverfout bij verifiëren.' });
