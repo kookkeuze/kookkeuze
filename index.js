@@ -1,4 +1,4 @@
-// index.js — volledig bestand (20-07-2025)
+// index.js — volledig bestand (auto-login + betere foutmeldingen)
 
 /* ========= API-basis & token-helper ========= */
 const API_BASE = 'https://kookkeuze.onrender.com';   // backend op Render
@@ -8,6 +8,29 @@ const authHeaders = () => {
   return t ? { Authorization: `Bearer ${t}` } : {};
 };
 
+/* ========= Auto-login vanaf verify redirect =========
+   Server redirect: https://kookkeuze.nl/auth/callback?token=XYZ
+   Dit pakt de token op (op elke route), slaat 'm op, en schoont de URL. */
+(function autoLoginFromVerify() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const token  = params.get('token');
+    if (token) {
+      localStorage.setItem('token', token);
+      // URL opschonen (zonder ?token)
+      const cleanUrl =
+        window.location.origin +
+        (window.location.pathname.startsWith('/auth/callback') ? '/' : window.location.pathname);
+      window.history.replaceState({}, document.title, cleanUrl);
+      if (typeof showMsg === 'function') showMsg('Je bent ingelogd. Welkom terug!', true);
+      // UI meteen verversen
+      if (typeof updateAuthUI === 'function') updateAuthUI();
+    }
+  } catch (e) {
+    console.error('Auto-login parse error:', e);
+  }
+})();
+
 /* -- alles leegmaken & melding wissen -- */
 function resetForms() {
   document.getElementById('login-form')   .reset();
@@ -15,7 +38,6 @@ function resetForms() {
   msgBox.textContent = '';
   msgBox.classList.remove('success', 'error');
 }
-
 
 /* ========= TABS ========= */
 const tabLinks     = document.querySelectorAll('.tab-link');
@@ -279,11 +301,10 @@ function updateAuthUI(){
 
 /* — Uitloggen — */
 logoutBtn.addEventListener('click', () => {
-localStorage.removeItem('token');
-resetForms();
-updateAuthUI();
-authModal.classList.add('hidden');
-
+  localStorage.removeItem('token');
+  resetForms();
+  updateAuthUI();
+  authModal.classList.add('hidden');
 });
 
 /* — Registreren — */
@@ -293,18 +314,17 @@ document.getElementById('register-form').addEventListener('submit', async e => {
   const password = document.getElementById('register-password').value;
 
   try {
-  const res  = await fetch(`${API_BASE}/api/register`, {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json' },
-    body: JSON.stringify({ email,password })
-  });
-  const data = await res.json();
-  showMsg(data.message || 'Registratie mislukt.', res.ok);
-} catch (err) {
-  console.error(err);
-  showMsg('Server niet bereikbaar.', false);
-}
-
+    const res  = await fetch(`${API_BASE}/api/register`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ email,password })
+    });
+    const data = await res.json();
+    showMsg(data.error || data.message || 'Registratie mislukt.', res.ok && !data.error);
+  } catch (err) {
+    console.error(err);
+    showMsg('Server niet bereikbaar.', false);
+  }
 });
 
 /* — Inloggen — */
@@ -325,18 +345,17 @@ document.getElementById('login-form').addEventListener('submit', async e => {
     if (res.ok && data.token) {
       localStorage.setItem('token', data.token);
       showMsg('Ingelogd!', true);
-      resetForms();                 // velden leeg
+      resetForms();
       updateAuthUI();
       authModal.classList.add('hidden');
-    } else {  
-      showMsg(data.message || 'Inloggen mislukt.', false);
+    } else {
+      showMsg(data.error || data.message || 'Inloggen mislukt.', false);
     }
   } catch (err) {
     console.error(err);
-    showMsg('Server niet bereikbaar.', false);   // netwerk- of CORS-fout
+    showMsg('Server niet bereikbaar.', false);
   }
 });
-
 
 /* ========= MODAL OPEN / CLOSE ========= */
 const authBtn   = document.getElementById('authBtn');
@@ -347,7 +366,7 @@ authBtn.addEventListener('click', () => {
   authModal.classList.remove('hidden'); 
 });
 
-closeAuth .addEventListener('click', () => authModal.classList.add('hidden'));
+closeAuth.addEventListener('click', () => authModal.classList.add('hidden'));
 window.addEventListener('click', e => { if (e.target === authModal) authModal.classList.add('hidden'); });
 
 /* CTA onder stappen: "Ik wil beginnen!" opent de login/registratie */
@@ -356,25 +375,21 @@ if (startNow) {
   startNow.addEventListener('click', (e) => {
     e.preventDefault();
     resetForms();
-    authModal.classList.remove('hidden');     // toon modal
-
-    // Wil je direct het registratie-tabje tonen?
+    authModal.classList.remove('hidden');
     // registerPane.classList.add('active');
     // loginPane.classList.remove('active');
   });
 }
-
 
 /* ========= GHOST-LINKS SWITCH ========= */
 document.querySelectorAll('.ghost-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     loginPane   .classList.toggle('active', btn.dataset.target === 'loginPane');
     registerPane.classList.toggle('active', btn.dataset.target === 'registerPane');
-    resetForms();      // velden en melding schoon
-
+    resetForms();
   });
 });
 
 /* ========= INIT ========= */
 updateAuthUI();
-fetchAllRecipes();     // laad direct het overzicht bij paginalaad
+fetchAllRecipes(); // laad direct het overzicht bij paginalaad
