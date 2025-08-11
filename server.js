@@ -79,9 +79,9 @@ app.get('/', (req, res) => {
 /* -------------------- Email template -------------------- */
 // Pas kleuren/logo hieronder aan jouw huisstijl aan
 function verificationEmailHtml(verifyUrl) {
-  const PRIMARY   = '#6C63FF'; // <- kleur aanpassen
-  const TEXT_DARK = '#222222';
-  const LOGO_URL  = 'https://kookkeuze.nl/logo.png'; // <- logo-URL aanpassen
+  const PRIMARY   = '#4dca5b'; // <- kleur aanpassen
+  const TEXT_DARK = '#000000';
+  const LOGO_URL  = 'Logo/Kookkeuze-logo.svg'; // <- logo-URL aanpassen
 
   return `
   <!doctype html>
