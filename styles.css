@@ -231,7 +231,7 @@ button {
 }
 
 .pink-btn {
-  background-color: #734fc9;
+  background-color: #c94f73;
   color: white;
 }
 
@@ -1170,4 +1170,5 @@ select:focus {
 .container:has(#kiesRecept.tab-content.active) ~ #hoeWerktHet {
   display: block;
 }
+
 
