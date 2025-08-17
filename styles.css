@@ -1,5 +1,22 @@
 /* styles.css */
 
+@font-face {
+  font-family: 'EatingPasta';
+  src: url('fonts/Eating-Pasta.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+h1 {
+    font-family: 'EatingPasta', Arial, sans-serif;
+    letter-spacing: 1px;
+}
+
+h2 {
+    font-family: 'EatingPasta', Arial, sans-serif;
+    letter-spacing: 1px;
+}
+
 /* Reset en basisopmaak */
 * {
   box-sizing: border-box;
@@ -44,13 +61,15 @@ body {
   border-bottom: 2px solid #edf2f7;
   gap: 8px;
   justify-content: center;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  letter-spacing: 0.5px;
 }
 
 .nav-tabs li a {
   display: inline-block;
   padding: 12px 24px;
   text-decoration: none;
-  color: #64748b;
+  color: #8e8e8e;
   border: none;
   border-radius: 8px 8px 0 0;
   background-color: transparent;
@@ -98,11 +117,12 @@ body {
 
 .hero-header h1 {
   margin: 0;
+  font-family: 'EatingPasta', Arial, sans-serif;
   font-size: 2.5em;
   font-weight: 800;
   text-transform: uppercase;
   color: white;
-  letter-spacing: -0.5px;
+  letter-spacing: 1px;
 }
 
 .hero-header p {
@@ -169,13 +189,15 @@ body {
 
 .hero-random button {
   background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
-  color: white;
-  font-size: 16px;
+  color: rgb(255, 255, 255);
+  font-size: 18px;
   font-weight: 600;
   padding: 16px 32px;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(99, 214, 113, 0.25);
   transition: all 0.2s ease;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  letter-spacing: 2px;
 }
 
 .hero-random button:hover {
@@ -209,15 +231,8 @@ button {
 }
 
 .pink-btn {
-  background-color: #FC425D;
+  background-color: #734fc9;
   color: white;
-  box-shadow: 0 2px 8px rgba(252, 66, 93, 0.25);
-}
-
-.pink-btn:hover {
-  background-color: #fb2845;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(252, 66, 93, 0.3);
 }
 
 /* Formulier spacing voor 'Voeg een recept toe' */
@@ -523,16 +538,8 @@ select:focus {
     box-shadow: 0 4px 16px rgba(0,0,0,0.1);
   }
 
-  .hero-search button {
-    background-color: #FC425D;    /* rood */
-  }
-
-  .hero-search button:hover {
-    background-color: #FC7042;
-  }
-
   .hero-random button {
-    background-color: #63D671;    /* groen */
+    background-color: #63D671;  
   }
 
   .hero-random button:hover {
@@ -566,12 +573,16 @@ select:focus {
 
 /* Zoekknop styling (desktop) */
 .hero-search button {
-  background-color: #FC7042;
-  color: white;
+  background-color: #ffffff;
+  color: #235b2a;
+  border: solid #235b2a 2px;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  letter-spacing: 1px;
 }
 
 .hero-search button:hover {
-  background-color: #FC425D;
+  background-color: #235b2a;
+  color: white;
 }
 
 /* Tabel styling */
@@ -592,12 +603,12 @@ select:focus {
 }
 
 .action-buttons .pink-btn {
-  background-color: #FC425D;
+  background-color: #c94f73;
   color: white;
 }
 
 .action-buttons .pink-btn:hover {
-  background-color: #FC7042;
+  background-color: #b9647d;
 }
 
 /* Container die de kaarten naast elkaar kan zetten */
@@ -631,7 +642,7 @@ select:focus {
 }
 
 .recipe-card p a {
-  color: #FC425D;
+  color:  #734fc9;
   text-decoration: none;
 }
 
@@ -717,17 +728,13 @@ select:focus {
 
 /* link-stijl voor “Vernieuw het overzicht” */
 .refresh-link{
-  color:#FC425D;              /* rood */
+  color: #734fc9;           
   text-decoration:underline;
   font-weight:600;
   cursor:pointer;
   background:none;
   border:none;
-  padding:0;
-}
-
-.refresh-link:hover{
-  color:#fb2845;              /* iets donkerder rood bij hover */
+  padding: 20px 0px;
 }
 
 /* ══════════════ TOP-BAR ══════════════ */
@@ -856,7 +863,7 @@ select:focus {
 
 /* Meldingen */
 .auth-msg { margin-top: 16px; font-weight: 600; }
-.auth-msg.error  { color:#FC425D; }
+.auth-msg.error  { color: #c94f73; }
 .auth-msg.success{ color:#63D671; }
 
 
@@ -922,8 +929,8 @@ select:focus {
 }
 
 /* ---------- AUTH COMMON ---------- */
-.auth-title   { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; color:#063; }
-.auth-sub     { font-size: .95rem; color:#555; margin-bottom: 24px; }
+.auth-title   { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; color:#235b2a; }
+.auth-sub     { font-size: .95rem; color:#3a3a3a; margin-bottom: 24px; }
 .auth-form    { display:flex; flex-direction:column; gap:16px; }
 
 .auth-label   { font-size:.9rem; font-weight:600; color:#222; margin-bottom:4px; }
@@ -940,15 +947,21 @@ select:focus {
 .primary-btn {
   padding:12px 0; border:none; border-radius:10px;
   font-size:1rem; font-weight:600; color:#fff;
-  background:#5fd46d;         
+  background:#4eca5c;         
   box-shadow:0 8px 18px rgba(7,148,110,.35);
   cursor:pointer; transition:.15s;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  letter-spacing: 1px;
 }
 .primary-btn:hover { transform:translateY(-2px); }
 
 .primary-btn.alt   { 
-  background:#5fd46d;  
-  box-shadow: 0 8px 18px rgba(79,107,255,.35); }
+  background: #734fc9;  
+  box-shadow: 0 8px 18px rgba(79,107,255,.35); 
+    font-family: 'EatingPasta', Arial, sans-serif;
+    letter-spacing: 1px;
+}
+  
 
 .ghost-btn {
   background:none; border:none; color:#5fd46d; 
@@ -1022,10 +1035,12 @@ select:focus {
   text-align:center;
   margin-bottom:48px;
   font-weight:800;
-  color:#2d3436;
+  color:#3a3a3a;
   font-family:'Inter',sans-serif;
     font-size: clamp(2.2rem, 2.4vw, 3rem);
     line-height: 1.15;
+        font-family: 'EatingPasta', Arial, sans-serif;
+    letter-spacing: 1px;
   }
 
 /* desktop/tablet: foto links, tekst rechts */
@@ -1070,6 +1085,8 @@ select:focus {
     margin: 0 0 10px 0;
     box-shadow: 0 0 10px 0px #b4b4b4;
     font-size: clamp(1.8rem, 1.2vw, 1.6rem);
+    font-family: 'EatingPasta', Arial, sans-serif;
+    letter-spacing: 1px;
 }
 
 .step-number::before{
@@ -1120,6 +1137,9 @@ select:focus {
   box-shadow: 0 8px 24px rgba(99,214,113,.25);
   transition: transform .15s, box-shadow .15s;
   font-size: 1.8rem;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  letter-spacing: 1px;
+
 }
 .start-btn:hover{
   transform: translateY(-2px);
