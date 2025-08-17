@@ -2,7 +2,7 @@
 const express    = require('express');
 const bodyParser = require('body-parser');
 const cors       = require('cors');
-const path       = require('path');
+const path       = require('path');        // nodig voor cid-attachment pad
 const crypto     = require('crypto');
 const nodemailer = require('nodemailer');
 
@@ -77,13 +77,12 @@ app.get('/', (req, res) => {
 });
 
 /* -------------------- Email template -------------------- */
-// Pas kleuren/logo hieronder aan jouw huisstijl aan
+// Huisstijl + inline logo via CID-attachment
 function verificationEmailHtml(verifyUrl) {
-  const PRIMARY   = '#4dca5b'; 
-  const TEXT_DARK = '#3a3a3a';
-  const LOGO_URL  = 'https://kookkeuze.nl/Logo/Kookkeuze-logo.svg'; 
-  const BACKGROUND= '#f8f9fa';
-  
+  const PRIMARY    = '#4dca5b';
+  const TEXT_DARK  = '#3a3a3a';
+  const BACKGROUND = '#f8f9fa';
+
   return `
   <!doctype html>
   <html>
@@ -98,7 +97,8 @@ function verificationEmailHtml(verifyUrl) {
            style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.08);">
       <tr>
         <td style="background:${BACKGROUND};padding:24px 24px 0;">
-          <img src="${LOGO_URL}" alt="Kookkeuze" style="height:28px;display:block;">
+          <!-- Belangrijk: cid verwijst naar attachment cid in sendMail -->
+          <img src="cid:logo@kookkeuze" alt="Kookkeuze" style="height:28px;display:block;">
         </td>
       </tr>
       <tr>
@@ -172,7 +172,15 @@ app.post('/api/register', (req, res) => {
             to: email,
             subject: 'Bevestig je e-mailadres',
             html: verificationEmailHtml(verifyUrl),
-            text: `Welkom bij Kookkeuze! Bevestig je e-mail via: ${verifyUrl}`
+            text: `Welkom bij Kookkeuze! Bevestig je e-mail via: ${verifyUrl}`,
+            // Belangrijk: inline logo meesturen als attachment met cid
+            attachments: [
+              {
+                filename: 'Kookkeuze-logo.png',
+                path: path.join(__dirname, 'Logo', 'Kookkeuze-logo.png'),
+                cid: 'logo@kookkeuze'
+              }
+            ]
           });
 
           res.json({ message: 'Registratie gelukt! Check je e-mail om te bevestigen.' });
