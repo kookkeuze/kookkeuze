@@ -98,7 +98,7 @@ function verificationEmailHtml(verifyUrl) {
       <tr>
         <td style="background:${BACKGROUND};padding:24px 24px 0;">
           <!-- Belangrijk: cid verwijst naar attachment cid in sendMail -->
-          <img src="cid:logo@kookkeuze" alt="Kookkeuze" style="height:28px;display:block;">
+          <img src="cid:logo@kookkeuze" alt="Kookkeuze" style="height:35px;display:block;">
         </td>
       </tr>
       <tr>
