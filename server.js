@@ -79,7 +79,7 @@ app.get('/', (req, res) => {
 /* -------------------- Email template -------------------- */
 // Pas kleuren/logo hieronder aan jouw huisstijl aan
 function verificationEmailHtml(verifyUrl) {
-  const PRIMARY   = '#4dca5b'; // <- kleur aanpassen
+  const PRIMARY   = '#4dca5b'; 
   const TEXT_DARK = '#3a3a3a';
   const LOGO_URL  = 'Logo/Kookkeuze-logo.svg'; 
   const BACKGROUND= '#f8f9fa';
@@ -130,7 +130,7 @@ function verificationEmailHtml(verifyUrl) {
       </tr>
       <tr>
         <td style="padding:20px 24px 28px;color:#8a8a8a;font-size:12px;">
-          © ${new Date().getFullYear()} Kookkeuze — Samen koken, beter kiezen.
+          © ${new Date().getFullYear()} Kookkeuze.
         </td>
       </tr>
     </table>
