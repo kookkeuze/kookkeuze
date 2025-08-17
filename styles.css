@@ -863,8 +863,8 @@ select:focus {
 
 /* Meldingen */
 .auth-msg { margin-top: 16px; font-weight: 600; }
-.auth-msg.error  { color: #c94f73; }
-.auth-msg.success{ color:#63D671; }
+.auth-msg.error  { color: #c94f73; text-align:center; }
+.auth-msg.success{ color:#63D671; text-align:center; }
 
 
 .logged-msg {
@@ -1170,6 +1170,7 @@ select:focus {
 .container:has(#kiesRecept.tab-content.active) ~ #hoeWerktHet {
   display: block;
 }
+
 
 
 
