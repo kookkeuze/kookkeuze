@@ -81,7 +81,7 @@ app.get('/', (req, res) => {
 function verificationEmailHtml(verifyUrl) {
   const PRIMARY   = '#4dca5b'; 
   const TEXT_DARK = '#3a3a3a';
-  const LOGO_URL  = 'Logo/Kookkeuze-logo.svg'; 
+  const LOGO_URL  = 'https://kookkeuze.nl/Logo/Kookkeuze-logo.svg'; 
   const BACKGROUND= '#f8f9fa';
   
   return `
@@ -93,11 +93,11 @@ function verificationEmailHtml(verifyUrl) {
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Bevestig je e-mailadres</title>
   </head>
-  <body style="margin:0;background:${BACKGROUND};padding:32px 12px;font-family:Arial,Helvetica,sans-serif;">
+  <body style="margin:0;background:${PRIMARY};padding:32px 12px;font-family:Arial,Helvetica,sans-serif;">
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
            style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.08);">
       <tr>
-        <td style="background:${PRIMARY};padding:24px 24px 0;">
+        <td style="background:${BACKGROUND};padding:24px 24px 0;">
           <img src="${LOGO_URL}" alt="Kookkeuze" style="height:28px;display:block;">
         </td>
       </tr>
