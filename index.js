@@ -25,6 +25,7 @@ const authHeaders = () => {
       if (typeof showMsg === 'function') showMsg('Je bent ingelogd. Welkom terug!', true);
       // UI meteen verversen
       if (typeof updateAuthUI === 'function') updateAuthUI();
+      window.location.reload();
     }
   } catch (e) {
     console.error('Auto-login parse error:', e);
@@ -305,6 +306,7 @@ logoutBtn.addEventListener('click', () => {
   resetForms();
   updateAuthUI();
   authModal.classList.add('hidden');
+  window.location.reload();
 });
 
 /* — Registreren — */
@@ -348,6 +350,7 @@ document.getElementById('login-form').addEventListener('submit', async e => {
       resetForms();
       updateAuthUI();
       authModal.classList.add('hidden');
+      window.location.reload();
     } else {
       showMsg(data.error || data.message || 'Inloggen mislukt.', false);
     }
