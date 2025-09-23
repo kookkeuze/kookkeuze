@@ -1171,6 +1171,46 @@ select:focus {
   display: block;
 }
 
+/* ===== VOORDELENBALK ===== */
+.benefits-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 64px;              
+  flex-wrap: wrap;        
+  margin: 20px auto -10px auto;
+  text-align: center;
+  font-size: 0.7rem;
+  color: #2d3436;        
+  opacity: 0.9;           
+}
+
+.benefit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;       
+}
+
+.benefit i {
+  color: #63D671;         
+  font-size: 1rem;        
+  opacity: 0.85;
+}
+
+.benefit .highlight {
+  color: #734fc9;         
+  font-weight: 600;       
+}
+
+/* Responsive: compacter op mobiel */
+@media (max-width: 600px) {
+  .benefits-bar {
+        gap: 15px;
+        font-size: 0.5rem;
+        margin: 10px 20px;
+  }
+}
 
 
 
