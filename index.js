@@ -52,6 +52,27 @@ function setOverviewImage(cell, imageUrl, title) {
   renderImageFallback(cell, safeTitle);
 }
 
+function setResultCardImage(container, imageUrl, title) {
+  container.innerHTML = '';
+  const safeTitle = (title || 'Recept').trim();
+
+  if (imageUrl) {
+    const img = document.createElement('img');
+    img.className = 'recipe-card-image';
+    img.alt = safeTitle;
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    img.src = imageUrl;
+    img.addEventListener('error', () => {
+      container.innerHTML = '<div class="recipe-card-image-fallback">Geen foto</div>';
+    });
+    container.appendChild(img);
+    return;
+  }
+
+  container.innerHTML = '<div class="recipe-card-image-fallback">Geen foto</div>';
+}
+
 function renderImageFallback(cell, title) {
   cell.innerHTML = '';
   const fallback = document.createElement('div');
@@ -69,6 +90,17 @@ function hydrateOverviewImages() {
     const title = cell.dataset.title || 'Recept';
     fetchRecipeImage(url).then(imageUrl => {
       setOverviewImage(cell, imageUrl, title);
+    });
+  });
+}
+
+function hydrateResultImages() {
+  const cells = document.querySelectorAll('.result-image-cell');
+  cells.forEach(cell => {
+    const url = decodeURIComponent(cell.dataset.url || '');
+    const title = cell.dataset.title || 'Recept';
+    fetchRecipeImage(url).then(imageUrl => {
+      setResultCardImage(cell, imageUrl, title);
     });
   });
 }
@@ -199,8 +231,13 @@ function showRecipes(arr) {
   }
   let html = '<div class="recipe-cards-container">';
   arr.forEach(r => {
+    const safeUrl = encodeURIComponent(r.url || '');
+    const safeTitle = (r.title || 'Recept').replace(/"/g, '&quot;');
     html += `
       <div class="recipe-card">
+        <div class="result-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
+          <div class="recipe-card-image-skeleton"></div>
+        </div>
         <h3>${r.title}</h3>
         <p><a href="${r.url}" target="_blank" class="ext-link">
           Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
@@ -215,19 +252,66 @@ function showRecipes(arr) {
   });
   html += '</div>';
   resultDiv.innerHTML = html;
+  hydrateResultImages();
 }
 
 /* ========= NIEUW RECEPT TOEVOEGEN (TAB 2) ========= */
 const addRecipeForm = document.getElementById('addRecipeForm');
 const addMessageDiv = document.getElementById('addMessage');
 const fetchInfoBtn  = document.getElementById('fetchInfoBtn');
+const homeLogo      = document.getElementById('homeLogo');
+
+const fieldNameToId = {
+  'Titel': 'title',
+  'Soort gerecht': 'dishTypeNew',
+  'Menugang': 'mealCategoryNew',
+  'Doel gerecht': 'mealTypeNew',
+  'Tijd': 'timeRequiredNew',
+  'Calorieën': 'caloriesNew'
+};
+
+function isFilled(input) {
+  if (!input) return false;
+  if (input.tagName === 'SELECT') return input.value !== 'maak een keuze';
+  return input.value.trim() !== '';
+}
+
+function clearMissingState() {
+  document.querySelectorAll('.field-missing').forEach(el => el.classList.remove('field-missing'));
+  document.querySelectorAll('.field-error-text').forEach(el => el.remove());
+}
+
+function setMissingState(input, message) {
+  if (!input) return;
+  input.classList.add('field-missing');
+  const fieldWrap = input.closest('#addRecipeForm > div') || input.parentElement;
+  if (!fieldWrap) return;
+  const text = document.createElement('p');
+  text.className = 'field-error-text';
+  text.textContent = message;
+  fieldWrap.appendChild(text);
+}
+
+Object.values(fieldNameToId).concat('url').forEach(id => {
+  const input = document.getElementById(id);
+  if (!input) return;
+  const eventName = input.tagName === 'SELECT' ? 'change' : 'input';
+  input.addEventListener(eventName, () => {
+    input.classList.remove('field-missing');
+    const fieldWrap = input.closest('#addRecipeForm > div') || input.parentElement;
+    const err = fieldWrap ? fieldWrap.querySelector('.field-error-text') : null;
+    if (err && isFilled(input)) err.remove();
+  });
+});
 
 if (fetchInfoBtn) {
   fetchInfoBtn.addEventListener('click', async () => {
     const urlInput = document.getElementById('url');
     const urlValue = urlInput.value.trim();
+    clearMissingState();
     if (!urlValue) {
-      addMessageDiv.innerHTML = `<p style="color:red;">Vul eerst een URL in.</p>`;
+      setMissingState(urlInput, 'URL is verplicht om informatie op te halen.');
+      addMessageDiv.innerHTML = '';
       return;
     }
 
@@ -266,7 +350,15 @@ if (fetchInfoBtn) {
       if (!caloriesNew.value.trim() && data.calories != null) caloriesNew.value = data.calories;
 
       if (data.missing && data.missing.length) {
-        addMessageDiv.innerHTML = `<p style="color:#734fc9;">Niet gevonden: ${data.missing.join(', ')}. Vul dit handmatig aan.</p>`;
+        data.missing.forEach(fieldName => {
+          const fieldId = fieldNameToId[fieldName];
+          if (!fieldId) return;
+          const input = document.getElementById(fieldId);
+          if (!isFilled(input)) {
+            setMissingState(input, `${fieldName} moet nog handmatig ingevuld worden.`);
+          }
+        });
+        addMessageDiv.innerHTML = '';
       } else {
         addMessageDiv.innerHTML = `<p style="color:green;">Informatie opgehaald en ingevuld.</p>`;
       }
@@ -277,6 +369,13 @@ if (fetchInfoBtn) {
       fetchInfoBtn.disabled = false;
       fetchInfoBtn.textContent = originalText;
     }
+  });
+}
+
+if (homeLogo) {
+  homeLogo.addEventListener('click', () => {
+    const chooseTab = document.querySelector('.nav-tabs a[href="#kiesRecept"]');
+    if (chooseTab) chooseTab.click();
   });
 }
 

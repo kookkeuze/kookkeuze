@@ -19,7 +19,7 @@
 <!-- TOP-BAR  -->
 <header class="topbar">
   <div class="topbar-inner">
-    <img src="Logo/Kookkeuze-logo.svg" alt="Kookkeuze-logo" class="logo-img" />
+    <img src="Logo/Kookkeuze-logo.svg" alt="Kookkeuze-logo" class="logo-img" id="homeLogo" />
 
     <!-- Je bestaande loginblok hier plaatsen -->
     <div class="auth-cta">
@@ -242,15 +242,15 @@
       <h2>Nieuw recept toevoegen</h2>
       <form id="addRecipeForm">
         <div>
-          <label for="title">Titel:</label>
-          <input id="title" type="text" required />
-        </div>
-        <div>
           <label for="url">URL:</label>
           <div class="url-fetch-row">
             <input id="url" type="url" required />
             <button id="fetchInfoBtn" type="button" class="green-btn fetch-info-btn">Haal informatie op</button>
           </div>
+        </div>
+        <div>
+          <label for="title">Titel:</label>
+          <input id="title" type="text" required />
         </div>
         <div>
           <label for="dishTypeNew">Soort gerecht:</label>
