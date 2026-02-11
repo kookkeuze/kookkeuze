@@ -238,16 +238,20 @@ function showRecipes(arr) {
         <div class="result-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
           <div class="recipe-card-image-skeleton"></div>
         </div>
-        <h3>${r.title}</h3>
-        <p><a href="${r.url}" target="_blank" class="ext-link">
-          Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
-        <ul>
-          <li><strong>Soort:</strong>        ${r.dish_type     || '-'}</li>
-          <li><strong>Menugang:</strong>     ${r.meal_category || '-'}</li>
-          <li><strong>Doel gerecht:</strong> ${r.meal_type     || '-'}</li>
-          <li><strong>Tijd:</strong>         ${r.time_required || '-'}</li>
-          <li><strong>Calorieën:</strong>    ${r.calories ?? '-'}</li>
-        </ul>
+        <div class="recipe-card-content">
+          <h3>${r.title}</h3>
+          <p class="recipe-link"><a href="${r.url}" target="_blank" class="ext-link">
+            Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
+          <div class="recipe-meta-row">
+            <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
+            <span class="recipe-meta-pill"><i class="fas fa-fire"></i> ${r.calories ?? '-'} kcal</span>
+          </div>
+          <ul>
+            <li><i class="fas fa-utensils"></i> <strong>Soort:</strong> ${r.dish_type || '-'}</li>
+            <li><i class="fas fa-layer-group"></i> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
+            <li><i class="fas fa-bullseye"></i> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
+          </ul>
+        </div>
       </div>`;
   });
   html += '</div>';
@@ -504,6 +508,7 @@ const loggedInPane = document.getElementById('loggedInPane');
 const logoutBtn    = document.getElementById('logoutBtn');
 const authBtnIcon  = document.querySelector('#authBtn i');
 const authModal    = document.getElementById('authModal');
+const loginText    = document.querySelector('.login-text');
 
 function showMsg(txt, ok=true){
   msgBox.textContent = txt;
@@ -517,6 +522,7 @@ function updateAuthUI(){
   msgBox.classList.remove('success','error');
 
   authBtnIcon.className = loggedIn ? 'fas fa-user-check' : 'fas fa-user-circle';
+  if (loginText) loginText.textContent = loggedIn ? 'Ingelogd' : 'Inloggen/registreren';
 
   if (loggedIn){
     loggedInPane.style.display = 'block';
