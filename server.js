@@ -25,6 +25,167 @@ const JWT_SECRET = process.env.JWT_SECRET || 'changeme-in-prod';
 const APP_BASE_URL  = process.env.APP_BASE_URL  || `http://localhost:${PORT}`;
 const FRONTEND_URL  = process.env.FRONTEND_URL  || 'http://localhost:3000';
 
+/* -------------------- Image scrape cache -------------------- */
+const IMAGE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const recipeImageCache = new Map();
+
+function extractMetaContent(tag) {
+  if (!tag) return null;
+  const match = tag.match(/content=["']([^"']+)["']/i);
+  return match ? match[1] : null;
+}
+
+function extractRecipeImage(html) {
+  const patterns = [
+    /<meta[^>]+property=["']og:image:secure_url["'][^>]*>/i,
+    /<meta[^>]+property=["']og:image["'][^>]*>/i,
+    /<meta[^>]+name=["']twitter:image:src["'][^>]*>/i,
+    /<meta[^>]+name=["']twitter:image["'][^>]*>/i,
+    /<meta[^>]+itemprop=["']image["'][^>]*>/i
+  ];
+
+  for (const re of patterns) {
+    const tag = html.match(re);
+    const content = extractMetaContent(tag && tag[0]);
+    if (content) return content;
+  }
+  return null;
+}
+/* ------------------------------------------------------------ */
+
+/* -------------------- Recipe info scrape -------------------- */
+const RECIPE_INFO_TTL_MS = 24 * 60 * 60 * 1000;
+const recipeInfoCache = new Map();
+
+function parseJsonLdBlocks(html) {
+  const blocks = [];
+  const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match;
+  while ((match = re.exec(html)) !== null) {
+    const raw = match[1].trim();
+    if (!raw) continue;
+    try {
+      blocks.push(JSON.parse(raw));
+    } catch {
+      // ignore parse errors
+    }
+  }
+  return blocks;
+}
+
+function findRecipeObject(data) {
+  if (!data) return null;
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      const found = findRecipeObject(item);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (data['@graph']) return findRecipeObject(data['@graph']);
+
+  const type = data['@type'];
+  if (type) {
+    const types = Array.isArray(type) ? type : [type];
+    if (types.map(t => String(t).toLowerCase()).includes('recipe')) return data;
+  }
+  return null;
+}
+
+function collectTextFields(recipe) {
+  const parts = [];
+  const push = v => {
+    if (!v) return;
+    if (Array.isArray(v)) v.forEach(x => push(x));
+    else parts.push(String(v));
+  };
+  push(recipe.recipeCategory);
+  push(recipe.recipeCuisine);
+  push(recipe.keywords);
+  push(recipe.name);
+  return parts.join(' ').toLowerCase();
+}
+
+function parseCalories(cal) {
+  if (!cal) return null;
+  const match = String(cal).match(/(\d{2,4})/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+function parseDurationToMinutes(iso) {
+  if (!iso) return null;
+  const match = String(iso).match(/PT(?:(\d+)H)?(?:(\d+)M)?/i);
+  if (!match) return null;
+  const h = parseInt(match[1] || '0', 10);
+  const m = parseInt(match[2] || '0', 10);
+  return h * 60 + m;
+}
+
+function mapTimeRequired(totalMinutes) {
+  if (totalMinutes == null) return null;
+  if (totalMinutes < 30) return 'Onder de 30 minuten';
+  if (totalMinutes <= 45) return '30 - 45 minuten';
+  if (totalMinutes <= 60) return '45 minuten - 1 uur';
+  if (totalMinutes <= 120) return '1 - 2 uur';
+  return 'langer dan 2 uur';
+}
+
+function mapDishType(text) {
+  const checks = [
+    { key: 'hartige taart', value: 'Hartige taart' },
+    { key: 'ovenschotel', value: 'Ovenschotel' },
+    { key: 'vegetarisch', value: 'Vegetarisch' },
+    { key: 'wrap', value: 'Wraps' },
+    { key: 'pasta', value: 'Pasta' },
+    { key: 'rijst', value: 'Rijst' },
+    { key: 'soep', value: 'Soep' },
+    { key: 'taart', value: 'Taart & cake' },
+    { key: 'cake', value: 'Taart & cake' },
+    { key: 'brood', value: 'Brood' },
+    { key: 'kip', value: 'Kip' },
+    { key: 'rund', value: 'Rund' },
+    { key: 'varken', value: 'Varken' },
+    { key: 'vis', value: 'Vis' },
+    { key: 'hartig', value: 'Hartig' },
+    { key: 'zoet', value: 'Zoet' }
+  ];
+  for (const c of checks) {
+    if (text.includes(c.key)) return c.value;
+  }
+  return null;
+}
+
+function mapMealCategory(text) {
+  const checks = [
+    { key: 'bakken', value: 'Bakken' },
+    { key: 'dessert', value: 'Dessert' },
+    { key: 'dressing', value: 'Dressings, sauzen & dips' },
+    { key: 'saus', value: 'Dressings, sauzen & dips' },
+    { key: 'dip', value: 'Dressings, sauzen & dips' },
+    { key: 'drinken', value: 'Drinken' },
+    { key: 'hoofdgerecht', value: 'Hoofdgerecht' },
+    { key: 'lunch', value: 'Lunch' },
+    { key: 'ontbijt', value: 'Ontbijt' },
+    { key: 'salade', value: 'Salade' },
+    { key: 'snack', value: 'Snacks' }
+  ];
+  for (const c of checks) {
+    if (text.includes(c.key)) return c.value;
+  }
+  return null;
+}
+
+function mapMealType(text) {
+  if (text.includes('sport') || text.includes('eiwit') || text.includes('high protein')) {
+    return 'Sporten';
+  }
+  if (text.includes('cheat') || text.includes('cheaten')) {
+    return 'Cheaten';
+  }
+  return null;
+}
+/* ------------------------------------------------------------ */
+
 // Nodemailer transporter
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -74,6 +235,140 @@ app.use(express.static(path.join(__dirname)));
 // Serve index.html for root route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Receptinfo ophalen via JSON-LD (recipe schema)
+app.get('/api/recipe-info', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: 'url ontbreekt' });
+
+  let pageUrl;
+  try {
+    pageUrl = new URL(url);
+  } catch {
+    return res.status(400).json({ error: 'ongeldige url' });
+  }
+  if (!['http:', 'https:'].includes(pageUrl.protocol)) {
+    return res.status(400).json({ error: 'ongeldige url' });
+  }
+
+  const cacheKey = pageUrl.toString();
+  const cached = recipeInfoCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return res.json(cached.payload);
+  }
+
+  try {
+    const response = await fetch(cacheKey, {
+      headers: {
+        'User-Agent': 'KookkeuzeBot/1.0',
+        'Accept': 'text/html,application/xhtml+xml'
+      }
+    });
+    if (!response.ok) {
+      return res.json({ error: 'Kon de pagina niet ophalen.' });
+    }
+
+    const html = await response.text();
+    const blocks = parseJsonLdBlocks(html);
+    let recipe = null;
+    for (const block of blocks) {
+      recipe = findRecipeObject(block);
+      if (recipe) break;
+    }
+
+    if (!recipe) {
+      return res.json({
+        title: null,
+        dish_type: null,
+        meal_category: null,
+        meal_type: null,
+        time_required: null,
+        calories: null,
+        missing: ['Titel', 'Soort gerecht', 'Menugang', 'Doel gerecht', 'Tijd', 'Calorieën']
+      });
+    }
+
+    const text = collectTextFields(recipe);
+    const totalMinutes = parseDurationToMinutes(recipe.totalTime || recipe.cookTime || recipe.prepTime);
+
+    const payload = {
+      title: recipe.name || null,
+      dish_type: mapDishType(text),
+      meal_category: mapMealCategory(text),
+      meal_type: mapMealType(text),
+      time_required: mapTimeRequired(totalMinutes),
+      calories: parseCalories(recipe.nutrition && recipe.nutrition.calories),
+      missing: []
+    };
+
+    if (!payload.title) payload.missing.push('Titel');
+    if (!payload.dish_type) payload.missing.push('Soort gerecht');
+    if (!payload.meal_category) payload.missing.push('Menugang');
+    if (!payload.meal_type) payload.missing.push('Doel gerecht');
+    if (!payload.time_required) payload.missing.push('Tijd');
+    if (payload.calories == null) payload.missing.push('Calorieën');
+
+    recipeInfoCache.set(cacheKey, {
+      payload,
+      expiresAt: Date.now() + RECIPE_INFO_TTL_MS
+    });
+
+    return res.json(payload);
+  } catch (err) {
+    console.error('❌ recipe-info error:', err);
+    return res.json({ error: 'Fout bij ophalen van receptinformatie.' });
+  }
+});
+
+// Receptafbeelding ophalen via URL (og:image / twitter:image)
+app.get('/api/recipe-image', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: 'url ontbreekt' });
+
+  let pageUrl;
+  try {
+    pageUrl = new URL(url);
+  } catch {
+    return res.status(400).json({ error: 'ongeldige url' });
+  }
+  if (!['http:', 'https:'].includes(pageUrl.protocol)) {
+    return res.status(400).json({ error: 'ongeldige url' });
+  }
+
+  const cacheKey = pageUrl.toString();
+  const cached = recipeImageCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return res.json({ imageUrl: cached.imageUrl });
+  }
+
+  try {
+    const response = await fetch(cacheKey, {
+      headers: {
+        'User-Agent': 'KookkeuzeBot/1.0',
+        'Accept': 'text/html,application/xhtml+xml'
+      }
+    });
+    if (!response.ok) {
+      return res.json({ imageUrl: null });
+    }
+
+    const html = await response.text();
+    let imageUrl = extractRecipeImage(html);
+    if (imageUrl) {
+      imageUrl = new URL(imageUrl, pageUrl).toString();
+    }
+
+    recipeImageCache.set(cacheKey, {
+      imageUrl: imageUrl || null,
+      expiresAt: Date.now() + IMAGE_CACHE_TTL_MS
+    });
+
+    return res.json({ imageUrl: imageUrl || null });
+  } catch (err) {
+    console.error('❌ recipe-image error:', err);
+    return res.json({ imageUrl: null });
+  }
 });
 
 /* -------------------- Email template -------------------- */

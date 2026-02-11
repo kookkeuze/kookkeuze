@@ -8,6 +8,71 @@ const authHeaders = () => {
   return t ? { Authorization: `Bearer ${t}` } : {};
 };
 
+/* ========= RECEPT AFBEELDINGEN ========= */
+const recipeImageCache = new Map();
+
+function fetchRecipeImage(url) {
+  if (!url) return Promise.resolve(null);
+  if (recipeImageCache.has(url)) return Promise.resolve(recipeImageCache.get(url));
+
+  const endpoint = `${API_BASE}/api/recipe-image?url=${encodeURIComponent(url)}`;
+  return fetch(endpoint, { headers: authHeaders() })
+    .then(r => r.json())
+    .then(d => {
+      const imageUrl = d && d.imageUrl ? d.imageUrl : null;
+      recipeImageCache.set(url, imageUrl);
+      return imageUrl;
+    })
+    .catch(() => null);
+}
+
+function setOverviewImage(cell, imageUrl, title) {
+  cell.innerHTML = '';
+  cell.classList.add('is-loading');
+  const safeTitle = (title || 'Recept').trim();
+
+  if (imageUrl) {
+    const img = document.createElement('img');
+    img.className = 'recipe-thumb';
+    img.alt = safeTitle;
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    img.src = imageUrl;
+    img.addEventListener('load', () => {
+      cell.classList.remove('is-loading');
+      cell.classList.add('is-loaded');
+    });
+    img.addEventListener('error', () => {
+      renderImageFallback(cell, safeTitle);
+    });
+    cell.appendChild(img);
+    return;
+  }
+
+  renderImageFallback(cell, safeTitle);
+}
+
+function renderImageFallback(cell, title) {
+  cell.innerHTML = '';
+  const fallback = document.createElement('div');
+  fallback.className = 'recipe-thumb-fallback';
+  fallback.textContent = title ? title[0].toUpperCase() : 'R';
+  cell.appendChild(fallback);
+  cell.classList.remove('is-loading');
+  cell.classList.add('is-loaded');
+}
+
+function hydrateOverviewImages() {
+  const cells = document.querySelectorAll('.overview-image-cell');
+  cells.forEach(cell => {
+    const url = decodeURIComponent(cell.dataset.url || '');
+    const title = cell.dataset.title || 'Recept';
+    fetchRecipeImage(url).then(imageUrl => {
+      setOverviewImage(cell, imageUrl, title);
+    });
+  });
+}
+
 /* ========= Auto-login vanaf verify redirect =========
    Server redirect: https://kookkeuze.nl/auth/callback?token=XYZ
    Dit pakt de token op (op elke route), slaat 'm op, en schoont de URL. */
@@ -155,6 +220,65 @@ function showRecipes(arr) {
 /* ========= NIEUW RECEPT TOEVOEGEN (TAB 2) ========= */
 const addRecipeForm = document.getElementById('addRecipeForm');
 const addMessageDiv = document.getElementById('addMessage');
+const fetchInfoBtn  = document.getElementById('fetchInfoBtn');
+
+if (fetchInfoBtn) {
+  fetchInfoBtn.addEventListener('click', async () => {
+    const urlInput = document.getElementById('url');
+    const urlValue = urlInput.value.trim();
+    if (!urlValue) {
+      addMessageDiv.innerHTML = `<p style="color:red;">Vul eerst een URL in.</p>`;
+      return;
+    }
+
+    fetchInfoBtn.disabled = true;
+    const originalText = fetchInfoBtn.textContent;
+    fetchInfoBtn.textContent = 'Bezig...';
+    addMessageDiv.innerHTML = '';
+
+    try {
+      const res = await fetch(`${API_BASE}/api/recipe-info?url=${encodeURIComponent(urlValue)}`, {
+        headers: authHeaders()
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        addMessageDiv.innerHTML = `<p style="color:red;">${data.error}</p>`;
+        return;
+      }
+
+      const titleInput = document.getElementById('title');
+      if (!titleInput.value.trim() && data.title) titleInput.value = data.title;
+
+      const dishTypeNew = document.getElementById('dishTypeNew');
+      if (dishTypeNew.value === 'maak een keuze' && data.dish_type) dishTypeNew.value = data.dish_type;
+
+      const mealCategoryNew = document.getElementById('mealCategoryNew');
+      if (mealCategoryNew.value === 'maak een keuze' && data.meal_category) mealCategoryNew.value = data.meal_category;
+
+      const mealTypeNew = document.getElementById('mealTypeNew');
+      if (mealTypeNew.value === 'maak een keuze' && data.meal_type) mealTypeNew.value = data.meal_type;
+
+      const timeRequiredNew = document.getElementById('timeRequiredNew');
+      if (timeRequiredNew.value === 'maak een keuze' && data.time_required) timeRequiredNew.value = data.time_required;
+
+      const caloriesNew = document.getElementById('caloriesNew');
+      if (!caloriesNew.value.trim() && data.calories != null) caloriesNew.value = data.calories;
+
+      if (data.missing && data.missing.length) {
+        addMessageDiv.innerHTML = `<p style="color:#734fc9;">Niet gevonden: ${data.missing.join(', ')}. Vul dit handmatig aan.</p>`;
+      } else {
+        addMessageDiv.innerHTML = `<p style="color:green;">Informatie opgehaald en ingevuld.</p>`;
+      }
+    } catch (err) {
+      console.error(err);
+      addMessageDiv.innerHTML = `<p style="color:red;">Kon geen informatie ophalen. Probeer later opnieuw.</p>`;
+    } finally {
+      fetchInfoBtn.disabled = false;
+      fetchInfoBtn.textContent = originalText;
+    }
+  });
+}
 
 addRecipeForm.addEventListener('submit', e => {
   e.preventDefault();
@@ -201,7 +325,7 @@ function fetchAllRecipes() {
 function showAllRecipes(recipes) {
   allRecipesDiv.innerHTML = '';
   if (!recipes || recipes.length === 0) {
-    allRecipesDiv.innerHTML = `<tr><td colspan="9">Er zijn nog geen recepten toegevoegd.</td></tr>`;
+    allRecipesDiv.innerHTML = `<tr><td colspan="10">Er zijn nog geen recepten toegevoegd.</td></tr>`;
     return;
   }
   const dishOpt  = ["Kip","Rund","Varken","Brood","Hartig","Hartige taart","Ovenschotel","Pasta","Rijst","Soep","Taart & cake","Vegetarisch","Vis","Wraps","Zoet"];
@@ -212,8 +336,13 @@ function showAllRecipes(recipes) {
   let html = '';
   recipes.forEach(r => {
     const cals = r.calories ?? '';
+    const safeUrl = encodeURIComponent(r.url || '');
+    const safeTitle = (r.title || 'Recept').replace(/"/g, '&quot;');
     html += `
       <tr data-id="${r.id}">
+        <td class="overview-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
+          <div class="recipe-thumb-skeleton"></div>
+        </td>
         <td contenteditable>${r.title}</td>
         <td contenteditable>${r.url}</td>
         <td>${dropdown(dishOpt,  r.dish_type)}</td>
@@ -226,6 +355,7 @@ function showAllRecipes(recipes) {
       </tr>`;
   });
   allRecipesDiv.innerHTML = html;
+  hydrateOverviewImages();
   document.querySelectorAll('.edit-btn')   .forEach(b => b.addEventListener('click', onUpdateRecipe));
   document.querySelectorAll('.delete-btn') .forEach(b => b.addEventListener('click', onDeleteRecipe));
 }
@@ -238,13 +368,13 @@ function onUpdateRecipe(e){
   const row = e.target.closest('tr');
   const id  = row.dataset.id;
   const data = {
-    title:         row.cells[0].innerText.trim(),
-    url:           row.cells[1].innerText.trim(),
-    dish_type:     row.cells[2].querySelector('select').value,
-    meal_category: row.cells[3].querySelector('select').value,
-    meal_type:     row.cells[4].querySelector('select').value,
-    time_required: row.cells[5].querySelector('select').value,
-    calories:      row.cells[6].querySelector('.calories-field').value.trim() || null
+    title:         row.cells[1].innerText.trim(),
+    url:           row.cells[2].innerText.trim(),
+    dish_type:     row.cells[3].querySelector('select').value,
+    meal_category: row.cells[4].querySelector('select').value,
+    meal_type:     row.cells[5].querySelector('select').value,
+    time_required: row.cells[6].querySelector('select').value,
+    calories:      row.cells[7].querySelector('.calories-field').value.trim() || null
   };
 
   fetch(`${API_BASE}/api/recipes/${id}`, {

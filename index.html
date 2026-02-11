@@ -247,7 +247,10 @@
         </div>
         <div>
           <label for="url">URL:</label>
-          <input id="url" type="url" required />
+          <div class="url-fetch-row">
+            <input id="url" type="url" required />
+            <button id="fetchInfoBtn" type="button" class="green-btn fetch-info-btn">Haal informatie op</button>
+          </div>
         </div>
         <div>
           <label for="dishTypeNew">Soort gerecht:</label>
@@ -325,6 +328,7 @@
         <table class="overview-table">
           <thead>
             <tr>
+              <th>Foto</th>
               <th>Titel</th>
               <th>URL</th>
               <th>Soort</th>
