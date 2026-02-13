@@ -728,6 +728,7 @@ select:focus {
 .result-image-cell {
   width: 100%;
   margin-bottom: 0;
+  flex-shrink: 0;
 }
 
 .recipe-card-image,
@@ -806,19 +807,52 @@ select:focus {
   padding: 0;
   margin: 0;
   margin-top: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .recipe-card li {
-  margin-bottom: 10px;
-  display: flex;
-  align-items: baseline;
+  margin-bottom: 0;
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
   color: #37403b;
+  background: #ffffff;
+  border: 1px solid #d7e7db;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.25;
 }
 
 .recipe-card li i {
   color: #63D671;
   min-width: 16px;
+}
+
+@media (min-width: 980px) {
+  .recipe-card {
+    flex: 1 1 900px;
+    display: flex;
+    align-items: stretch;
+  }
+
+  .result-image-cell {
+    width: 45%;
+  }
+
+  .recipe-card-image,
+  .recipe-card-image-skeleton,
+  .recipe-card-image-fallback {
+    height: 100%;
+    min-height: 320px;
+  }
+
+  .recipe-card-content {
+    width: 55%;
+    padding: 22px 24px;
+  }
 }
 
 @media (max-width: 600px) {
