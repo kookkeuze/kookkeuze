@@ -715,13 +715,14 @@ select:focus {
 }
 
 .recipe-card-content {
-  padding: 16px 18px 18px;
+  padding: 24px 24px 22px;
 }
 
 .recipe-card h3 {
-  margin: 0 0 8px;
-  color: #63D671;
+  margin: 0 0 16px;
+  color: #3a3a3a;
   font-size: 1.95rem;
+  font-weight: 800;
   line-height: 1.2;
 }
 
@@ -764,25 +765,34 @@ select:focus {
 }
 
 .recipe-link {
-  margin: 0 0 12px;
+  margin: 0 0 20px;
 }
 
 .recipe-card p a {
-  color:  #734fc9;
+  color: #5e3bc9;
   text-decoration: none;
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-size: 1.12rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #c9bcf6;
+  background: #f4f0ff;
 }
 
 .recipe-card p a:hover {
   text-decoration: underline;
+  text-underline-offset: 2px;
+  background: #ece5ff;
 }
 
 .recipe-meta-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .recipe-meta-pill {
@@ -845,13 +855,14 @@ select:focus {
   .recipe-card-image,
   .recipe-card-image-skeleton,
   .recipe-card-image-fallback {
-    height: 100%;
-    min-height: 320px;
+    height: 340px;
+    min-height: 340px;
+    max-height: 340px;
   }
 
   .recipe-card-content {
     width: 55%;
-    padding: 22px 24px;
+    padding: 26px 28px;
   }
 }
 
