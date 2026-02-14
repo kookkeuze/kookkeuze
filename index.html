@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/png" href="Logo/favicon-kookkeuze.png" />
+  <meta name="theme-color" content="#63D671" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="Logo/favicon-kookkeuze.png" />
 
 
   <title>Kookkeuze</title>
@@ -21,12 +24,19 @@
   <div class="topbar-inner">
     <img src="Logo/Kookkeuze-logo.svg" alt="Kookkeuze-logo" class="logo-img" id="homeLogo" />
 
-    <!-- Je bestaande loginblok hier plaatsen -->
-    <div class="auth-cta">
-      <button id="authBtn" class="icon-btn" aria-label="Inloggen of registreren">
-        <i class="fas fa-user-circle"></i>
-      </button>
-      <span class="login-text">Inloggen/registreren</span>
+    <div class="topbar-actions">
+      <div class="install-cta">
+        <button id="installAppBtn" class="install-app-btn" aria-label="Installeer app">
+          <i class="fas fa-mobile-alt"></i>
+        </button>
+        <span id="installAppText" class="install-text">Installeer app</span>
+      </div>
+      <div class="auth-cta">
+        <button id="authBtn" class="icon-btn" aria-label="Inloggen of registreren">
+          <i class="fas fa-user-circle"></i>
+        </button>
+        <span class="login-text">Inloggen/registreren</span>
+      </div>
     </div>
   </div>
 </header>

@@ -978,6 +978,13 @@ select:focus {
   gap: 12px;
 }
 
+.topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .topbar .logo {
   font-size: 22px;
   font-weight: 700;
@@ -992,12 +999,29 @@ select:focus {
   cursor: pointer;
 }
 
+.install-app-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #63D671;
+  cursor: pointer;
+  min-width: unset;
+  padding: 0;
+}
+
 .auth-cta {
   display: flex;
   flex-direction: column;   /* tekst onder het icoon */
   align-items: center;
   gap: 2px;
-  margin-left: auto;
+  margin-top: -10px;
+}
+
+.install-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   margin-top: -10px;
 }
 
@@ -1009,10 +1033,19 @@ select:focus {
   margin-top: -5px;
 }
 
-@media (max-width: 480px) {
-.auth-cta { margin-top: 0px;
+.install-text {
+  font-size: 12px;
+  line-height: 1;
+  color: #333;
+  opacity: .85;
+  margin-top: -5px;
 }
+
+@media (max-width: 480px) {
+  .auth-cta { margin-top: 0px; }
+  .install-cta { margin-top: 0px; }
   .auth-cta .login-text { display: none; }  /* tekst weg op klein scherm */
+  .install-text { display: none; }
 }
 
 /* ══════════════ MODAL OVERLAY ══════════════ */

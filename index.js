@@ -141,6 +141,9 @@ function resetForms() {
 const tabLinks     = document.querySelectorAll('.tab-link');
 const tabContents  = document.querySelectorAll('.tab-content');
 const navDropdown  = document.getElementById('navDropdown');
+const installAppBtn = document.getElementById('installAppBtn');
+const installAppText = document.getElementById('installAppText');
+let deferredInstallPrompt = null;
 
 tabLinks.forEach(link => {
   link.addEventListener('click', e => {
@@ -257,6 +260,40 @@ function showRecipes(arr) {
   html += '</div>';
   resultDiv.innerHTML = html;
   hydrateResultImages();
+}
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  if (installAppBtn) installAppBtn.style.display = 'inline-block';
+  if (installAppText) installAppText.style.display = 'inline-block';
+});
+
+if (installAppBtn) {
+  installAppBtn.addEventListener('click', async () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      return;
+    }
+
+    const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+    if (isIos && !isStandalone) {
+      alert('Op iPhone/iPad: tik op Deel en kies Zet op beginscherm.');
+      return;
+    }
+
+    alert('Installeren is nu niet beschikbaar op dit apparaat of in deze browser.');
+  });
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
 }
 
 /* ========= NIEUW RECEPT TOEVOEGEN (TAB 2) ========= */
