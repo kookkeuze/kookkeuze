@@ -38,6 +38,12 @@ textarea {
   flex-wrap: wrap;
 }
 
+.url-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .url-fetch-row input {
   flex: 1 1 auto;
   min-width: 0;
@@ -49,23 +55,27 @@ textarea {
   font-size: 14px;
 }
 
-.url-info-btn {
-  white-space: nowrap;
-  padding: 10px 14px;
-  font-size: 14px;
-  color: #2e5c35;
+.url-info-icon-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 999px;
+  border: 1px solid #5ab86a;
+  color: #2e6b3a;
   background: #eef8f0;
-  border: 1px solid #c5e4cc;
-  border-radius: 8px;
-  min-width: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 12px;
 }
 
-.url-info-btn:hover {
+.url-info-icon-btn:hover {
   background: #e3f3e6;
 }
 
 .url-help-text {
-  margin-top: 8px;
+  margin: 2px 0 10px;
   color: #4d5a52;
   font-size: 13px;
 }
@@ -84,6 +94,73 @@ textarea {
 
 .url-info-note.show {
   display: block;
+}
+
+.recipe-toast {
+  position: fixed;
+  left: 50%;
+  top: 84px;
+  transform: translateX(-50%) scale(0.9);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2500;
+  background: #ffffff;
+  border: 1px solid #d6f1db;
+  border-radius: 16px;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.14);
+  padding: 16px 22px 14px;
+  min-width: 260px;
+  text-align: center;
+}
+
+.recipe-toast.show {
+  animation: recipeToastIn 280ms ease forwards;
+}
+
+.recipe-toast.hide {
+  animation: recipeToastOut 240ms ease forwards;
+}
+
+.recipe-toast-icon {
+  width: 74px;
+  height: 74px;
+  margin: 0 auto 10px;
+  border-radius: 999px;
+  background: #63D671;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+}
+
+.recipe-toast-text {
+  margin: 0;
+  color: #2f3a35;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+@keyframes recipeToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+@keyframes recipeToastOut {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.94);
+  }
 }
 
 

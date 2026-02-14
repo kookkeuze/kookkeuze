@@ -341,10 +341,31 @@ if ('serviceWorker' in navigator) {
 /* ========= NIEUW RECEPT TOEVOEGEN (TAB 2) ========= */
 const addRecipeForm = document.getElementById('addRecipeForm');
 const addMessageDiv = document.getElementById('addMessage');
+const recipeAddedToast = document.getElementById('recipeAddedToast');
+const recipeAddedToastText = document.getElementById('recipeAddedToastText');
 const fetchInfoBtn  = document.getElementById('fetchInfoBtn');
 const urlInfoBtn    = document.getElementById('urlInfoBtn');
 const urlInfoNote   = document.getElementById('urlInfoNote');
 const homeLogo      = document.getElementById('homeLogo');
+let recipeToastTimer = null;
+
+function showRecipeAddedToast(message) {
+  if (!recipeAddedToast || !recipeAddedToastText) return;
+
+  if (recipeToastTimer) {
+    clearTimeout(recipeToastTimer);
+    recipeToastTimer = null;
+  }
+
+  recipeAddedToastText.textContent = message;
+  recipeAddedToast.classList.remove('hide');
+  recipeAddedToast.classList.add('show');
+
+  recipeToastTimer = setTimeout(() => {
+    recipeAddedToast.classList.remove('show');
+    recipeAddedToast.classList.add('hide');
+  }, 2200);
+}
 
 const fieldNameToId = {
   'Titel': 'title',
@@ -492,10 +513,14 @@ addRecipeForm.addEventListener('submit', e => {
   })
     .then(r => r.json())
     .then(d => {
-      addMessageDiv.innerHTML = d.error
-        ? `<p style="color:red;">${d.error}</p>`
-        : `<p style="color:green;">${d.message} (ID: ${d.id})</p>`;
-      if (!d.error) addRecipeForm.reset();
+      if (d.error) {
+        addMessageDiv.innerHTML = `<p style="color:red;">${d.error}</p>`;
+        return;
+      }
+
+      addMessageDiv.innerHTML = '';
+      showRecipeAddedToast(`Recept toegevoegd! (ID: ${d.id})`);
+      addRecipeForm.reset();
     })
     .catch(console.error);
 });

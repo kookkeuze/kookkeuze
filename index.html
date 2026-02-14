@@ -138,6 +138,12 @@
   </div>          
 </div>           
 
+<!-- Success popup na recept toevoegen -->
+<div id="recipeAddedToast" class="recipe-toast" role="status" aria-live="polite">
+  <div class="recipe-toast-icon"><i class="fas fa-check"></i></div>
+  <p id="recipeAddedToastText" class="recipe-toast-text">Recept toegevoegd!</p>
+</div>
+
   <div class="container">
 
 
@@ -252,15 +258,17 @@
       <h2>Nieuw recept toevoegen</h2>
       <form id="addRecipeForm">
         <div>
-          <label for="url">URL:</label>
-          <div class="url-fetch-row">
-            <input id="url" type="url" placeholder="Plak hier je recept-URL (bijv. website, Instagram of Pinterest)" required />
-            <button id="fetchInfoBtn" type="button" class="green-btn fetch-info-btn">Haal informatie op</button>
-            <button id="urlInfoBtn" type="button" class="url-info-btn" aria-label="Uitleg over URL gebruik">
-              <i class="fas fa-circle-info"></i> Info
+          <div class="url-label-row">
+            <label for="url">URL:</label>
+            <button id="urlInfoBtn" type="button" class="url-info-icon-btn" aria-label="Uitleg over URL gebruik">
+              <i class="fas fa-info"></i>
             </button>
           </div>
           <p class="url-help-text">Plak een link en klik op <strong>Haal informatie op</strong> om velden automatisch te vullen.</p>
+          <div class="url-fetch-row">
+            <input id="url" type="url" placeholder="Plak hier je recept-URL (bijv. website, Instagram of Pinterest)" required />
+            <button id="fetchInfoBtn" type="button" class="green-btn fetch-info-btn">Haal informatie op</button>
+          </div>
           <p id="urlInfoNote" class="url-info-note">Je kunt elke recept-link gebruiken, ook van Instagram of Pinterest. We vullen automatisch in wat gevonden wordt; ontbrekende velden vul je handmatig aan.</p>
         </div>
         <div>
