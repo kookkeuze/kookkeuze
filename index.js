@@ -4,9 +4,49 @@
 const API_BASE = 'https://kookkeuze.onrender.com';   // backend op Render
 
 const authHeaders = () => {
-  const t = localStorage.getItem('token');
+  const t = getValidToken();
   return t ? { Authorization: `Bearer ${t}` } : {};
 };
+
+function decodeJwtPayload(token) {
+  try {
+    const payloadPart = token.split('.')[1];
+    if (!payloadPart) return null;
+    const normalized = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const base64 = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+    return JSON.parse(atob(base64));
+  } catch (_err) {
+    return null;
+  }
+}
+
+function getValidToken() {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+
+  const payload = decodeJwtPayload(token);
+  if (!payload || !payload.exp) {
+    localStorage.removeItem('token');
+    return null;
+  }
+
+  if (Date.now() >= payload.exp * 1000) {
+    localStorage.removeItem('token');
+    return null;
+  }
+
+  return token;
+}
+
+function ensureLoggedInOrNotify(targetEl) {
+  if (getValidToken()) return true;
+
+  if (targetEl) {
+    targetEl.innerHTML = '<p>Je sessie is verlopen. Log opnieuw in om verder te gaan.</p>';
+  }
+  if (typeof updateAuthUI === 'function') updateAuthUI();
+  return false;
+}
 
 /* ========= RECEPT AFBEELDINGEN ========= */
 const recipeImageCache = new Map();
@@ -181,6 +221,7 @@ const resultDiv           = document.getElementById('result');
 
 /* — Zoekknop — */
 document.getElementById('searchBtn').addEventListener('click', () => {
+  if (!ensureLoggedInOrNotify(resultDiv)) return;
   const params = {};
   if (dishTypeSelect.value      !== 'Soort gerecht') params.dish_type     = dishTypeSelect.value;
   if (mealCategorySelect.value  !== 'Menugang')      params.meal_category = mealCategorySelect.value;
@@ -202,6 +243,7 @@ document.getElementById('searchBtn').addEventListener('click', () => {
 
 /* — Random recept — */
 document.getElementById('randomBtn').addEventListener('click', () => {
+  if (!ensureLoggedInOrNotify(resultDiv)) return;
   const params = {};
   if (dishTypeSelect.value      !== 'Soort gerecht') params.dish_type     = dishTypeSelect.value;
   if (mealCategorySelect.value  !== 'Menugang')      params.meal_category = mealCategorySelect.value;
@@ -300,6 +342,8 @@ if ('serviceWorker' in navigator) {
 const addRecipeForm = document.getElementById('addRecipeForm');
 const addMessageDiv = document.getElementById('addMessage');
 const fetchInfoBtn  = document.getElementById('fetchInfoBtn');
+const urlInfoBtn    = document.getElementById('urlInfoBtn');
+const urlInfoNote   = document.getElementById('urlInfoNote');
 const homeLogo      = document.getElementById('homeLogo');
 
 const fieldNameToId = {
@@ -347,6 +391,7 @@ Object.values(fieldNameToId).concat('url').forEach(id => {
 
 if (fetchInfoBtn) {
   fetchInfoBtn.addEventListener('click', async () => {
+    if (!ensureLoggedInOrNotify(addMessageDiv)) return;
     const urlInput = document.getElementById('url');
     const urlValue = urlInput.value.trim();
     clearMissingState();
@@ -413,6 +458,12 @@ if (fetchInfoBtn) {
   });
 }
 
+if (urlInfoBtn && urlInfoNote) {
+  urlInfoBtn.addEventListener('click', () => {
+    urlInfoNote.classList.toggle('show');
+  });
+}
+
 if (homeLogo) {
   homeLogo.addEventListener('click', () => {
     const chooseTab = document.querySelector('.nav-tabs a[href="#kiesRecept"]');
@@ -422,6 +473,7 @@ if (homeLogo) {
 
 addRecipeForm.addEventListener('submit', e => {
   e.preventDefault();
+  if (!ensureLoggedInOrNotify(addMessageDiv)) return;
   const cal = document.getElementById('caloriesNew').value.trim();
   const bodyData = {
     title:         document.getElementById('title').value,
@@ -454,6 +506,10 @@ const refreshBtn    = document.getElementById('refreshBtn');
 if (refreshBtn) refreshBtn.addEventListener('click', fetchAllRecipes);
 
 function fetchAllRecipes() {
+  if (!ensureLoggedInOrNotify(allRecipesDiv)) {
+    allRecipesDiv.innerHTML = `<tr><td colspan="10">Je sessie is verlopen. Log opnieuw in.</td></tr>`;
+    return;
+  }
   fetch(`${API_BASE}/api/recipes`, {
     headers: authHeaders() // ✅ JWT meesturen
   })
@@ -505,6 +561,7 @@ function dropdown(options, sel){
 }
 
 function onUpdateRecipe(e){
+  if (!ensureLoggedInOrNotify()) return;
   const row = e.target.closest('tr');
   const id  = row.dataset.id;
   const data = {
@@ -528,6 +585,7 @@ function onUpdateRecipe(e){
 
 function onDeleteRecipe(e){
   if (!confirm('Weet je zeker dat je dit recept wilt verwijderen?')) return;
+  if (!ensureLoggedInOrNotify()) return;
   const id = e.target.closest('tr').dataset.id;
   fetch(`${API_BASE}/api/recipes/${id}`, {
     method:'DELETE',
@@ -554,7 +612,7 @@ function showMsg(txt, ok=true){
 }
 
 function updateAuthUI(){
-  const loggedIn = !!localStorage.getItem('token');
+  const loggedIn = !!getValidToken();
   msgBox.textContent = '';
   msgBox.classList.remove('success','error');
 

@@ -254,9 +254,14 @@
         <div>
           <label for="url">URL:</label>
           <div class="url-fetch-row">
-            <input id="url" type="url" required />
+            <input id="url" type="url" placeholder="Plak hier je recept-URL (bijv. website, Instagram of Pinterest)" required />
             <button id="fetchInfoBtn" type="button" class="green-btn fetch-info-btn">Haal informatie op</button>
+            <button id="urlInfoBtn" type="button" class="url-info-btn" aria-label="Uitleg over URL gebruik">
+              <i class="fas fa-circle-info"></i> Info
+            </button>
           </div>
+          <p class="url-help-text">Plak een link en klik op <strong>Haal informatie op</strong> om velden automatisch te vullen.</p>
+          <p id="urlInfoNote" class="url-info-note">Je kunt elke recept-link gebruiken, ook van Instagram of Pinterest. We vullen automatisch in wat gevonden wordt; ontbrekende velden vul je handmatig aan.</p>
         </div>
         <div>
           <label for="title">Titel:</label>
