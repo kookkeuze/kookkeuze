@@ -25,18 +25,19 @@
     <img src="Logo/Kookkeuze-logo.svg" alt="Kookkeuze-logo" class="logo-img" id="homeLogo" />
 
     <div class="topbar-actions">
-      <div class="install-cta">
-        <button id="installAppBtn" class="install-app-btn" aria-label="Installeer app">
-          <i class="fas fa-mobile-alt"></i>
-        </button>
+      <button id="installAppBtn" class="topbar-action-btn install-app-btn" aria-label="Installeer app">
+        <span class="action-icon-shell"><i class="fas fa-mobile-alt"></i></span>
         <span id="installAppText" class="install-text">Installeer app</span>
-      </div>
-      <div class="auth-cta">
-        <button id="authBtn" class="icon-btn" aria-label="Inloggen of registreren">
-          <i class="fas fa-user-circle"></i>
-        </button>
-        <span class="login-text">Inloggen/registreren</span>
-      </div>
+      </button>
+
+      <button id="authBtn" class="topbar-action-btn auth-action-btn" aria-label="Inloggen of registreren">
+        <span class="action-icon-shell auth-icon-shell">
+          <i class="far fa-user auth-main-icon"></i>
+          <span id="authStatusBadge" class="auth-status-badge"><i class="fas fa-times"></i></span>
+        </span>
+        <span class="login-text">Inloggen</span>
+        <i class="fas fa-chevron-down topbar-chevron"></i>
+      </button>
     </div>
   </div>
 </header>

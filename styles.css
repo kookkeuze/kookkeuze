@@ -1157,7 +1157,7 @@ select:focus {
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -1167,105 +1167,114 @@ select:focus {
   color: #63D671;       /* zelfde groen */
 }
 
-.icon-btn {
-  background: none;
+.topbar-action-btn {
   border: none;
+  background: transparent;
+  padding: 6px 8px;
+  min-width: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #30363f;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.action-icon-shell {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 30px;
-  color: #63D671;
-  cursor: pointer;
-  min-width: 44px;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  color: #2f3740;
 }
 
-.install-app-btn {
-  background: none;
-  border: none;
-  font-size: 28px;
-  color: #63D671;
-  cursor: pointer;
-  min-width: 44px;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.install-app-btn .action-icon-shell {
+  color: #0d9add;
 }
 
-.auth-cta {
-  display: flex;
-  flex-direction: column;   /* tekst onder het icoon */
-  align-items: center;
-  gap: 3px;
-  min-width: 80px;
-}
-
-.install-cta {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  min-width: 80px;
-}
-
-.auth-cta .login-text {
-  font-size: 12px;
-  line-height: 1.1;
-  color: #333;
-  opacity: .85;
+.install-text,
+.login-text {
+  font-size: 17px;
+  line-height: 1;
+  color: #2f3740;
   white-space: nowrap;
 }
 
-.install-text {
-  font-size: 12px;
-  line-height: 1.1;
-  color: #333;
-  opacity: .85;
-  white-space: nowrap;
+.topbar-chevron {
+  font-size: 16px;
+  color: #2f3740;
+  margin-left: 2px;
 }
 
-@media (max-width: 480px) {
+.auth-icon-shell {
+  color: #2f3740;
+}
+
+.auth-status-badge {
+  position: absolute;
+  right: -5px;
+  bottom: -2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #ff2a2a;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.auth-status-badge.is-logged-in {
+  background: #4dca5b;
+}
+
+@media (max-width: 900px) {
   .topbar {
     padding: 8px 12px;
   }
 
   .topbar-inner {
-    gap: 10px;
+    gap: 8px;
   }
 
   .logo-img {
-    height: 42px;
+    height: 40px;
     width: auto;
   }
 
   .topbar-actions {
-    gap: 8px;
+    gap: 4px;
   }
 
-  .auth-cta,
-  .install-cta {
-    min-width: 64px;
-    gap: 1px;
+  .topbar-action-btn {
+    padding: 4px;
+    gap: 5px;
   }
 
-  .icon-btn,
-  .install-app-btn {
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-    font-size: 28px;
+  .action-icon-shell {
+    width: 24px;
+    height: 24px;
+    font-size: 25px;
   }
 
-  .auth-cta .login-text,
+  .install-text,
+  .login-text {
+    font-size: 13px;
+  }
+
+  .topbar-chevron {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 600px) {
   .install-text {
-    display: block;
-    font-size: 10px;
-    line-height: 1.1;
+    display: none;
   }
 }
 

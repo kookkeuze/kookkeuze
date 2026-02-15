@@ -674,7 +674,8 @@ const loginPane    = document.getElementById('loginPane');
 const registerPane = document.getElementById('registerPane');
 const loggedInPane = document.getElementById('loggedInPane');
 const logoutBtn    = document.getElementById('logoutBtn');
-const authBtnIcon  = document.querySelector('#authBtn i');
+const authBtnIcon  = document.querySelector('#authBtn .auth-main-icon');
+const authStatusBadge = document.getElementById('authStatusBadge');
 const authModal    = document.getElementById('authModal');
 const loginText    = document.querySelector('.login-text');
 
@@ -689,8 +690,14 @@ function updateAuthUI(){
   msgBox.textContent = '';
   msgBox.classList.remove('success','error');
 
-  authBtnIcon.className = loggedIn ? 'fas fa-user-check' : 'fas fa-user-circle';
-  if (loginText) loginText.textContent = loggedIn ? 'Ingelogd' : 'Inloggen/registreren';
+  if (authBtnIcon) authBtnIcon.className = 'far fa-user auth-main-icon';
+  if (loginText) loginText.textContent = loggedIn ? 'Ingelogd' : 'Inloggen';
+  if (authStatusBadge) {
+    authStatusBadge.classList.toggle('is-logged-in', loggedIn);
+    authStatusBadge.innerHTML = loggedIn
+      ? '<i class="fas fa-check"></i>'
+      : '<i class="fas fa-times"></i>';
+  }
 
   if (loggedIn){
     loggedInPane.style.display = 'block';
