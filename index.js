@@ -578,7 +578,7 @@ function showAllRecipes(recipes) {
   const timeOpt  = ["Onder de 30 minuten","30 - 45 minuten","45 minuten - 1 uur","1 - 2 uur","langer dan 2 uur"];
 
   let html = '';
-  let gridHtml = '<div class="recipe-cards-container">';
+  let gridHtml = '<div class="recipe-cards-container overview-grid-cards">';
   recipes.forEach(r => {
     const cals = r.calories ?? '';
     const safeUrl = encodeURIComponent(r.url || '');

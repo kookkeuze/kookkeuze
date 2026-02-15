@@ -468,7 +468,8 @@ select:focus {
 }
 
 .overview-view-btn {
-  min-width: unset;
+  min-width: 146px;
+  height: 46px;
   padding: 8px 12px;
   border: 1px solid #d7e7db;
   background: #fff;
@@ -476,6 +477,9 @@ select:focus {
   border-radius: 999px;
   font-size: 13px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .overview-view-btn i {
@@ -814,6 +818,13 @@ select:focus {
   margin-top: 20px;
 }
 
+.overview-grid-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
 /* Individuele kaart-styling */
 .recipe-card {
   flex: 0 1 380px;
@@ -824,6 +835,24 @@ select:focus {
   overflow: hidden;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
   transition: transform 0.2s ease;
+}
+
+.overview-grid-cards .recipe-card {
+  width: 100%;
+  max-width: none;
+  flex: initial;
+}
+
+.overview-grid-cards .result-image-cell {
+  width: 100%;
+}
+
+.overview-grid-cards .recipe-card-image,
+.overview-grid-cards .recipe-card-image-skeleton,
+.overview-grid-cards .recipe-card-image-fallback {
+  height: 210px;
+  min-height: 210px;
+  max-height: 210px;
 }
 
 .recipe-card:hover {
@@ -981,6 +1010,24 @@ select:focus {
     width: 55%;
     padding: 26px 28px;
   }
+
+  .overview-grid-cards .recipe-card {
+    display: block;
+  }
+
+  .overview-grid-cards .result-image-cell {
+    width: 100%;
+  }
+
+  .overview-grid-cards .recipe-card-content {
+    width: 100%;
+    padding: 20px 18px 18px;
+  }
+
+  .overview-grid-cards .recipe-card h3 {
+    font-size: 1.55rem;
+    margin-bottom: 12px;
+  }
 }
 
 @media (max-width: 600px) {
@@ -996,6 +1043,17 @@ select:focus {
   .recipe-card-image-skeleton,
   .recipe-card-image-fallback {
     height: 210px;
+  }
+
+  .overview-grid-cards {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 1100px) {
+  .overview-grid-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
