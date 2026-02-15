@@ -468,14 +468,14 @@ select:focus {
 }
 
 .overview-view-btn {
-  min-width: 146px;
-  height: 46px;
-  padding: 8px 12px;
-  border: 1px solid #d7e7db;
+  min-width: 124px;
+  height: 40px;
+  padding: 7px 11px;
+  border: 1px solid #bcd8c4;
   background: #fff;
-  color: #2f3a35;
+  color: #235b2a;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -487,8 +487,8 @@ select:focus {
 }
 
 .overview-view-btn.active {
-  background: #63D671;
-  border-color: #63D671;
+  background: #235b2a;
+  border-color: #235b2a;
   color: #fff;
 }
 
@@ -1157,7 +1157,7 @@ select:focus {
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
@@ -1170,43 +1170,43 @@ select:focus {
 .topbar-action-btn {
   border: none;
   background: transparent;
-  padding: 6px 8px;
+  padding: 4px 6px;
   min-width: unset;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   color: #30363f;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .action-icon-shell {
   position: relative;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 30px;
+  font-size: 25px;
   color: #2f3740;
 }
 
 .install-app-btn .action-icon-shell {
-  color: #0d9add;
+  color: #4dca5b;
 }
 
 .install-text,
 .login-text {
-  font-size: 17px;
+  font-size: 14px;
   line-height: 1;
   color: #2f3740;
   white-space: nowrap;
 }
 
 .topbar-chevron {
-  font-size: 16px;
+  font-size: 13px;
   color: #2f3740;
-  margin-left: 2px;
+  margin-left: 1px;
 }
 
 .auth-icon-shell {
@@ -1217,8 +1217,8 @@ select:focus {
   position: absolute;
   right: -5px;
   bottom: -2px;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 999px;
   background: #ff2a2a;
   color: #ffffff;
@@ -1226,7 +1226,7 @@ select:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 8px;
 }
 
 .auth-status-badge.is-logged-in {
