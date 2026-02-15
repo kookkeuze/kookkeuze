@@ -258,18 +258,12 @@
       <h2>Nieuw recept toevoegen</h2>
       <form id="addRecipeForm">
         <div>
-          <div class="url-label-row">
-            <label for="url">URL:</label>
-            <button id="urlInfoBtn" type="button" class="url-info-icon-btn" aria-label="Uitleg over URL gebruik">
-              <i class="fas fa-info"></i>
-            </button>
-          </div>
+          <label for="url">URL:</label>
           <p class="url-help-text">Plak een link en klik op <strong>Haal informatie op</strong> om velden automatisch te vullen.</p>
           <div class="url-fetch-row">
             <input id="url" type="url" placeholder="Plak hier je recept-URL (bijv. website, Instagram of Pinterest)" required />
             <button id="fetchInfoBtn" type="button" class="green-btn fetch-info-btn">Haal informatie op</button>
           </div>
-          <p id="urlInfoNote" class="url-info-note">Je kunt elke recept-link gebruiken, ook van Instagram of Pinterest. We vullen automatisch in wat gevonden wordt; ontbrekende velden vul je handmatig aan.</p>
         </div>
         <div>
           <label for="title">Titel:</label>
@@ -344,10 +338,16 @@
     <!-- TAB 3: OVERZICHT RECEPTEN -->
     <div id="overzichtRecepten" class="tab-content">
       <h2>Overzicht van alle recepten</h2>
-      <a id="refreshBtn" href="#" class="refresh-link">Vernieuw het overzicht</a>
+      <div class="overview-toolbar">
+        <a id="refreshBtn" href="#" class="refresh-link">Vernieuw het overzicht</a>
+        <div class="overview-view-switch" role="group" aria-label="Weergave kiezen">
+          <button id="overviewListBtn" type="button" class="overview-view-btn active"><i class="fas fa-list"></i> Lijst</button>
+          <button id="overviewGridBtn" type="button" class="overview-view-btn"><i class="fas fa-th-large"></i> Raster</button>
+        </div>
+      </div>
 
 
-      <div class="table-container">
+      <div id="overviewListContainer" class="table-container">
         <table class="overview-table">
           <thead>
             <tr>
@@ -368,6 +368,7 @@
           </tbody>
         </table>
       </div>
+      <div id="overviewGridContainer" class="overview-grid-container"></div>
     </div>
 
     <!-- Scripts -->

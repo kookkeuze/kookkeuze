@@ -344,8 +344,6 @@ const addMessageDiv = document.getElementById('addMessage');
 const recipeAddedToast = document.getElementById('recipeAddedToast');
 const recipeAddedToastText = document.getElementById('recipeAddedToastText');
 const fetchInfoBtn  = document.getElementById('fetchInfoBtn');
-const urlInfoBtn    = document.getElementById('urlInfoBtn');
-const urlInfoNote   = document.getElementById('urlInfoNote');
 const homeLogo      = document.getElementById('homeLogo');
 let recipeToastTimer = null;
 
@@ -479,12 +477,6 @@ if (fetchInfoBtn) {
   });
 }
 
-if (urlInfoBtn && urlInfoNote) {
-  urlInfoBtn.addEventListener('click', () => {
-    urlInfoNote.classList.toggle('show');
-  });
-}
-
 if (homeLogo) {
   homeLogo.addEventListener('click', () => {
     const chooseTab = document.querySelector('.nav-tabs a[href="#kiesRecept"]');
@@ -528,11 +520,39 @@ addRecipeForm.addEventListener('submit', e => {
 /* ========= OVERZICHT RECEPTEN (TAB 3) ========= */
 const allRecipesDiv = document.getElementById('allRecipes');
 const refreshBtn    = document.getElementById('refreshBtn');
+const overviewListBtn = document.getElementById('overviewListBtn');
+const overviewGridBtn = document.getElementById('overviewGridBtn');
+const overviewListContainer = document.getElementById('overviewListContainer');
+const overviewGridContainer = document.getElementById('overviewGridContainer');
+let overviewViewMode = 'list';
 if (refreshBtn) refreshBtn.addEventListener('click', fetchAllRecipes);
+
+if (overviewListBtn && overviewGridBtn) {
+  overviewListBtn.addEventListener('click', () => {
+    overviewViewMode = 'list';
+    applyOverviewViewMode();
+  });
+  overviewGridBtn.addEventListener('click', () => {
+    overviewViewMode = 'grid';
+    applyOverviewViewMode();
+  });
+}
+
+function applyOverviewViewMode() {
+  const isList = overviewViewMode === 'list';
+  if (overviewListBtn) overviewListBtn.classList.toggle('active', isList);
+  if (overviewGridBtn) overviewGridBtn.classList.toggle('active', !isList);
+  if (overviewListContainer) overviewListContainer.style.display = isList ? 'block' : 'none';
+  if (overviewGridContainer) overviewGridContainer.classList.toggle('active', !isList);
+}
 
 function fetchAllRecipes() {
   if (!ensureLoggedInOrNotify(allRecipesDiv)) {
     allRecipesDiv.innerHTML = `<tr><td colspan="10">Je sessie is verlopen. Log opnieuw in.</td></tr>`;
+    if (overviewGridContainer) {
+      overviewGridContainer.innerHTML = '<p>Je sessie is verlopen. Log opnieuw in.</p>';
+    }
+    applyOverviewViewMode();
     return;
   }
   fetch(`${API_BASE}/api/recipes`, {
@@ -545,8 +565,11 @@ function fetchAllRecipes() {
 
 function showAllRecipes(recipes) {
   allRecipesDiv.innerHTML = '';
+  if (overviewGridContainer) overviewGridContainer.innerHTML = '';
   if (!recipes || recipes.length === 0) {
     allRecipesDiv.innerHTML = `<tr><td colspan="10">Er zijn nog geen recepten toegevoegd.</td></tr>`;
+    if (overviewGridContainer) overviewGridContainer.innerHTML = '<p>Er zijn nog geen recepten toegevoegd.</p>';
+    applyOverviewViewMode();
     return;
   }
   const dishOpt  = ["Kip","Rund","Varken","Brood","Hartig","Hartige taart","Ovenschotel","Pasta","Rijst","Soep","Taart & cake","Vegetarisch","Vis","Wraps","Zoet"];
@@ -555,6 +578,7 @@ function showAllRecipes(recipes) {
   const timeOpt  = ["Onder de 30 minuten","30 - 45 minuten","45 minuten - 1 uur","1 - 2 uur","langer dan 2 uur"];
 
   let html = '';
+  let gridHtml = '<div class="recipe-cards-container">';
   recipes.forEach(r => {
     const cals = r.calories ?? '';
     const safeUrl = encodeURIComponent(r.url || '');
@@ -574,9 +598,33 @@ function showAllRecipes(recipes) {
         <td><button class="green-btn edit-btn">Opslaan</button></td>
         <td><button class="pink-btn  delete-btn">Verwijder</button></td>
       </tr>`;
+    gridHtml += `
+      <div class="recipe-card">
+        <div class="result-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
+          <div class="recipe-card-image-skeleton"></div>
+        </div>
+        <div class="recipe-card-content">
+          <h3>${r.title}</h3>
+          <p class="recipe-link"><a href="${r.url}" target="_blank" class="ext-link">
+            Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
+          <div class="recipe-meta-row">
+            <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
+            <span class="recipe-meta-pill"><i class="fas fa-fire"></i> ${r.calories ?? '-'} kcal</span>
+          </div>
+          <ul>
+            <li><i class="fas fa-utensils"></i> <strong>Soort:</strong> ${r.dish_type || '-'}</li>
+            <li><i class="fas fa-layer-group"></i> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
+            <li><i class="fas fa-bullseye"></i> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
+          </ul>
+        </div>
+      </div>`;
   });
+  gridHtml += '</div>';
   allRecipesDiv.innerHTML = html;
+  if (overviewGridContainer) overviewGridContainer.innerHTML = gridHtml;
   hydrateOverviewImages();
+  hydrateResultImages();
+  applyOverviewViewMode();
   document.querySelectorAll('.edit-btn')   .forEach(b => b.addEventListener('click', onUpdateRecipe));
   document.querySelectorAll('.delete-btn') .forEach(b => b.addEventListener('click', onDeleteRecipe));
 }
@@ -661,7 +709,8 @@ logoutBtn.addEventListener('click', () => {
   resetForms();
   updateAuthUI();
   authModal.classList.add('hidden');
-  window.location.reload();
+  fetchAllRecipes();
+  resultDiv.innerHTML = '';
 });
 
 /* — Registreren — */
@@ -705,7 +754,7 @@ document.getElementById('login-form').addEventListener('submit', async e => {
       resetForms();
       updateAuthUI();
       authModal.classList.add('hidden');
-      window.location.reload();
+      fetchAllRecipes();
     } else {
       showMsg(data.error || data.message || 'Inloggen mislukt.', false);
     }

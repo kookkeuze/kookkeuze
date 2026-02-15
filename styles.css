@@ -38,12 +38,6 @@ textarea {
   flex-wrap: wrap;
 }
 
-.url-label-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .url-fetch-row input {
   flex: 1 1 auto;
   min-width: 0;
@@ -55,45 +49,10 @@ textarea {
   font-size: 14px;
 }
 
-.url-info-icon-btn {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  border-radius: 999px;
-  border: 1px solid #5ab86a;
-  color: #2e6b3a;
-  background: #eef8f0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  font-size: 12px;
-}
-
-.url-info-icon-btn:hover {
-  background: #e3f3e6;
-}
-
 .url-help-text {
   margin: 2px 0 10px;
   color: #4d5a52;
   font-size: 13px;
-}
-
-.url-info-note {
-  margin-top: 8px;
-  display: none;
-  padding: 10px 12px;
-  border: 1px solid #cfe4d4;
-  border-radius: 8px;
-  background: #f5fbf6;
-  color: #33413a;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.url-info-note.show {
-  display: block;
 }
 
 .recipe-toast {
@@ -494,6 +453,41 @@ select:focus {
   margin-bottom: 32px;
 }
 
+.overview-toolbar {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.overview-view-switch {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.overview-view-btn {
+  min-width: unset;
+  padding: 8px 12px;
+  border: 1px solid #d7e7db;
+  background: #fff;
+  color: #2f3a35;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.overview-view-btn i {
+  margin-right: 6px;
+}
+
+.overview-view-btn.active {
+  background: #63D671;
+  border-color: #63D671;
+  color: #fff;
+}
+
 /* Tabel container aanpassingen */
 .table-container {
   background: white;
@@ -501,6 +495,15 @@ select:focus {
   box-shadow: 0 4px 16px rgba(149, 157, 165, 0.1);
   margin-top: 32px;
   overflow-x: auto;
+}
+
+.overview-grid-container {
+  margin-top: 22px;
+  display: none;
+}
+
+.overview-grid-container.active {
+  display: block;
 }
 
 /* Basis tabel styling */
@@ -814,18 +817,18 @@ select:focus {
 /* Individuele kaart-styling */
 .recipe-card {
   flex: 0 1 380px;
-  background: #f9fbf9;
-  border: 2px solid #63D671;
+  background: #ffffff;
+  border: none;
   border-radius: 16px;
   padding: 0;
   overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
   transition: transform 0.2s ease;
 }
 
 .recipe-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.14);
 }
 
 .recipe-card-content {
