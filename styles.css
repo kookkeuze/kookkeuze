@@ -1191,8 +1191,16 @@ select:focus {
   color: #2f3740;
 }
 
+.action-icon-shell i {
+  line-height: 1;
+}
+
+.install-app-btn {
+  color: #2f3740;
+}
+
 .install-app-btn .action-icon-shell {
-  color: #4dca5b;
+  color: inherit;
 }
 
 .install-text,

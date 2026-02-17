@@ -24,6 +24,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'changeme-in-prod';
 */
 const APP_BASE_URL  = process.env.APP_BASE_URL  || `http://localhost:${PORT}`;
 const FRONTEND_URL  = process.env.FRONTEND_URL  || 'http://localhost:3000';
+const SMTP_HOST     = process.env.SMTP_HOST;
+const SMTP_PORT     = parseInt(process.env.SMTP_PORT || '587', 10);
+const SMTP_USER     = process.env.SMTP_USER;
+const SMTP_PASS     = process.env.SMTP_PASS;
+const SMTP_FROM     = process.env.SMTP_FROM || SMTP_USER;
 
 /* -------------------- Image scrape cache -------------------- */
 const IMAGE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -188,12 +193,25 @@ function mapMealType(text) {
 
 // Nodemailer transporter
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587', 10),
-  secure: false, // 587 = STARTTLS
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: SMTP_PORT === 465,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+    user: SMTP_USER,
+    pass: SMTP_PASS
+  },
+  requireTLS: SMTP_PORT !== 465
+});
+
+if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+  console.warn('⚠️ SMTP configuratie incompleet: verificatie-mails kunnen niet verstuurd worden.');
+}
+
+transporter.verify((err) => {
+  if (err) {
+    console.error('❌ SMTP verify mislukt:', err.message);
+  } else {
+    console.log('✅ SMTP verbinding ok.');
   }
 });
 
@@ -462,8 +480,12 @@ app.post('/api/register', (req, res) => {
 
           const verifyUrl = `${APP_BASE_URL}/api/verify?token=${token}`;
 
-          await transporter.sendMail({
-            from: `"Kookkeuze" <kookkeuze@gmail.com>`, // <- afzender (gecontroleerde sender)
+          if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !SMTP_FROM) {
+            return res.status(500).json({ error: 'Mailconfig ontbreekt. Neem contact op met de beheerder.' });
+          }
+
+          const mailInfo = await transporter.sendMail({
+            from: `"Kookkeuze" <${SMTP_FROM}>`,
             to: email,
             subject: 'Bevestig je e-mailadres',
             html: verificationEmailHtml(verifyUrl),
@@ -476,6 +498,13 @@ app.post('/api/register', (req, res) => {
                 cid: 'logo@kookkeuze'
               }
             ]
+          });
+
+          console.log('📧 Verificatiemail verstuurd:', {
+            to: email,
+            messageId: mailInfo.messageId,
+            accepted: mailInfo.accepted,
+            rejected: mailInfo.rejected
           });
 
           res.json({ message: 'Registratie gelukt! Check je e-mail om te bevestigen.' });
