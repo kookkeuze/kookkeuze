@@ -469,14 +469,14 @@ select:focus {
 
 .overview-view-btn {
   min-width: 124px;
-  height: 40px;
-  padding: 7px 11px;
-  border: 1px solid #bcd8c4;
+  height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #cfe0d4;
   background: #fff;
   color: #235b2a;
-  border-radius: 999px;
+  border-radius: 8px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -487,9 +487,9 @@ select:focus {
 }
 
 .overview-view-btn.active {
-  background: #235b2a;
+  background: #eef6ef;
   border-color: #235b2a;
-  color: #fff;
+  color: #235b2a;
 }
 
 /* Tabel container aanpassingen */
@@ -830,10 +830,10 @@ select:focus {
   flex: 0 1 380px;
   background: #ffffff;
   border: none;
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 0;
   overflow: hidden;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 18px rgba(15, 30, 18, 0.08);
   transition: transform 0.2s ease;
 }
 
@@ -856,19 +856,19 @@ select:focus {
 }
 
 .recipe-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.14);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(15, 30, 18, 0.1);
 }
 
 .recipe-card-content {
-  padding: 24px 24px 22px;
+  padding: 20px 20px 18px;
 }
 
 .recipe-card h3 {
-  margin: 0 0 16px;
+  margin: 0 0 10px;
   color: #3a3a3a;
-  font-size: 1.95rem;
-  font-weight: 800;
+  font-size: 1.75rem;
+  font-weight: 700;
   line-height: 1.2;
 }
 
@@ -911,46 +911,44 @@ select:focus {
 }
 
 .recipe-link {
-  margin: 0 0 20px;
+  margin: 0 0 12px;
 }
 
 .recipe-card p a {
-  color: #5e3bc9;
-  text-decoration: none;
-  font-size: 1.12rem;
-  font-weight: 800;
+  color: #235b2a;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  font-size: 1rem;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid #c9bcf6;
-  background: #f4f0ff;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .recipe-card p a:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  background: #ece5ff;
+  color: #1b4720;
 }
 
 .recipe-meta-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 14px;
 }
 
 .recipe-meta-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border: 1px solid #d7e7db;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #2f3a35;
-  font-size: 14px;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #4b5650;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -962,23 +960,21 @@ select:focus {
   list-style: none;
   padding: 0;
   margin: 0;
-  margin-top: 2px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  gap: 8px;
 }
 
 .recipe-card li {
   margin-bottom: 0;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
   color: #37403b;
-  background: #ffffff;
-  border: 1px solid #d7e7db;
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 14px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  font-size: 15px;
   line-height: 1.25;
 }
 
