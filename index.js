@@ -50,6 +50,7 @@ function ensureLoggedInOrNotify(targetEl) {
 
 /* ========= RECEPT AFBEELDINGEN ========= */
 const recipeImageCache = new Map();
+let pendingResetToken = null;
 
 function fetchRecipeImage(url) {
   if (!url) return Promise.resolve(null);
@@ -152,6 +153,7 @@ function hydrateResultImages() {
   try {
     const params = new URLSearchParams(window.location.search);
     const token  = params.get('token');
+    pendingResetToken = params.get('resetToken');
     if (token) {
       localStorage.setItem('token', token);
       // URL opschonen (zonder ?token)
@@ -163,6 +165,9 @@ function hydrateResultImages() {
       // UI meteen verversen
       if (typeof updateAuthUI === 'function') updateAuthUI();
       window.location.reload();
+    } else if (pendingResetToken) {
+      const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl);
     }
   } catch (e) {
     console.error('Auto-login parse error:', e);
@@ -173,6 +178,8 @@ function hydrateResultImages() {
 function resetForms() {
   document.getElementById('login-form')   .reset();
   document.getElementById('register-form').reset();
+  document.getElementById('forgot-form')?.reset();
+  document.getElementById('reset-form')?.reset();
   msgBox.textContent = '';
   msgBox.classList.remove('success', 'error');
 }
@@ -716,12 +723,28 @@ function onDeleteRecipe(e){
 const msgBox       = document.getElementById('authMessage');
 const loginPane    = document.getElementById('loginPane');
 const registerPane = document.getElementById('registerPane');
+const forgotPane   = document.getElementById('forgotPane');
+const resetPane    = document.getElementById('resetPane');
 const loggedInPane = document.getElementById('loggedInPane');
 const logoutBtn    = document.getElementById('logoutBtn');
 const authBtnIcon  = document.querySelector('#authBtn .auth-main-icon');
 const authStatusBadge = document.getElementById('authStatusBadge');
 const authModal    = document.getElementById('authModal');
 const loginText    = document.querySelector('.login-text');
+
+function setAuthPane(targetPane) {
+  [loggedInPane, loginPane, registerPane, forgotPane, resetPane].forEach(p => {
+    if (!p) return;
+    if (p === loggedInPane) p.style.display = 'none';
+    p.classList.remove('active');
+  });
+
+  if (targetPane === loggedInPane) {
+    loggedInPane.style.display = 'block';
+    return;
+  }
+  if (targetPane) targetPane.classList.add('active');
+}
 
 function showMsg(txt, ok=true){
   msgBox.textContent = txt;
@@ -744,13 +767,9 @@ function updateAuthUI(){
   }
 
   if (loggedIn){
-    loggedInPane.style.display = 'block';
-    loginPane.classList.remove('active');
-    registerPane.classList.remove('active');
+    setAuthPane(loggedInPane);
   } else {
-    loggedInPane.style.display = 'none';
-    loginPane.classList.add('active');
-    registerPane.classList.remove('active');
+    setAuthPane(pendingResetToken ? resetPane : loginPane);
   }
 }
 
@@ -815,12 +834,65 @@ document.getElementById('login-form').addEventListener('submit', async e => {
   }
 });
 
+/* — Wachtwoord reset aanvragen — */
+document.getElementById('forgot-form')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = document.getElementById('forgot-email').value.trim();
+  if (!email) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/password-reset/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    showMsg(data.error || data.message || 'Kon resetlink niet versturen.', res.ok && !data.error);
+    if (res.ok) {
+      setAuthPane(loginPane);
+      document.getElementById('login-email').value = email;
+    }
+  } catch (err) {
+    console.error(err);
+    showMsg('Server niet bereikbaar.', false);
+  }
+});
+
+/* — Nieuw wachtwoord instellen — */
+document.getElementById('reset-form')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const password = document.getElementById('reset-password').value;
+  if (!pendingResetToken) {
+    showMsg('Resetlink ontbreekt of is verlopen. Vraag opnieuw een reset aan.', false);
+    setAuthPane(forgotPane);
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/password-reset/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: pendingResetToken, password })
+    });
+    const data = await res.json();
+    showMsg(data.error || data.message || 'Reset mislukt.', res.ok && !data.error);
+    if (res.ok) {
+      pendingResetToken = null;
+      setAuthPane(loginPane);
+    }
+  } catch (err) {
+    console.error(err);
+    showMsg('Server niet bereikbaar.', false);
+  }
+});
+
 /* ========= MODAL OPEN / CLOSE ========= */
 const authBtn   = document.getElementById('authBtn');
 const closeAuth = document.getElementById('closeAuth');
 
 authBtn.addEventListener('click', () => { 
   resetForms(); 
+  updateAuthUI();
   authModal.classList.remove('hidden'); 
 });
 
@@ -842,12 +914,21 @@ if (startNow) {
 /* ========= GHOST-LINKS SWITCH ========= */
 document.querySelectorAll('.ghost-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    loginPane   .classList.toggle('active', btn.dataset.target === 'loginPane');
-    registerPane.classList.toggle('active', btn.dataset.target === 'registerPane');
-    resetForms();
+    const target = btn.dataset.target;
+    if (target === 'loginPane') setAuthPane(loginPane);
+    if (target === 'registerPane') setAuthPane(registerPane);
+    if (target === 'forgotPane') setAuthPane(forgotPane);
+    if (target === 'resetPane') setAuthPane(resetPane);
+    msgBox.textContent = '';
+    msgBox.classList.remove('success', 'error');
   });
 });
 
 /* ========= INIT ========= */
 updateAuthUI();
+if (pendingResetToken && !getValidToken()) {
+  authModal.classList.remove('hidden');
+  setAuthPane(resetPane);
+  showMsg('Kies een nieuw wachtwoord om verder te gaan.', true);
+}
 fetchAllRecipes(); // laad direct het overzicht bij paginalaad

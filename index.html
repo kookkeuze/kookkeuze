@@ -100,10 +100,53 @@
 
     <button type="submit" class="primary-btn">Log in</button>
   </form>
+  <p class="auth-switch auth-switch-single">
+    <button id="forgotPasswordBtn" class="ghost-btn" data-target="forgotPane">Wachtwoord vergeten?</button>
+  </p>
 
   <p class="auth-switch">
     Nog geen account?
     <button class="ghost-btn" data-target="registerPane">Registreren</button>
+  </p>
+</div>
+
+<div id="forgotPane" class="auth-pane">
+  <h2 class="auth-title">Wachtwoord vergeten</h2>
+  <p class="auth-sub">Vul je e-mailadres in. Je ontvangt een link om je wachtwoord opnieuw in te stellen.</p>
+
+  <form id="forgot-form" class="auth-form">
+    <label for="forgot-email" class="auth-label">E-mailadres</label>
+    <div class="input-wrap">
+      <input type="email" id="forgot-email" placeholder="Vul je e-mail in" required>
+      <i class="fas fa-envelope"></i>
+    </div>
+
+    <button type="submit" class="primary-btn">Stuur resetlink</button>
+  </form>
+
+  <p class="auth-switch">
+    Toch je wachtwoord nog?
+    <button class="ghost-btn" data-target="loginPane">Log in</button>
+  </p>
+</div>
+
+<div id="resetPane" class="auth-pane">
+  <h2 class="auth-title">Nieuw wachtwoord</h2>
+  <p class="auth-sub">Kies een nieuw wachtwoord voor je account.</p>
+
+  <form id="reset-form" class="auth-form">
+    <label for="reset-password" class="auth-label">Nieuw wachtwoord</label>
+    <div class="input-wrap">
+      <input type="password" id="reset-password" placeholder="Minimaal 8 tekens" minlength="8" required>
+      <i class="fas fa-lock"></i>
+    </div>
+
+    <button type="submit" class="primary-btn">Wachtwoord opslaan</button>
+  </form>
+
+  <p class="auth-switch">
+    Terug naar
+    <button class="ghost-btn" data-target="loginPane">Log in</button>
   </p>
 </div>
 

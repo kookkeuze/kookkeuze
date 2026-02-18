@@ -1501,6 +1501,10 @@ select:focus {
   display:flex; justify-content:center; align-items:center; gap:4px;
 }
 
+.auth-switch-single {
+  margin-top: 14px;
+}
+
 /* 1. Close-icoon beter uitlijnen */
 .modal-close {
   top: 12px;          /* i.p.v. 16px → iets hoger */

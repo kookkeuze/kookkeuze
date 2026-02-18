@@ -242,7 +242,10 @@ const {
   // helpers uit database.js
   setVerificationToken,
   getUserByVerificationToken,
-  verifyUserById
+  verifyUserById,
+  setPasswordResetToken,
+  getUserByPasswordResetToken,
+  updateUserPasswordById
 } = require('./database');
 
 app.use(bodyParser.json());
@@ -451,6 +454,66 @@ function verificationEmailHtml(verifyUrl) {
   </html>
   `;
 }
+
+function passwordResetEmailHtml(resetUrl) {
+  const PRIMARY = '#4dca5b';
+  const TEXT_DARK = '#3a3a3a';
+  const BACKGROUND = '#f8f9fa';
+
+  return `
+  <!doctype html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="color-scheme" content="light only">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Wachtwoord opnieuw instellen</title>
+  </head>
+  <body style="margin:0;background:${PRIMARY};padding:32px 12px;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+           style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.08);">
+      <tr>
+        <td style="background:${BACKGROUND};padding:24px 24px 0;">
+          <img src="cid:logo@kookkeuze" alt="Kookkeuze" style="height:35px;display:block;">
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:24px 24px 0;">
+          <h1 style="margin:0 0 8px 0;font-size:36px;line-height:1.1;color:${TEXT_DARK};">
+            Wachtwoord opnieuw instellen
+          </h1>
+          <hr style="border:none;border-top:1px solid #eee;margin:16px 0;">
+          <p style="margin:0 0 16px 0;color:#444;font-size:16px;line-height:1.6;">
+            Klik op de knop hieronder om een nieuw wachtwoord te kiezen.
+          </p>
+          <p style="margin:24px 0;">
+            <a href="${resetUrl}"
+               style="display:inline-block;background:${PRIMARY};color:#fff;text-decoration:none;
+                      padding:14px 22px;border-radius:10px;font-weight:bold;">
+              Nieuw wachtwoord instellen
+            </a>
+          </p>
+          <p style="margin:0 0 8px 0;color:#666;font-size:14px;">
+            Werkt de knop niet? Kopieer en plak deze link in je browser:
+          </p>
+          <p style="margin:0 0 24px 0;color:#4a4a4a;font-size:13px;word-break:break-all;">
+            <a href="${resetUrl}" style="color:${PRIMARY};text-decoration:underline;">${resetUrl}</a>
+          </p>
+          <p style="margin:0 0 4px 0;color:#888;font-size:12px;line-height:1.6;">
+            Heb jij dit niet aangevraagd? Dan kun je deze e-mail negeren.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:20px 24px 28px;color:#8a8a8a;font-size:12px;">
+          © ${new Date().getFullYear()} Kookkeuze.
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+  `;
+}
 /* ------------------------------------------------------- */
 
 // ====================== AUTH ===============================================
@@ -564,6 +627,85 @@ app.post('/api/login', (req, res) => {
       res.json({ message: 'Inloggen gelukt!', token });
     });
   });
+});
+
+// 2b. Reset wachtwoord aanvragen
+app.post('/api/password-reset/request', async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!email) {
+    return res.status(400).json({ error: 'E-mailadres is verplicht.' });
+  }
+
+  const genericMessage = 'Als dit e-mailadres bestaat, is er een resetlink verstuurd.';
+
+  try {
+    const user = await new Promise((resolve, reject) => {
+      getUserByEmail(email, (err, foundUser) => {
+        if (err) return reject(err);
+        resolve(foundUser || null);
+      });
+    });
+
+    if (!user) return res.json({ message: genericMessage });
+    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !SMTP_FROM) {
+      return res.status(500).json({ error: 'Mailconfig ontbreekt. Neem contact op met de beheerder.' });
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 uur
+    await setPasswordResetToken(email, token, expires);
+
+    const resetUrl = `${FRONTEND_URL}/?resetToken=${token}`;
+
+    await transporter.sendMail({
+      from: `"Kookkeuze" <${SMTP_FROM}>`,
+      to: email,
+      subject: 'Wachtwoord opnieuw instellen',
+      html: passwordResetEmailHtml(resetUrl),
+      text: `Stel je wachtwoord opnieuw in via: ${resetUrl}`,
+      attachments: [
+        {
+          filename: 'Kookkeuze-logo.png',
+          path: path.join(__dirname, 'Logo', 'Kookkeuze-logo.png'),
+          cid: 'logo@kookkeuze'
+        }
+      ]
+    });
+
+    return res.json({ message: genericMessage });
+  } catch (err) {
+    console.error('❌ Password reset request error:', err);
+    return res.status(500).json({ error: 'Kon reset e-mail niet versturen.' });
+  }
+});
+
+// 2c. Nieuw wachtwoord opslaan met reset token
+app.post('/api/password-reset/confirm', async (req, res) => {
+  const token = String(req.body?.token || '').trim();
+  const password = String(req.body?.password || '');
+
+  if (!token || !password) {
+    return res.status(400).json({ error: 'Token en wachtwoord zijn verplicht.' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Gebruik minimaal 8 tekens voor je wachtwoord.' });
+  }
+
+  try {
+    const user = await getUserByPasswordResetToken(token);
+    if (!user) return res.status(400).json({ error: 'Resetlink is ongeldig of al gebruikt.' });
+
+    if (!user.reset_token_expires || new Date(user.reset_token_expires) < new Date()) {
+      return res.status(400).json({ error: 'Resetlink is verlopen. Vraag een nieuwe aan.' });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    await updateUserPasswordById(user.id, hash);
+    return res.json({ message: 'Je wachtwoord is bijgewerkt. Je kunt nu inloggen.' });
+  } catch (err) {
+    console.error('❌ Password reset confirm error:', err);
+    return res.status(500).json({ error: 'Serverfout bij resetten van wachtwoord.' });
+  }
 });
 
 // 3. Middleware – zet gedecodeerde token in req.user

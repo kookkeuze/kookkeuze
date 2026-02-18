@@ -39,7 +39,9 @@ async function initializeDatabase() {
       ALTER TABLE users
         ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS verification_token TEXT,
-        ADD COLUMN IF NOT EXISTS token_expires TIMESTAMP
+        ADD COLUMN IF NOT EXISTS token_expires TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS reset_token TEXT,
+        ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP
     `);
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_users_verification_token
@@ -346,6 +348,42 @@ async function verifyUserById(userId) {
   return res.rows[0];
 }
 
+async function setPasswordResetToken(email, token, expires) {
+  const q = `
+    UPDATE users
+       SET reset_token = $1,
+           reset_token_expires = $2
+     WHERE email = $3
+     RETURNING id
+  `;
+  const res = await pool.query(q, [token, expires, email]);
+  return res.rows[0];
+}
+
+async function getUserByPasswordResetToken(token) {
+  const q = `
+    SELECT id, email, reset_token_expires
+      FROM users
+     WHERE reset_token = $1
+     LIMIT 1
+  `;
+  const res = await pool.query(q, [token]);
+  return res.rows[0];
+}
+
+async function updateUserPasswordById(userId, passwordHash) {
+  const q = `
+    UPDATE users
+       SET password_hash = $1,
+           reset_token = NULL,
+           reset_token_expires = NULL
+     WHERE id = $2
+     RETURNING id
+  `;
+  const res = await pool.query(q, [passwordHash, userId]);
+  return res.rows[0];
+}
+
 
 module.exports = {
   getRecipes,
@@ -357,5 +395,8 @@ module.exports = {
   getUserByEmail,
   setVerificationToken,          
   getUserByVerificationToken,    
-  verifyUserById                
+  verifyUserById,
+  setPasswordResetToken,
+  getUserByPasswordResetToken,
+  updateUserPasswordById
 };
