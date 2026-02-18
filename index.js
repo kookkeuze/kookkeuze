@@ -274,7 +274,8 @@ function showRecipes(arr) {
     resultDiv.innerHTML = '<p>Geen resultaten gevonden.</p>';
     return;
   }
-  let html = '<div class="recipe-cards-container">';
+  const singleClass = arr.length === 1 ? ' single-result' : '';
+  let html = `<div class="recipe-cards-container search-results${singleClass}">`;
   arr.forEach(r => {
     const safeUrl = encodeURIComponent(r.url || '');
     const safeTitle = (r.title || 'Recept').replace(/"/g, '&quot;');
@@ -524,6 +525,10 @@ const overviewListBtn = document.getElementById('overviewListBtn');
 const overviewGridBtn = document.getElementById('overviewGridBtn');
 const overviewListContainer = document.getElementById('overviewListContainer');
 const overviewGridContainer = document.getElementById('overviewGridContainer');
+const overviewPagination = document.getElementById('overviewPagination');
+const OVERVIEW_PAGE_SIZE = 9;
+let overviewAllRecipes = [];
+let overviewCurrentPage = 1;
 let overviewViewMode = 'list';
 if (refreshBtn) refreshBtn.addEventListener('click', fetchAllRecipes);
 
@@ -546,40 +551,53 @@ function applyOverviewViewMode() {
   if (overviewGridContainer) overviewGridContainer.classList.toggle('active', !isList);
 }
 
-function fetchAllRecipes() {
-  if (!ensureLoggedInOrNotify(allRecipesDiv)) {
-    allRecipesDiv.innerHTML = `<tr><td colspan="10">Je sessie is verlopen. Log opnieuw in.</td></tr>`;
-    if (overviewGridContainer) {
-      overviewGridContainer.innerHTML = '<p>Je sessie is verlopen. Log opnieuw in.</p>';
-    }
-    applyOverviewViewMode();
+function renderOverviewPagination(totalItems) {
+  if (!overviewPagination) return;
+  const totalPages = Math.max(1, Math.ceil(totalItems / OVERVIEW_PAGE_SIZE));
+  if (totalPages <= 1) {
+    overviewPagination.innerHTML = '';
     return;
   }
-  fetch(`${API_BASE}/api/recipes`, {
-    headers: authHeaders() // ✅ JWT meesturen
-  })
-    .then(r => r.json())
-    .then(showAllRecipes)
-    .catch(console.error);
+
+  let html = '';
+  for (let i = 1; i <= totalPages; i++) {
+    const activeClass = i === overviewCurrentPage ? ' active' : '';
+    html += `<button type="button" class="overview-page-btn${activeClass}" data-page="${i}">${i}</button>`;
+  }
+  overviewPagination.innerHTML = html;
+  overviewPagination.querySelectorAll('.overview-page-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      overviewCurrentPage = Number(btn.dataset.page);
+      renderOverviewPage();
+    });
+  });
 }
 
-function showAllRecipes(recipes) {
+function renderOverviewPage() {
   allRecipesDiv.innerHTML = '';
   if (overviewGridContainer) overviewGridContainer.innerHTML = '';
-  if (!recipes || recipes.length === 0) {
+
+  if (!overviewAllRecipes || overviewAllRecipes.length === 0) {
     allRecipesDiv.innerHTML = `<tr><td colspan="10">Er zijn nog geen recepten toegevoegd.</td></tr>`;
     if (overviewGridContainer) overviewGridContainer.innerHTML = '<p>Er zijn nog geen recepten toegevoegd.</p>';
+    renderOverviewPagination(0);
     applyOverviewViewMode();
     return;
   }
+
   const dishOpt  = ["Kip","Rund","Varken","Brood","Hartig","Hartige taart","Ovenschotel","Pasta","Rijst","Soep","Taart & cake","Vegetarisch","Vis","Wraps","Zoet"];
   const catOpt   = ["Bakken","Dessert","Dressings, sauzen & dips","Drinken","Hoofdgerecht","Lunch","Ontbijt","Salade","Snacks"];
   const mealOpt  = ["Sporten","Normaal","Cheaten"];
   const timeOpt  = ["Onder de 30 minuten","30 - 45 minuten","45 minuten - 1 uur","1 - 2 uur","langer dan 2 uur"];
 
+  const totalPages = Math.max(1, Math.ceil(overviewAllRecipes.length / OVERVIEW_PAGE_SIZE));
+  if (overviewCurrentPage > totalPages) overviewCurrentPage = totalPages;
+  const startIdx = (overviewCurrentPage - 1) * OVERVIEW_PAGE_SIZE;
+  const pageRecipes = overviewAllRecipes.slice(startIdx, startIdx + OVERVIEW_PAGE_SIZE);
+
   let html = '';
   let gridHtml = '<div class="recipe-cards-container overview-grid-cards">';
-  recipes.forEach(r => {
+  pageRecipes.forEach(r => {
     const cals = r.calories ?? '';
     const safeUrl = encodeURIComponent(r.url || '');
     const safeTitle = (r.title || 'Recept').replace(/"/g, '&quot;');
@@ -622,11 +640,37 @@ function showAllRecipes(recipes) {
   gridHtml += '</div>';
   allRecipesDiv.innerHTML = html;
   if (overviewGridContainer) overviewGridContainer.innerHTML = gridHtml;
+
   hydrateOverviewImages();
   hydrateResultImages();
+  renderOverviewPagination(overviewAllRecipes.length);
   applyOverviewViewMode();
-  document.querySelectorAll('.edit-btn')   .forEach(b => b.addEventListener('click', onUpdateRecipe));
-  document.querySelectorAll('.delete-btn') .forEach(b => b.addEventListener('click', onDeleteRecipe));
+  document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', onUpdateRecipe));
+  document.querySelectorAll('.delete-btn').forEach(b => b.addEventListener('click', onDeleteRecipe));
+}
+
+function fetchAllRecipes() {
+  if (!ensureLoggedInOrNotify(allRecipesDiv)) {
+    allRecipesDiv.innerHTML = `<tr><td colspan="10">Je sessie is verlopen. Log opnieuw in.</td></tr>`;
+    if (overviewGridContainer) {
+      overviewGridContainer.innerHTML = '<p>Je sessie is verlopen. Log opnieuw in.</p>';
+    }
+    if (overviewPagination) overviewPagination.innerHTML = '';
+    applyOverviewViewMode();
+    return;
+  }
+  fetch(`${API_BASE}/api/recipes`, {
+    headers: authHeaders() // ✅ JWT meesturen
+  })
+    .then(r => r.json())
+    .then(showAllRecipes)
+    .catch(console.error);
+}
+
+function showAllRecipes(recipes) {
+  overviewAllRecipes = Array.isArray(recipes) ? recipes : [];
+  overviewCurrentPage = 1;
+  renderOverviewPage();
 }
 
 function dropdown(options, sel){

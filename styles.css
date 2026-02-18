@@ -510,6 +510,32 @@ select:focus {
   display: block;
 }
 
+.overview-pagination {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.overview-page-btn {
+  min-width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid #d3e1d7;
+  background: #fff;
+  color: #2f3a35;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.overview-page-btn.active {
+  background: #235b2a;
+  border-color: #235b2a;
+  color: #fff;
+}
+
 /* Basis tabel styling */
 .overview-table {
   width: 100%;
@@ -823,6 +849,7 @@ select:focus {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   align-items: start;
+  grid-auto-rows: 1fr;
 }
 
 /* Individuele kaart-styling */
@@ -841,6 +868,13 @@ select:focus {
   width: 100%;
   max-width: none;
   flex: initial;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.overview-grid-cards .recipe-card-content {
+  flex: 1;
 }
 
 .overview-grid-cards .result-image-cell {
@@ -870,6 +904,8 @@ select:focus {
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1.2;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  letter-spacing: 0.4px;
 }
 
 .result-image-cell {
@@ -915,28 +951,27 @@ select:focus {
 }
 
 .recipe-card p a {
-  color: #235b2a;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
-  font-size: 1rem;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.96rem;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  padding: 8px 14px;
+  border: 1px solid #4fcf62;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
+  box-shadow: 0 6px 18px rgba(99, 214, 113, 0.2);
 }
 
 .recipe-card p a:hover {
-  color: #1b4720;
+  background: linear-gradient(135deg, #57ca65 0%, #46bc55 100%);
 }
 
 .recipe-meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
+  display: grid;
+  gap: 6px;
   margin-bottom: 14px;
 }
 
@@ -953,7 +988,7 @@ select:focus {
 }
 
 .recipe-meta-pill i {
-  color: #63D671;
+  color: #235b2a;
 }
 
 .recipe-card ul {
@@ -979,7 +1014,7 @@ select:focus {
 }
 
 .recipe-card li i {
-  color: #63D671;
+  color: #235b2a;
   min-width: 16px;
 }
 
@@ -992,6 +1027,10 @@ select:focus {
 
   .result-image-cell {
     width: 45%;
+  }
+
+  .search-results.single-result .result-image-cell {
+    width: 55%;
   }
 
   .recipe-card-image,
@@ -1008,7 +1047,9 @@ select:focus {
   }
 
   .overview-grid-cards .recipe-card {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
   }
 
   .overview-grid-cards .result-image-cell {
