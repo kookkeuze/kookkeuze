@@ -1725,6 +1725,58 @@ select:focus {
   display: block;
 }
 
+.site-footer {
+  margin-top: 28px;
+  border-top: 1px solid #e5ece7;
+  background: #ffffff;
+}
+
+.site-footer-inner {
+  width: min(1200px, 95%);
+  margin: 0 auto;
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.footer-brand {
+  color: #2f3a35;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  letter-spacing: 0.6px;
+  font-size: 1.35rem;
+}
+
+.footer-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.footer-links a {
+  color: #235b2a;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-bottom: 1px solid transparent;
+  transition: border-color .15s ease;
+}
+
+.footer-links a:hover {
+  border-color: #235b2a;
+}
+
+@media (max-width: 767px) {
+  .site-footer-inner {
+    min-height: unset;
+    padding: 14px 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
 /* ===== VOORDELENBALK ===== */
 .benefits-bar {
   display: flex;
