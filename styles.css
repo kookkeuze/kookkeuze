@@ -1729,6 +1729,7 @@ select:focus {
   margin-top: 28px;
   border-top: 1px solid #e5ece7;
   background: #ffffff;
+  padding: 10px 0;
 }
 
 .site-footer-inner {
@@ -1741,17 +1742,22 @@ select:focus {
   gap: 16px;
 }
 
-.footer-brand {
-  color: #2f3a35;
-  font-family: 'EatingPasta', Arial, sans-serif;
-  letter-spacing: 0.6px;
-  font-size: 1.35rem;
+.footer-logo {
+  height: 34px;
+  width: auto;
+  display: block;
 }
 
 .footer-links {
   display: inline-flex;
   align-items: center;
   gap: 14px;
+}
+
+.footer-current {
+  color: #235b2a;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .footer-links a {
@@ -1772,7 +1778,7 @@ select:focus {
     min-height: unset;
     padding: 14px 0;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 6px;
   }
 }
