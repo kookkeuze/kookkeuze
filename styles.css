@@ -17,6 +17,10 @@ h2 {
     letter-spacing: 1px;
 }
 
+:root {
+  --btn-radius: 12px;
+}
+
 /* Reset en basisopmaak */
 * {
   box-sizing: border-box;
@@ -285,8 +289,8 @@ body {
   font-size: 18px;
   font-weight: 600;
   padding: 16px 32px;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(99, 214, 113, 0.25);
+  border-radius: var(--btn-radius);
+  box-shadow: none;
   transition: all 0.2s ease;
   font-family: 'EatingPasta', Arial, sans-serif;
   letter-spacing: 2px;
@@ -294,32 +298,33 @@ body {
 
 .hero-random button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(99, 214, 113, 0.3);
+  box-shadow: none;
 }
 
 /* Buttons */
 button {
   cursor: pointer;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--btn-radius);
   padding: 12px 24px;
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
   min-width: 100px;
   transition: all 0.2s ease;
+  font-family: 'EatingPasta', Arial, sans-serif;
 }
 
 .green-btn {
   background-color: #63D671;
   color: white;
-  box-shadow: 0 2px 8px rgba(99, 214, 113, 0.25);
+  box-shadow: none;
 }
 
 .green-btn:hover {
   background-color: #4ac858;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 214, 113, 0.3);
+  box-shadow: none;
 }
 
 .pink-btn {
@@ -440,7 +445,7 @@ select:focus {
   height: 32px;
   padding: 0 12px;
   font-size: 12px;
-  border-radius: 6px;
+  border-radius: var(--btn-radius);
 }
 
 .overview-table th:last-child,
@@ -474,7 +479,7 @@ select:focus {
   border: 1px solid #cfe0d4;
   background: #fff;
   color: #235b2a;
-  border-radius: 8px;
+  border-radius: var(--btn-radius);
   font-size: 12px;
   font-weight: 600;
   display: inline-flex;
@@ -521,7 +526,7 @@ select:focus {
 .overview-page-btn {
   min-width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--btn-radius);
   border: 1px solid #d3e1d7;
   background: #fff;
   color: #2f3a35;
@@ -661,7 +666,7 @@ select:focus {
   height: 32px;
   padding: 0 16px;
   font-size: 13px;
-  border-radius: 6px;
+  border-radius: var(--btn-radius);
 }
 
 /* Hover effect voor rijen */
@@ -755,11 +760,11 @@ select:focus {
   .hero-random button {
     width: 100%;
     max-width: 100%;
-    border-radius: 12px;
+    border-radius: var(--btn-radius);
     padding: 14px 24px;
     font-size: 16px;
     font-weight: 600;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    box-shadow: none;
   }
 
   .hero-random button {
@@ -896,10 +901,13 @@ select:focus {
 
 .recipe-card-content {
   padding: 20px 20px 18px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
 }
 
 .recipe-card h3 {
-  margin: 0 0 10px;
+  margin: 0;
   color: #3a3a3a;
   font-size: 1.75rem;
   font-weight: 700;
@@ -947,7 +955,7 @@ select:focus {
 }
 
 .recipe-link {
-  margin: 0 0 12px;
+  margin: 0;
 }
 
 .recipe-card p a {
@@ -960,9 +968,11 @@ select:focus {
   gap: 6px;
   padding: 8px 14px;
   border: 1px solid #4fcf62;
-  border-radius: 10px;
+  border-radius: var(--btn-radius);
   background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
-  box-shadow: 0 6px 18px rgba(99, 214, 113, 0.2);
+  box-shadow: none;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  letter-spacing: 0.4px;
 }
 
 .recipe-card p a:hover {
@@ -971,8 +981,8 @@ select:focus {
 
 .recipe-meta-row {
   display: grid;
-  gap: 6px;
-  margin-bottom: 14px;
+  gap: 8px;
+  margin: 0;
 }
 
 .recipe-meta-pill {
@@ -1374,7 +1384,7 @@ select:focus {
   padding: 8px 0;
   background: #f5f5f5;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--btn-radius);
   font-weight: 600;
   cursor: pointer;
   transition: background .2s;
@@ -1447,7 +1457,7 @@ select:focus {
   color: #fff;
   background: #c94f73;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--btn-radius);
   cursor: pointer;
   transition: transform .15s;
 }
@@ -1472,10 +1482,10 @@ select:focus {
 }
 
 .primary-btn {
-  padding:12px 0; border:none; border-radius:10px;
+  padding:12px 0; border:none; border-radius:var(--btn-radius);
   font-size:1rem; font-weight:600; color:#fff;
   background:#4eca5c;         
-  box-shadow:0 8px 18px rgba(7,148,110,.35);
+  box-shadow:none;
   cursor:pointer; transition:.15s;
   font-family: 'EatingPasta', Arial, sans-serif;
   letter-spacing: 1px;
@@ -1484,7 +1494,7 @@ select:focus {
 
 .primary-btn.alt   { 
   background: #734fc9;  
-  box-shadow: 0 8px 18px rgba(79,107,255,.35); 
+  box-shadow: none; 
     font-family: 'EatingPasta', Arial, sans-serif;
     letter-spacing: 1px;
 }
@@ -1661,11 +1671,11 @@ select:focus {
   display: inline-block;
   text-decoration: none;
   padding: 16px 28px;
-  border-radius: 12px;
+  border-radius: var(--btn-radius);
   font-weight: 600;
   background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(99,214,113,.25);
+  box-shadow: none;
   transition: transform .15s, box-shadow .15s;
   font-size: 1.8rem;
   font-family: 'EatingPasta', Arial, sans-serif;
@@ -1674,7 +1684,7 @@ select:focus {
 }
 .start-btn:hover{
   transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(99,214,113,.3);
+  box-shadow: none;
 }
 
 /* iets meer marge op telefoon */
