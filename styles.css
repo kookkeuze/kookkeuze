@@ -187,10 +187,24 @@ body {
 /* Tab content */
 .tab-content {
   display: none;
+  opacity: 0;
+  transform: translateY(6px);
 }
 
 .tab-content.active {
   display: block;
+  animation: tabFadeIn 280ms ease forwards;
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Logo als afbeelding in de top-bar */
