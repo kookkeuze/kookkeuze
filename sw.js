@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kookkeuze-static-v1';
+const CACHE_NAME = 'kookkeuze-static-v2';
 const ASSETS = [
   '/',
   '/index.html',
