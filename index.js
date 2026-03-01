@@ -519,7 +519,7 @@ addRecipeForm.addEventListener('submit', e => {
       }
 
       addMessageDiv.innerHTML = '';
-      showRecipeAddedToast(`Recept toegevoegd! (ID: ${d.id})`);
+      showRecipeAddedToast('Recept toegevoegd!');
       addRecipeForm.reset();
     })
     .catch(console.error);
