@@ -250,8 +250,14 @@ const {
 
 app.use(bodyParser.json());
 
-// Statische bestanden serveren
-app.use(express.static(path.join(__dirname)));
+// Statische bestanden serveren (zonder cache voor HTML)
+app.use(express.static(path.join(__dirname), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store');
+    }
+  }
+}));
 
 // Serve index.html for root route
 app.get('/', (req, res) => {
