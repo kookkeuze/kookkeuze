@@ -19,6 +19,8 @@ h2 {
 
 :root {
   --btn-radius: 12px;
+  --accent-color: #d97a45;
+  --accent-color-hover: #c96936;
 }
 
 /* Reset en basisopmaak */
@@ -342,7 +344,7 @@ button {
 }
 
 .pink-btn {
-  background-color: #c94f73;
+  background-color: var(--accent-color);
   color: white;
 }
 
@@ -400,15 +402,23 @@ button {
 }
 
 #addRecipeForm .field-missing {
-  border-color: #dc3545 !important;
-  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.12) !important;
+  border-color: #d8c7a1 !important;
+  background-color: #fffaf0;
+  box-shadow: 0 0 0 3px rgba(216, 199, 161, 0.18) !important;
 }
 
 .field-error-text {
   margin-top: -6px;
-  color: #dc3545;
-  font-size: 13px;
-  font-weight: 600;
+  color: #7b6b45;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.url-manual-note {
+  margin-top: 8px;
+  color: #5f6b63;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 #addRecipeForm button[type="submit"] {
@@ -629,7 +639,7 @@ select:focus {
 }
 
 .recipe-thumb-fallback {
-  background: linear-gradient(135deg, #63D671 0%, #734fc9 100%);
+  background: linear-gradient(135deg, #63D671 0%, var(--accent-color) 100%);
   color: #fff;
   font-weight: 700;
   font-size: 18px;
@@ -846,12 +856,12 @@ select:focus {
 }
 
 .action-buttons .pink-btn {
-  background-color: #c94f73;
+  background-color: var(--accent-color);
   color: white;
 }
 
 .action-buttons .pink-btn:hover {
-  background-color: #b9647d;
+  background-color: var(--accent-color-hover);
 }
 
 /* Container die de kaarten naast elkaar kan zetten */
@@ -1196,7 +1206,7 @@ select:focus {
 
 /* link-stijl voor “Vernieuw het overzicht” */
 .refresh-link{
-  color: #734fc9;           
+  color: var(--accent-color);
   text-decoration:underline;
   font-weight:600;
   cursor:pointer;
@@ -1355,8 +1365,45 @@ select:focus {
 }
 
 @media (max-width: 600px) {
+  .topbar {
+    padding: 6px 10px;
+  }
+
+  .topbar-inner {
+    gap: 6px;
+  }
+
+  .topbar-action-btn {
+    padding: 3px;
+    gap: 4px;
+  }
+
+  .action-icon-shell {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+  }
+
+  .login-text,
   .install-text {
+    font-size: 12px;
     display: none;
+  }
+
+  .login-text {
+    display: inline;
+  }
+
+  .topbar-chevron {
+    font-size: 11px;
+  }
+
+  .auth-status-badge {
+    width: 12px;
+    height: 12px;
+    font-size: 7px;
+    right: -4px;
+    bottom: -1px;
   }
 }
 
@@ -1520,7 +1567,7 @@ select:focus {
 .primary-btn:hover { transform:translateY(-2px); }
 
 .primary-btn.alt   { 
-  background: #734fc9;  
+  background: var(--accent-color);
   box-shadow: none; 
     font-family: 'EatingPasta', Arial, sans-serif;
     letter-spacing: 1px;
@@ -1825,7 +1872,7 @@ select:focus {
 }
 
 .benefit .highlight {
-  color: #734fc9;         
+  color: var(--accent-color);
   font-weight: 600;       
 }
 

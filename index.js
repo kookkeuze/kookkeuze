@@ -468,7 +468,7 @@ if (fetchInfoBtn) {
           if (!fieldId) return;
           const input = document.getElementById(fieldId);
           if (!isFilled(input)) {
-            setMissingState(input, `${fieldName} moet nog handmatig ingevuld worden.`);
+            setMissingState(input, `${fieldName} is niet automatisch gevonden. Je kunt dit nu invullen, of later aanpassen.`);
           }
         });
         addMessageDiv.innerHTML = '';
@@ -904,10 +904,17 @@ const startNow = document.getElementById('startNow');
 if (startNow) {
   startNow.addEventListener('click', (e) => {
     e.preventDefault();
+    if (getValidToken()) {
+      const chooseTab = document.querySelector('.nav-tabs a[href="#kiesRecept"]');
+      if (chooseTab) chooseTab.click();
+      window.location.hash = 'kiesRecept';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     resetForms();
+    updateAuthUI();
     authModal.classList.remove('hidden');
-    // registerPane.classList.add('active');
-    // loginPane.classList.remove('active');
   });
 }
 
