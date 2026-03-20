@@ -1,7 +1,17 @@
 // index.js — volledig bestand (auto-login + betere foutmeldingen)
 
 /* ========= API-basis & token-helper ========= */
-const API_BASE = 'https://kookkeuze.onrender.com';   // backend op Render
+function resolveApiBase() {
+  const fromWindow = window.KOOKKEUZE_API_BASE;
+  const fromMeta = document
+    .querySelector('meta[name="kookkeuze-api-base"]')
+    ?.getAttribute('content');
+
+  const base = (fromWindow || fromMeta || window.location.origin || '').trim();
+  return base.replace(/\/+$/, '');
+}
+
+const API_BASE = resolveApiBase();
 
 const authHeaders = () => {
   const t = getValidToken();

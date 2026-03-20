@@ -2,9 +2,8 @@
 const express    = require('express');
 const bodyParser = require('body-parser');
 const cors       = require('cors');
-const path       = require('path');        // nodig voor cid-attachment pad
+const path       = require('path');
 const crypto     = require('crypto');
-const nodemailer = require('nodemailer');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -16,19 +15,48 @@ const JWT_SECRET = process.env.JWT_SECRET || 'changeme-in-prod';
 // ----------------------------------------------------------------------------
 
 /*
-  Vereiste ENV variabelen (Render / .env):
+  Vereiste ENV variabelen (Railway / .env):
   - JWT_SECRET
-  - APP_BASE_URL          (bv. https://kookkeuze.onrender.com)
-  - FRONTEND_URL          (bv. https://kookkeuze.nl)
-  - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+  - APP_BASE_URL          (bv. https://<service>.up.railway.app of https://www.kookkeuze.nl)
+  - FRONTEND_URL          (bv. https://www.kookkeuze.nl)
+  - BREVO_API_KEY
+  - BREVO_FROM_EMAIL      (optioneel, fallback: SMTP_FROM of SMTP_USER)
+  - BREVO_FROM_NAME       (optioneel, fallback: Kookkeuze)
+  - CORS_ORIGINS          (optioneel, comma-separated lijst)
 */
 const APP_BASE_URL  = process.env.APP_BASE_URL  || `http://localhost:${PORT}`;
 const FRONTEND_URL  = process.env.FRONTEND_URL  || 'http://localhost:3000';
-const SMTP_HOST     = process.env.SMTP_HOST;
-const SMTP_PORT     = parseInt(process.env.SMTP_PORT || '587', 10);
-const SMTP_USER     = process.env.SMTP_USER;
-const SMTP_PASS     = process.env.SMTP_PASS;
-const SMTP_FROM     = process.env.SMTP_FROM || SMTP_USER;
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER;
+const BREVO_FROM_NAME  = process.env.BREVO_FROM_NAME || 'Kookkeuze';
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+
+function sanitizeOrigin(value) {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value.trim());
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return null;
+  }
+}
+
+function buildAllowedOrigins() {
+  const configured = String(process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map(v => sanitizeOrigin(v))
+    .filter(Boolean);
+
+  const defaults = [
+    'https://kookkeuze.nl',
+    'https://www.kookkeuze.nl',
+    'http://localhost:3000',
+    sanitizeOrigin(APP_BASE_URL),
+    sanitizeOrigin(FRONTEND_URL)
+  ].filter(Boolean);
+
+  return [...new Set([...configured, ...defaults])];
+}
 
 /* -------------------- Image scrape cache -------------------- */
 const IMAGE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -191,42 +219,46 @@ function mapMealType(text) {
 }
 /* ------------------------------------------------------------ */
 
-// Nodemailer transporter
-const transporter = nodemailer.createTransport({
-  host: SMTP_HOST,
-  port: SMTP_PORT,
-  secure: SMTP_PORT === 465,
-  auth: {
-    user: SMTP_USER,
-    pass: SMTP_PASS
-  },
-  requireTLS: SMTP_PORT !== 465
-});
-
-if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-  console.warn('⚠️ SMTP configuratie incompleet: verificatie-mails kunnen niet verstuurd worden.');
+if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
+  console.warn('⚠️ Brevo API configuratie incompleet: verificatie-mails kunnen niet verstuurd worden.');
+} else {
+  console.log('✅ Brevo API mail geconfigureerd.');
 }
 
-transporter.verify((err) => {
-  if (err) {
-    console.error('❌ SMTP verify mislukt:', err.message);
-  } else {
-    console.log('✅ SMTP verbinding ok.');
+async function sendBrevoEmail({ to, subject, html, text }) {
+  const response = await fetch(BREVO_API_URL, {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'content-type': 'application/json',
+      'api-key': BREVO_API_KEY
+    },
+    body: JSON.stringify({
+      sender: { email: BREVO_FROM_EMAIL, name: BREVO_FROM_NAME },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      textContent: text
+    })
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Brevo API fout (${response.status}): ${errorBody}`);
   }
-});
+
+  return response.json().catch(() => ({}));
+}
 
 /* -------------------- CORS -------------------- */
 const corsOptions = {
-  origin: [
-    'https://kookkeuze.nl',
-    'https://www.kookkeuze.nl',
-    'http://localhost:3000' // lokaal testen
-  ],
+  origin: buildAllowedOrigins(),
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: false,
   optionsSuccessStatus: 204
 };
+console.log('🌐 CORS origins:', corsOptions.origin);
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 /* ---------------------------------------------- */
@@ -399,11 +431,11 @@ app.get('/api/recipe-image', async (req, res) => {
 });
 
 /* -------------------- Email template -------------------- */
-// Huisstijl + inline logo via CID-attachment
 function verificationEmailHtml(verifyUrl) {
   const PRIMARY    = '#4dca5b';
   const TEXT_DARK  = '#3a3a3a';
   const BACKGROUND = '#f8f9fa';
+  const logoUrl = `${FRONTEND_URL}/Logo/Kookkeuze-logo.png`;
 
   return `
   <!doctype html>
@@ -419,8 +451,7 @@ function verificationEmailHtml(verifyUrl) {
            style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.08);">
       <tr>
         <td style="background:${BACKGROUND};padding:24px 24px 0;">
-          <!-- Belangrijk: cid verwijst naar attachment cid in sendMail -->
-          <img src="cid:logo@kookkeuze" alt="Kookkeuze" style="height:35px;display:block;">
+          <img src="${logoUrl}" alt="Kookkeuze" style="height:35px;display:block;">
         </td>
       </tr>
       <tr>
@@ -465,6 +496,7 @@ function passwordResetEmailHtml(resetUrl) {
   const PRIMARY = '#4dca5b';
   const TEXT_DARK = '#3a3a3a';
   const BACKGROUND = '#f8f9fa';
+  const logoUrl = `${FRONTEND_URL}/Logo/Kookkeuze-logo.png`;
 
   return `
   <!doctype html>
@@ -480,7 +512,7 @@ function passwordResetEmailHtml(resetUrl) {
            style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.08);">
       <tr>
         <td style="background:${BACKGROUND};padding:24px 24px 0;">
-          <img src="cid:logo@kookkeuze" alt="Kookkeuze" style="height:35px;display:block;">
+          <img src="${logoUrl}" alt="Kookkeuze" style="height:35px;display:block;">
         </td>
       </tr>
       <tr>
@@ -549,31 +581,20 @@ app.post('/api/register', (req, res) => {
 
           const verifyUrl = `${APP_BASE_URL}/api/verify?token=${token}`;
 
-          if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !SMTP_FROM) {
+          if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
             return res.status(500).json({ error: 'Mailconfig ontbreekt. Neem contact op met de beheerder.' });
           }
 
-          const mailInfo = await transporter.sendMail({
-            from: `"Kookkeuze" <${SMTP_FROM}>`,
+          const mailInfo = await sendBrevoEmail({
             to: email,
             subject: 'Bevestig je e-mailadres',
             html: verificationEmailHtml(verifyUrl),
-            text: `Welkom bij Kookkeuze! Bevestig je e-mail via: ${verifyUrl}`,
-            // Belangrijk: inline logo meesturen als attachment met cid
-            attachments: [
-              {
-                filename: 'Kookkeuze-logo.png',
-                path: path.join(__dirname, 'Logo', 'Kookkeuze-logo.png'),
-                cid: 'logo@kookkeuze'
-              }
-            ]
+            text: `Welkom bij Kookkeuze! Bevestig je e-mail via: ${verifyUrl}`
           });
 
           console.log('📧 Verificatiemail verstuurd:', {
             to: email,
-            messageId: mailInfo.messageId,
-            accepted: mailInfo.accepted,
-            rejected: mailInfo.rejected
+            messageId: mailInfo.messageId || null
           });
 
           res.json({ message: 'Registratie gelukt! Check je e-mail om te bevestigen.' });
@@ -653,7 +674,7 @@ app.post('/api/password-reset/request', async (req, res) => {
     });
 
     if (!user) return res.json({ message: genericMessage });
-    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !SMTP_FROM) {
+    if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
       return res.status(500).json({ error: 'Mailconfig ontbreekt. Neem contact op met de beheerder.' });
     }
 
@@ -663,19 +684,11 @@ app.post('/api/password-reset/request', async (req, res) => {
 
     const resetUrl = `${FRONTEND_URL}/?resetToken=${token}`;
 
-    await transporter.sendMail({
-      from: `"Kookkeuze" <${SMTP_FROM}>`,
+    await sendBrevoEmail({
       to: email,
       subject: 'Wachtwoord opnieuw instellen',
       html: passwordResetEmailHtml(resetUrl),
-      text: `Stel je wachtwoord opnieuw in via: ${resetUrl}`,
-      attachments: [
-        {
-          filename: 'Kookkeuze-logo.png',
-          path: path.join(__dirname, 'Logo', 'Kookkeuze-logo.png'),
-          cid: 'logo@kookkeuze'
-        }
-      ]
+      text: `Stel je wachtwoord opnieuw in via: ${resetUrl}`
     });
 
     return res.json({ message: genericMessage });
