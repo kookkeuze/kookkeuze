@@ -236,20 +236,171 @@ const timeRequiredSelect  = document.getElementById('timeRequired');
 const calorieRangeSelect  = document.getElementById('calorieRange');
 const resultDiv           = document.getElementById('result');
 
+function getSelectedValues(select) {
+  if (!select) return [];
+  if (select._multiSelectApi) return select._multiSelectApi.getValues();
+  if (select.value) return [select.value];
+  return [];
+}
+
+function setMultiSelectValues(selectId, values) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  const normalized = Array.isArray(values) ? values.filter(Boolean) : (values ? [values] : []);
+  if (select._multiSelectApi) {
+    select._multiSelectApi.setValues(normalized);
+    return;
+  }
+  Array.from(select.options).forEach(option => {
+    option.selected = normalized.includes(option.value || option.textContent.trim());
+  });
+}
+
+function createMultiSelect(select, placeholderLabel) {
+  if (!select) return;
+  const optionItems = Array.from(select.options).filter(opt => {
+    const text = (opt.value || opt.textContent || '').trim();
+    return text && text !== placeholderLabel && text !== 'maak een keuze';
+  });
+  if (optionItems.length === 0) return;
+  const initiallySelected = optionItems
+    .filter(opt => opt.selected)
+    .map(opt => (opt.value || opt.textContent || '').trim());
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'multi-select';
+
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'multi-select-trigger';
+  trigger.setAttribute('aria-expanded', 'false');
+
+  const triggerText = document.createElement('span');
+  triggerText.className = 'multi-select-text';
+  triggerText.textContent = placeholderLabel;
+
+  const triggerIcon = document.createElement('i');
+  triggerIcon.className = 'fas fa-chevron-down multi-select-chevron';
+
+  trigger.appendChild(triggerText);
+  trigger.appendChild(triggerIcon);
+
+  const menu = document.createElement('div');
+  menu.className = 'multi-select-menu';
+
+  function updateLabel() {
+    const selected = optionItems.filter(opt => opt.selected).map(opt => (opt.value || opt.textContent || '').trim());
+    if (selected.length === 0) {
+      triggerText.textContent = placeholderLabel;
+      return;
+    }
+    triggerText.textContent = selected.join(', ');
+  }
+
+  optionItems.forEach(opt => {
+    const value = (opt.value || opt.textContent || '').trim();
+    const item = document.createElement('label');
+    item.className = 'multi-select-option';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = !!opt.selected;
+
+    const text = document.createElement('span');
+    text.textContent = value;
+
+    checkbox.addEventListener('change', () => {
+      opt.selected = checkbox.checked;
+      updateLabel();
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    item.appendChild(checkbox);
+    item.appendChild(text);
+    menu.appendChild(item);
+  });
+
+  trigger.addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('.multi-select.open').forEach(node => {
+      if (node !== wrapper) node.classList.remove('open');
+    });
+    wrapper.classList.toggle('open');
+    trigger.setAttribute('aria-expanded', wrapper.classList.contains('open') ? 'true' : 'false');
+  });
+
+  wrapper.appendChild(trigger);
+  wrapper.appendChild(menu);
+
+  select.classList.add('multi-select-native');
+  select.multiple = true;
+  Array.from(select.options).forEach(opt => { opt.selected = false; });
+  optionItems.forEach(opt => {
+    const value = (opt.value || opt.textContent || '').trim();
+    if (initiallySelected.includes(value)) opt.selected = true;
+  });
+  select.after(wrapper);
+
+  select._multiSelectApi = {
+    getValues: () => optionItems.filter(opt => opt.selected).map(opt => (opt.value || opt.textContent || '').trim()),
+    setValues: values => {
+      const selected = new Set(values);
+      Array.from(select.options).forEach(opt => { opt.selected = false; });
+      optionItems.forEach((opt, idx) => {
+        opt.selected = selected.has((opt.value || opt.textContent || '').trim());
+        const checkbox = menu.children[idx]?.querySelector('input');
+        if (checkbox) checkbox.checked = !!opt.selected;
+      });
+      updateLabel();
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    },
+    clear: () => {
+      Array.from(select.options).forEach(opt => { opt.selected = false; });
+      optionItems.forEach((opt, idx) => {
+        opt.selected = false;
+        const checkbox = menu.children[idx]?.querySelector('input');
+        if (checkbox) checkbox.checked = false;
+      });
+      updateLabel();
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  };
+
+  updateLabel();
+}
+
+[
+  [dishTypeSelect, 'Soort gerecht'],
+  [mealCategorySelect, 'Menugang'],
+  [mealTypeSelect, 'Doel gerecht'],
+  [timeRequiredSelect, 'Tijd'],
+  [calorieRangeSelect, 'Calorieën'],
+  [document.getElementById('dishTypeNew'), 'Soort gerecht'],
+  [document.getElementById('mealCategoryNew'), 'Menugang'],
+  [document.getElementById('mealTypeNew'), 'Doel gerecht'],
+  [document.getElementById('timeRequiredNew'), 'Tijd']
+].forEach(([select, placeholder]) => createMultiSelect(select, placeholder));
+
+document.addEventListener('click', e => {
+  document.querySelectorAll('.multi-select.open').forEach(node => {
+    if (!node.contains(e.target)) node.classList.remove('open');
+  });
+});
+
 /* — Zoekknop — */
 document.getElementById('searchBtn').addEventListener('click', () => {
   if (!ensureLoggedInOrNotify(resultDiv)) return;
-  const params = {};
-  if (dishTypeSelect.value      !== 'Soort gerecht') params.dish_type     = dishTypeSelect.value;
-  if (mealCategorySelect.value  !== 'Menugang')      params.meal_category = mealCategorySelect.value;
-  if (mealTypeSelect.value      !== 'Doel gerecht')  params.meal_type     = mealTypeSelect.value;
-  if (timeRequiredSelect.value  !== 'Tijd')          params.time_required = timeRequiredSelect.value;
-  if (calorieRangeSelect.value  !== 'Calorieën')     params.calorieRange  = calorieRangeSelect.value;
+  const params = new URLSearchParams();
+  getSelectedValues(dishTypeSelect).forEach(v => params.append('dish_type', v));
+  getSelectedValues(mealCategorySelect).forEach(v => params.append('meal_category', v));
+  getSelectedValues(mealTypeSelect).forEach(v => params.append('meal_type', v));
+  getSelectedValues(timeRequiredSelect).forEach(v => params.append('time_required', v));
+  getSelectedValues(calorieRangeSelect).forEach(v => params.append('calorieRange', v));
 
   const searchTerm = document.getElementById('searchTerm').value.trim();
-  if (searchTerm) params.search = searchTerm;
+  if (searchTerm) params.append('search', searchTerm);
 
-  const qs = new URLSearchParams(params).toString();
+  const qs = params.toString();
   fetch(`${API_BASE}/api/recipes?` + qs, {
     headers: authHeaders() // ✅ JWT meesturen
   })
@@ -261,14 +412,14 @@ document.getElementById('searchBtn').addEventListener('click', () => {
 /* — Random recept — */
 document.getElementById('randomBtn').addEventListener('click', () => {
   if (!ensureLoggedInOrNotify(resultDiv)) return;
-  const params = {};
-  if (dishTypeSelect.value      !== 'Soort gerecht') params.dish_type     = dishTypeSelect.value;
-  if (mealCategorySelect.value  !== 'Menugang')      params.meal_category = mealCategorySelect.value;
-  if (mealTypeSelect.value      !== 'Doel gerecht')  params.meal_type     = mealTypeSelect.value;
-  if (timeRequiredSelect.value  !== 'Tijd')          params.time_required = timeRequiredSelect.value;
-  if (calorieRangeSelect.value  !== 'Calorieën')     params.calorieRange  = calorieRangeSelect.value;
+  const params = new URLSearchParams();
+  getSelectedValues(dishTypeSelect).forEach(v => params.append('dish_type', v));
+  getSelectedValues(mealCategorySelect).forEach(v => params.append('meal_category', v));
+  getSelectedValues(mealTypeSelect).forEach(v => params.append('meal_type', v));
+  getSelectedValues(timeRequiredSelect).forEach(v => params.append('time_required', v));
+  getSelectedValues(calorieRangeSelect).forEach(v => params.append('calorieRange', v));
 
-  const qs = new URLSearchParams(params).toString();
+  const qs = params.toString();
   fetch(`${API_BASE}/api/recipes/random?` + qs, {
     headers: authHeaders() // ✅ JWT meesturen
   })
@@ -394,7 +545,10 @@ const fieldNameToId = {
 
 function isFilled(input) {
   if (!input) return false;
-  if (input.tagName === 'SELECT') return input.value !== 'maak een keuze';
+  if (input.tagName === 'SELECT') {
+    if (input.multiple) return Array.from(input.selectedOptions).length > 0;
+    return input.value !== 'maak een keuze';
+  }
   return input.value.trim() !== '';
 }
 
@@ -406,6 +560,9 @@ function clearMissingState() {
 function setMissingState(input, message) {
   if (!input) return;
   input.classList.add('field-missing');
+  if (input.tagName === 'SELECT' && input._multiSelectApi) {
+    input.nextElementSibling?.classList.add('field-missing');
+  }
   const fieldWrap = input.closest('#addRecipeForm > div') || input.parentElement;
   if (!fieldWrap) return;
   const text = document.createElement('p');
@@ -420,6 +577,9 @@ Object.values(fieldNameToId).concat('url').forEach(id => {
   const eventName = input.tagName === 'SELECT' ? 'change' : 'input';
   input.addEventListener(eventName, () => {
     input.classList.remove('field-missing');
+    if (input.tagName === 'SELECT' && input._multiSelectApi) {
+      input.nextElementSibling?.classList.remove('field-missing');
+    }
     const fieldWrap = input.closest('#addRecipeForm > div') || input.parentElement;
     const err = fieldWrap ? fieldWrap.querySelector('.field-error-text') : null;
     if (err && isFilled(input)) err.remove();
@@ -458,16 +618,24 @@ if (fetchInfoBtn) {
       if (!titleInput.value.trim() && data.title) titleInput.value = data.title;
 
       const dishTypeNew = document.getElementById('dishTypeNew');
-      if (dishTypeNew.value === 'maak een keuze' && data.dish_type) dishTypeNew.value = data.dish_type;
+      if (getSelectedValues(dishTypeNew).length === 0 && data.dish_type) {
+        setMultiSelectValues('dishTypeNew', [data.dish_type]);
+      }
 
       const mealCategoryNew = document.getElementById('mealCategoryNew');
-      if (mealCategoryNew.value === 'maak een keuze' && data.meal_category) mealCategoryNew.value = data.meal_category;
+      if (getSelectedValues(mealCategoryNew).length === 0 && data.meal_category) {
+        setMultiSelectValues('mealCategoryNew', [data.meal_category]);
+      }
 
       const mealTypeNew = document.getElementById('mealTypeNew');
-      if (mealTypeNew.value === 'maak een keuze' && data.meal_type) mealTypeNew.value = data.meal_type;
+      if (getSelectedValues(mealTypeNew).length === 0 && data.meal_type) {
+        setMultiSelectValues('mealTypeNew', [data.meal_type]);
+      }
 
       const timeRequiredNew = document.getElementById('timeRequiredNew');
-      if (timeRequiredNew.value === 'maak een keuze' && data.time_required) timeRequiredNew.value = data.time_required;
+      if (getSelectedValues(timeRequiredNew).length === 0 && data.time_required) {
+        setMultiSelectValues('timeRequiredNew', [data.time_required]);
+      }
 
       const caloriesNew = document.getElementById('caloriesNew');
       if (!caloriesNew.value.trim() && data.calories != null) caloriesNew.value = data.calories;
@@ -509,10 +677,10 @@ addRecipeForm.addEventListener('submit', e => {
   const bodyData = {
     title:         document.getElementById('title').value,
     url:           document.getElementById('url').value,
-    dish_type:     document.getElementById('dishTypeNew').value,
-    meal_category: document.getElementById('mealCategoryNew').value,
-    meal_type:     document.getElementById('mealTypeNew').value,
-    time_required: document.getElementById('timeRequiredNew').value,
+    dish_type:     getSelectedValues(document.getElementById('dishTypeNew')),
+    meal_category: getSelectedValues(document.getElementById('mealCategoryNew')),
+    meal_type:     getSelectedValues(document.getElementById('mealTypeNew')),
+    time_required: getSelectedValues(document.getElementById('timeRequiredNew')),
     calories:      cal ? parseInt(cal, 10) : null
   };
 
@@ -531,6 +699,8 @@ addRecipeForm.addEventListener('submit', e => {
       addMessageDiv.innerHTML = '';
       showRecipeAddedToast('Recept toegevoegd!');
       addRecipeForm.reset();
+      ['dishTypeNew', 'mealCategoryNew', 'mealTypeNew', 'timeRequiredNew']
+        .forEach(id => document.getElementById(id)?._multiSelectApi?.clear());
     })
     .catch(console.error);
 });
@@ -691,7 +861,9 @@ function showAllRecipes(recipes) {
 }
 
 function dropdown(options, sel){
-  return `<select>${options.map(o=>`<option${o===sel?' selected':''}>${o}</option>`).join('')}</select>`;
+  const hasMatch = options.includes(sel);
+  const extra = sel && !hasMatch ? `<option selected>${sel}</option>` : '';
+  return `<select>${extra}${options.map(o=>`<option${o===sel?' selected':''}>${o}</option>`).join('')}</select>`;
 }
 
 function onUpdateRecipe(e){

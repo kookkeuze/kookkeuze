@@ -801,6 +801,23 @@ app.use(authenticate);
 // ===========================================================================
 
 // ===================== RECEPT-API ==========================================
+function toArrayValue(raw, placeholder) {
+  if (Array.isArray(raw)) {
+    return raw
+      .map(v => String(v || '').trim())
+      .filter(v => v && v !== placeholder && v !== 'maak een keuze');
+  }
+  const single = String(raw || '').trim();
+  if (!single || single === placeholder || single === 'maak een keuze') return [];
+  return [single];
+}
+
+function normalizeRecipeField(raw) {
+  const values = toArrayValue(raw, '');
+  if (values.length === 0) return null;
+  return values.join('||');
+}
+
 // 1. Haal (gefilterde) recepten op
 app.get('/api/recipes', (req, res) => {
   const { dish_type, meal_category, meal_type, time_required, search, calorieRange } = req.query;
@@ -858,10 +875,10 @@ app.post('/api/recipes', (req, res) => {
     return res.status(400).json({ error: 'Titel en URL zijn verplicht.' });
   }
 
-  const cleanDishType     = dish_type     === 'maak een keuze' ? null : dish_type;
-  const cleanMealCategory = meal_category === 'maak een keuze' ? null : meal_category;
-  const cleanMealType     = meal_type     === 'maak een keuze' ? null : meal_type;
-  const cleanTimeRequired = time_required === 'maak een keuze' ? null : time_required;
+  const cleanDishType     = normalizeRecipeField(dish_type);
+  const cleanMealCategory = normalizeRecipeField(meal_category);
+  const cleanMealType     = normalizeRecipeField(meal_type);
+  const cleanTimeRequired = normalizeRecipeField(time_required);
 
   addRecipe({
     title,
@@ -891,7 +908,15 @@ app.put('/api/recipes/:id', (req, res) => {
     return res.status(400).json({ error: 'Titel en URL zijn verplicht voor update.' });
   }
 
-  updateRecipe(recipeId, { title, url, dish_type, meal_type, time_required, meal_category, calories }, (err) => {
+  updateRecipe(recipeId, {
+    title,
+    url,
+    dish_type: normalizeRecipeField(dish_type),
+    meal_type: normalizeRecipeField(meal_type),
+    time_required: normalizeRecipeField(time_required),
+    meal_category: normalizeRecipeField(meal_category),
+    calories
+  }, (err) => {
     if (err) return res.status(500).json({ error: 'Er ging iets mis bij het bijwerken.' });
     res.json({ message: 'Recept bijgewerkt!' });
   });

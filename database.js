@@ -66,6 +66,15 @@ async function initializeDatabase() {
     `);
     console.log('✅ Recipes table created/verified');
 
+    await pool.query(`
+      ALTER TABLE recipes
+        ALTER COLUMN dish_type TYPE TEXT,
+        ALTER COLUMN meal_type TYPE TEXT,
+        ALTER COLUMN time_required TYPE TEXT,
+        ALTER COLUMN meal_category TYPE TEXT
+    `);
+    console.log('✅ Recipe category columns converted to TEXT');
+
     // Check if tables have data
     const userCount = await pool.query('SELECT COUNT(*) FROM users');
     const recipeCount = await pool.query('SELECT COUNT(*) FROM recipes');
@@ -91,33 +100,50 @@ pool.query('SELECT NOW()', (err, res) => {
  * bijv. "Onder 300" => AND calories < 300
  * "Boven 1000" => AND calories > 1000
  */
-function buildSingleCalorieCondition(range) {
+function buildSingleCalorieExpression(range) {
   switch (range) {
     case 'Onder 100':
-      return ' AND calories < 100';
+      return 'calories < 100';
     case 'Onder 200':
-      return ' AND calories < 200';
+      return 'calories < 200';
     case 'Onder 300':
-      return ' AND calories < 300';
+      return 'calories < 300';
     case 'Onder 400':
-      return ' AND calories < 400';
+      return 'calories < 400';
     case 'Onder 500':
-      return ' AND calories < 500';
+      return 'calories < 500';
     case 'Onder 600':
-      return ' AND calories < 600';
+      return 'calories < 600';
     case 'Onder 700':
-      return ' AND calories < 700';
+      return 'calories < 700';
     case 'Onder 800':
-      return ' AND calories < 800';
+      return 'calories < 800';
     case 'Onder 900':
-      return ' AND calories < 900';
+      return 'calories < 900';
     case 'Onder 1000':
-      return ' AND calories < 1000';
+      return 'calories < 1000';
     case 'Boven 1000':
-      return ' AND calories > 1000';
+      return 'calories > 1000';
     default:
       return '';
   }
+}
+
+function normalizeFilterArray(rawValue, placeholder) {
+  const values = Array.isArray(rawValue) ? rawValue : [rawValue];
+  return values
+    .map(v => String(v || '').trim())
+    .filter(v => v && v !== placeholder && v !== 'maak een keuze');
+}
+
+function toDisplayValue(rawValue) {
+  if (typeof rawValue !== 'string') return rawValue;
+  if (!rawValue.includes('||')) return rawValue;
+  return rawValue
+    .split('||')
+    .map(v => v.trim())
+    .filter(Boolean)
+    .join(', ');
 }
 
 function getRecipes(filters, callback) {
@@ -137,28 +163,47 @@ function getRecipes(filters, callback) {
     console.log('⚠️ No user_id provided in filters!');
   }
 
-  // dish_type
-  if (filters.dish_type && filters.dish_type !== 'maak een keuze') {
-    query += ` AND dish_type = $${paramIndex}`;
-    params.push(filters.dish_type);
+  const dishTypes = normalizeFilterArray(filters.dish_type, 'Soort gerecht');
+  if (dishTypes.length > 0) {
+    query += ` AND EXISTS (
+      SELECT 1
+      FROM unnest(string_to_array(COALESCE(dish_type, ''), '||')) AS v(val)
+      WHERE btrim(v.val) = ANY($${paramIndex}::text[])
+    )`;
+    params.push(dishTypes);
     paramIndex++;
   }
-  // meal_category
-  if (filters.meal_category && filters.meal_category !== 'maak een keuze') {
-    query += ` AND meal_category = $${paramIndex}`;
-    params.push(filters.meal_category);
+
+  const mealCategories = normalizeFilterArray(filters.meal_category, 'Menugang');
+  if (mealCategories.length > 0) {
+    query += ` AND EXISTS (
+      SELECT 1
+      FROM unnest(string_to_array(COALESCE(meal_category, ''), '||')) AS v(val)
+      WHERE btrim(v.val) = ANY($${paramIndex}::text[])
+    )`;
+    params.push(mealCategories);
     paramIndex++;
   }
-  // meal_type
-  if (filters.meal_type && filters.meal_type !== 'maak een keuze') {
-    query += ` AND meal_type = $${paramIndex}`;
-    params.push(filters.meal_type);
+
+  const mealTypes = normalizeFilterArray(filters.meal_type, 'Doel gerecht');
+  if (mealTypes.length > 0) {
+    query += ` AND EXISTS (
+      SELECT 1
+      FROM unnest(string_to_array(COALESCE(meal_type, ''), '||')) AS v(val)
+      WHERE btrim(v.val) = ANY($${paramIndex}::text[])
+    )`;
+    params.push(mealTypes);
     paramIndex++;
   }
-  // time_required
-  if (filters.time_required && filters.time_required !== 'maak een keuze') {
-    query += ` AND time_required = $${paramIndex}`;
-    params.push(filters.time_required);
+
+  const timeRanges = normalizeFilterArray(filters.time_required, 'Tijd');
+  if (timeRanges.length > 0) {
+    query += ` AND EXISTS (
+      SELECT 1
+      FROM unnest(string_to_array(COALESCE(time_required, ''), '||')) AS v(val)
+      WHERE btrim(v.val) = ANY($${paramIndex}::text[])
+    )`;
+    params.push(timeRanges);
     paramIndex++;
   }
   // Zoeken in titel
@@ -168,9 +213,14 @@ function getRecipes(filters, callback) {
     paramIndex++;
   }
 
-  // Eén calorieRange => buildSingleCalorieCondition
-  if (filters.calorieRange && filters.calorieRange !== 'Calorieën') {
-    query += buildSingleCalorieCondition(filters.calorieRange);
+  const calorieRanges = normalizeFilterArray(filters.calorieRange, 'Calorieën');
+  if (calorieRanges.length > 0) {
+    const calorieExpr = calorieRanges
+      .map(buildSingleCalorieExpression)
+      .filter(Boolean);
+    if (calorieExpr.length > 0) {
+      query += ` AND (${calorieExpr.join(' OR ')})`;
+    }
   }
 
   console.log('Final query:', query);
@@ -185,7 +235,14 @@ function getRecipes(filters, callback) {
     if (result.rows.length > 0) {
       console.log('Sample row:', result.rows[0]);
     }
-    callback(null, result.rows);
+    const formattedRows = result.rows.map(row => ({
+      ...row,
+      dish_type: toDisplayValue(row.dish_type),
+      meal_category: toDisplayValue(row.meal_category),
+      meal_type: toDisplayValue(row.meal_type),
+      time_required: toDisplayValue(row.time_required)
+    }));
+    callback(null, formattedRows);
   });
 }
 

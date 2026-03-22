@@ -143,13 +143,21 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: #f8f9fa;
   color: #2d3436;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 
 /* Container voor de hele pagina */
 .container {
   width: 95%;
   max-width: 1200px;
-  margin: 32px auto;
+  margin: 12px auto 32px;
   background: #fff;
   border-radius: 16px;
   padding: 32px;
@@ -415,6 +423,12 @@ button {
   box-shadow: 0 0 0 3px rgba(216, 199, 161, 0.18) !important;
 }
 
+#addRecipeForm .multi-select.field-missing .multi-select-trigger {
+  border-color: #d8c7a1 !important;
+  background-color: #fffaf0;
+  box-shadow: 0 0 0 3px rgba(216, 199, 161, 0.18) !important;
+}
+
 .field-error-text {
   margin-top: -6px;
   color: #7b6b45;
@@ -465,10 +479,104 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
 }
 
+.multi-select-native {
+  display: none !important;
+}
+
+.multi-select {
+  position: relative;
+  min-width: 160px;
+}
+
+.multi-select-trigger {
+  width: 100%;
+  min-width: 160px;
+  height: 44px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #2d3436;
+  padding: 10px 36px 10px 14px;
+  font-size: 16px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.multi-select-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.multi-select-chevron {
+  color: #63D671;
+  font-size: 13px;
+  margin-left: 8px;
+}
+
+.multi-select.open .multi-select-trigger {
+  border-color: #63D671;
+  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
+}
+
+.multi-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #dfe7e2;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(25, 38, 29, 0.12);
+  padding: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 1200;
+  display: none;
+}
+
+.multi-select.open .multi-select-menu {
+  display: block;
+}
+
+.multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.multi-select-option:hover {
+  background: #f4fbf5;
+}
+
+.multi-select-option input {
+  accent-color: #63D671;
+}
+
 /* Hero filters (Kies een recept tab) */
 .hero-filters select {
   min-width: 160px;
   max-width: 200px;
+}
+
+.hero-filters .multi-select {
+  min-width: 160px;
+  max-width: 200px;
+}
+
+#addRecipeForm .multi-select,
+#addRecipeForm .multi-select-trigger {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Kleinere actieknoppen in overzicht tabel */
@@ -738,6 +846,11 @@ select:focus {
     min-width: 140px;
   }
 
+  .hero-filters .multi-select,
+  .hero-filters .multi-select-trigger {
+    min-width: 140px;
+  }
+
   .overview-table {
     font-size: 13px;
   }
@@ -784,6 +897,13 @@ select:focus {
   .hero-search select,
   .hero-search input {
     width: 100%;
+    max-width: 100%;
+  }
+
+  .hero-filters .multi-select,
+  .hero-filters .multi-select-trigger {
+    width: 100%;
+    min-width: 100%;
     max-width: 100%;
   }
 
@@ -1270,6 +1390,7 @@ select:focus {
   color: #30363f;
   font-size: 14px;
   font-weight: 600;
+  min-height: 32px;
 }
 
 .action-icon-shell {
@@ -1301,6 +1422,9 @@ select:focus {
   line-height: 1;
   color: #2f3740;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
 }
 
 .topbar-chevron {
@@ -1821,7 +1945,7 @@ select:focus {
 }
 
 .site-footer {
-  margin-top: 28px;
+  margin-top: auto;
   border-top: 1px solid #e5ece7;
   background: #ffffff;
   padding: 10px 0;
@@ -1881,16 +2005,18 @@ select:focus {
 /* ===== VOORDELENBALK ===== */
 .benefits-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  gap: 22px;
+  gap: 92px;
   flex-wrap: nowrap;
-  max-width: 760px;
-  padding: 8px 16px;
-  margin: 10px auto -4px auto;
-  border: 1px solid #e1e8e3;
-  border-radius: 999px;
-  background: #f8fbf9;
+  max-width: 1100px;
+  width: min(95%, 1100px);
+  min-height: 30px;
+  padding: 2px 8px;
+  margin: 6px auto -2px auto;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   text-align: center;
   font-size: 0.9rem;
   color: #2d3436;
@@ -1900,19 +2026,30 @@ select:focus {
 .benefit {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
   font-weight: 500;
   white-space: nowrap;
+  min-height: 24px;
+  line-height: 1;
+}
+
+.benefit-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38em;
 }
 
 .benefit i {
   width: 18px;
   height: 18px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #2f9f52;
   font-size: 11px;
+  background: #e8f7eb;
+  border: 1px solid #c9eace;
   opacity: 1;
 }
 
@@ -1924,13 +2061,19 @@ select:focus {
 /* Responsive: compacter op mobiel */
 @media (max-width: 600px) {
   .benefits-bar {
-        gap: 8px;
+        gap: 8px 16px;
         justify-content: center;
+        flex-direction: row;
         flex-wrap: wrap;
+        align-items: center;
         max-width: calc(100% - 20px);
-        font-size: 0.72rem;
-        padding: 7px 10px;
+        font-size: 0.8rem;
+        padding: 4px 10px;
         margin: 8px 10px 0;
+  }
+
+  .benefit {
+    min-height: 20px;
   }
 }
 
