@@ -535,6 +535,7 @@ select:focus {
   padding: 8px;
   max-height: 220px;
   overflow-y: auto;
+  overflow-x: hidden;
   z-index: 1200;
   display: none;
 }
@@ -544,10 +545,11 @@ select:focus {
 }
 
 .multi-select-option {
-  display: flex;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
   align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
+  justify-content: initial !important;
+  column-gap: 10px;
   padding: 7px 8px;
   border-radius: 8px;
   cursor: pointer;
@@ -566,12 +568,16 @@ select:focus {
   width: 16px;
   height: 16px;
   margin: 0;
-  flex: 0 0 auto;
+  display: block;
 }
 
 .multi-select-option span {
+  display: block;
+  min-width: 0;
   line-height: 1.3;
   text-align: left;
+  white-space: normal;
+  word-break: normal;
 }
 
 /* Hero filters (Kies een recept tab) */

@@ -30,6 +30,13 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER;
 const BREVO_FROM_NAME  = process.env.BREVO_FROM_NAME || 'Kookkeuze';
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+const DEFAULT_HTML_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'nl-NL,nl;q=0.9,en;q=0.8',
+  'Cache-Control': 'no-cache',
+  'Pragma': 'no-cache'
+};
 
 function sanitizeOrigin(value) {
   if (!value) return null;
@@ -60,6 +67,7 @@ function buildAllowedOrigins() {
 
 /* -------------------- Image scrape cache -------------------- */
 const IMAGE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const IMAGE_NEGATIVE_CACHE_TTL_MS = 10 * 60 * 1000;
 const recipeImageCache = new Map();
 
 function extractMetaContent(tag) {
@@ -81,6 +89,60 @@ function extractRecipeImage(html) {
     const tag = html.match(re);
     const content = extractMetaContent(tag && tag[0]);
     if (content) return content;
+  }
+  return null;
+}
+
+function normalizeImageCandidate(raw) {
+  if (!raw) return null;
+  if (typeof raw === 'string') return raw.trim() || null;
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      const found = normalizeImageCandidate(item);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof raw === 'object') {
+    return normalizeImageCandidate(raw.url || raw.contentUrl || raw['@id']);
+  }
+  return null;
+}
+
+function extractRecipeImageFromJsonLd(html) {
+  const blocks = parseJsonLdBlocks(html);
+  for (const block of blocks) {
+    const recipe = findRecipeObject(block);
+    if (!recipe) continue;
+    const candidate = normalizeImageCandidate(recipe.image);
+    if (candidate) return candidate;
+  }
+  return null;
+}
+
+async function fetchHtmlWithRetries(targetUrl) {
+  const attempts = [
+    DEFAULT_HTML_HEADERS,
+    {
+      ...DEFAULT_HTML_HEADERS,
+      'User-Agent': 'KookkeuzeBot/1.1',
+      'Accept': 'text/html,application/xhtml+xml'
+    }
+  ];
+
+  for (const headers of attempts) {
+    try {
+      const response = await fetch(targetUrl, {
+        headers,
+        redirect: 'follow',
+        signal: AbortSignal.timeout(12000)
+      });
+      if (!response.ok) continue;
+      const html = await response.text();
+      if (html && html.length > 100) return html;
+    } catch (_err) {
+      // probeer volgende poging
+    }
   }
   return null;
 }
@@ -318,17 +380,10 @@ app.get('/api/recipe-info', async (req, res) => {
   }
 
   try {
-    const response = await fetch(cacheKey, {
-      headers: {
-        'User-Agent': 'KookkeuzeBot/1.0',
-        'Accept': 'text/html,application/xhtml+xml'
-      }
-    });
-    if (!response.ok) {
-      return res.json({ error: 'Kon de pagina niet ophalen.' });
+    const html = await fetchHtmlWithRetries(cacheKey);
+    if (!html) {
+      return res.json({ error: 'Kon de pagina niet ophalen. Deze site blokkeert waarschijnlijk automatisch uitlezen.' });
     }
-
-    const html = await response.text();
     const blocks = parseJsonLdBlocks(html);
     let recipe = null;
     for (const block of blocks) {
@@ -402,31 +457,80 @@ app.get('/api/recipe-image', async (req, res) => {
   }
 
   try {
-    const response = await fetch(cacheKey, {
-      headers: {
-        'User-Agent': 'KookkeuzeBot/1.0',
-        'Accept': 'text/html,application/xhtml+xml'
-      }
-    });
-    if (!response.ok) {
+    const html = await fetchHtmlWithRetries(cacheKey);
+    if (!html) {
       return res.json({ imageUrl: null });
     }
 
-    const html = await response.text();
-    let imageUrl = extractRecipeImage(html);
+    let imageUrl = extractRecipeImage(html) || extractRecipeImageFromJsonLd(html);
     if (imageUrl) {
       imageUrl = new URL(imageUrl, pageUrl).toString();
     }
+    const proxiedImageUrl = imageUrl
+      ? `/api/image-proxy?url=${encodeURIComponent(imageUrl)}&ref=${encodeURIComponent(cacheKey)}`
+      : null;
 
     recipeImageCache.set(cacheKey, {
-      imageUrl: imageUrl || null,
-      expiresAt: Date.now() + IMAGE_CACHE_TTL_MS
+      imageUrl: proxiedImageUrl,
+      expiresAt: Date.now() + (proxiedImageUrl ? IMAGE_CACHE_TTL_MS : IMAGE_NEGATIVE_CACHE_TTL_MS)
     });
 
-    return res.json({ imageUrl: imageUrl || null });
+    return res.json({ imageUrl: proxiedImageUrl });
   } catch (err) {
     console.error('❌ recipe-image error:', err);
     return res.json({ imageUrl: null });
+  }
+});
+
+// Afbeelding proxy (vermindert hotlink/referrer problemen bij externe sites)
+app.get('/api/image-proxy', async (req, res) => {
+  const { url, ref } = req.query;
+  if (!url) return res.status(400).send('url ontbreekt');
+
+  let imageUrl;
+  try {
+    imageUrl = new URL(url);
+  } catch {
+    return res.status(400).send('ongeldige url');
+  }
+  if (!['http:', 'https:'].includes(imageUrl.protocol)) {
+    return res.status(400).send('ongeldige url');
+  }
+
+  let referer = null;
+  if (typeof ref === 'string' && ref) {
+    try {
+      referer = new URL(ref).toString();
+    } catch {
+      referer = null;
+    }
+  }
+
+  try {
+    const response = await fetch(imageUrl.toString(), {
+      headers: {
+        'User-Agent': DEFAULT_HTML_HEADERS['User-Agent'],
+        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        ...(referer ? { Referer: referer } : {})
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(12000)
+    });
+
+    if (!response.ok) {
+      return res.status(404).send('Afbeelding niet beschikbaar');
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const arrBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrBuffer);
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.send(buffer);
+  } catch (err) {
+    console.error('❌ image-proxy error:', err);
+    return res.status(502).send('Afbeelding ophalen mislukt');
   }
 });
 
