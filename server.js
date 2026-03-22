@@ -432,9 +432,14 @@ app.get('/api/recipe-image', async (req, res) => {
 
 /* -------------------- Email template -------------------- */
 function verificationEmailHtml(verifyUrl) {
-  const PRIMARY    = '#4dca5b';
-  const TEXT_DARK  = '#3a3a3a';
-  const BACKGROUND = '#f8f9fa';
+  const PRIMARY = '#4dca5b';
+  const PRIMARY_DARK = '#38b248';
+  const ACCENT = '#d97a45';
+  const PAGE_BG = '#eef5ef';
+  const CARD_BG = '#ffffff';
+  const TEXT_DARK = '#28372f';
+  const TEXT_BODY = '#4b5c53';
+  const MUTED = '#708178';
   const logoUrl = `${FRONTEND_URL}/Logo/Kookkeuze-logo.png`;
 
   return `
@@ -445,45 +450,97 @@ function verificationEmailHtml(verifyUrl) {
     <meta name="color-scheme" content="light only">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Bevestig je e-mailadres</title>
+    <style>
+      @media screen and (max-width: 640px) {
+        .mail-wrap { padding: 18px 10px !important; }
+        .mail-card { border-radius: 14px !important; }
+        .mail-body { padding: 24px 18px !important; }
+        .mail-title { font-size: 31px !important; }
+        .mail-cta { display: block !important; text-align: center !important; }
+      }
+    </style>
   </head>
-  <body style="margin:0;background:${PRIMARY};padding:32px 12px;font-family:Arial,Helvetica,sans-serif;">
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
-           style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.08);">
+  <body style="margin:0;background:${PAGE_BG};font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+    <div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0;">
+      Bevestig je e-mailadres en activeer je Kookkeuze-account.
+    </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="mail-wrap"
+           style="background:${PAGE_BG};padding:30px 12px;">
       <tr>
-        <td style="background:${BACKGROUND};padding:24px 24px 0;">
-          <img src="${logoUrl}" alt="Kookkeuze" style="height:35px;display:block;">
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:24px 24px 0;">
-          <h1 style="margin:0 0 8px 0;font-size:36px;line-height:1.1;color:${TEXT_DARK};">
-            Bevestig je e-mailadres
-          </h1>
-          <hr style="border:none;border-top:1px solid #eee;margin:16px 0;">
-          <p style="margin:0 0 16px 0;color:#444;font-size:16px;line-height:1.6;">
-            Welkom bij Kookkeuze! Klik op de knop hieronder om je e-mailadres te bevestigen.
-          </p>
-          <p style="margin:24px 0;">
-            <a href="${verifyUrl}"
-               style="display:inline-block;background:${PRIMARY};color:#fff;text-decoration:none;
-                      padding:14px 22px;border-radius:10px;font-weight:bold;">
-              E-mailadres bevestigen
-            </a>
-          </p>
-          <p style="margin:0 0 8px 0;color:#666;font-size:14px;">
-            Werkt de knop niet? Kopieer en plak deze link in je browser:
-          </p>
-          <p style="margin:0 0 24px 0;color:#4a4a4a;font-size:13px;word-break:break-all;">
-            <a href="${verifyUrl}" style="color:${PRIMARY};text-decoration:underline;">${verifyUrl}</a>
-          </p>
-          <p style="margin:0 0 4px 0;color:#888;font-size:12px;line-height:1.6;">
-            Heb jij dit niet aangevraagd? Negeer deze e-mail.
-          </p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:20px 24px 28px;color:#8a8a8a;font-size:12px;">
-          © ${new Date().getFullYear()} Kookkeuze.
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="mail-card"
+                 style="max-width:640px;margin:0 auto;background:${CARD_BG};border-radius:20px;overflow:hidden;box-shadow:0 18px 42px rgba(40,55,47,0.14);">
+            <tr>
+              <td style="height:8px;background:${PRIMARY};font-size:0;line-height:0;">&nbsp;</td>
+            </tr>
+            <tr>
+              <td style="padding:24px 24px 20px;background:#f4fbf4;border-bottom:1px solid #e0efe2;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                  <tr>
+                    <td valign="middle">
+                      <img src="${logoUrl}" alt="Kookkeuze" style="height:36px;display:block;">
+                    </td>
+                    <td align="right" valign="middle">
+                      <span style="display:inline-block;background:#ffffff;color:${PRIMARY_DARK};border:1px solid #d8eddc;
+                                   border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;letter-spacing:.03em;">
+                        ACCOUNT ACTIVEREN
+                      </span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td class="mail-body" style="padding:30px 28px 26px;">
+                <h1 class="mail-title" style="margin:0 0 14px 0;font-size:42px;line-height:1.06;letter-spacing:-0.02em;color:${TEXT_DARK};">
+                  Bevestig je e-mailadres
+                </h1>
+                <p style="margin:0 0 20px 0;color:${TEXT_BODY};font-size:17px;line-height:1.62;">
+                  Welkom bij Kookkeuze. Klik op de knop hieronder om je account af te ronden en direct recepten te kunnen bewaren.
+                </p>
+                <p style="margin:0 0 26px 0;">
+                  <a href="${verifyUrl}" class="mail-cta"
+                     style="display:inline-block;background:${PRIMARY};color:#ffffff;text-decoration:none;
+                            padding:14px 24px;border-radius:12px;font-size:18px;font-weight:700;line-height:1.2;
+                            box-shadow:0 8px 18px rgba(77,202,91,0.32);">
+                    E-mailadres bevestigen
+                  </a>
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+                       style="background:#f8fbf8;border:1px solid #e0eae1;border-radius:12px;">
+                  <tr>
+                    <td style="padding:14px 14px 12px;">
+                      <p style="margin:0 0 8px 0;color:${MUTED};font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;">
+                        Werkt de knop niet?
+                      </p>
+                      <p style="margin:0;color:${TEXT_BODY};font-size:13px;line-height:1.55;word-break:break-all;">
+                        Kopieer en plak deze link in je browser:<br>
+                        <a href="${verifyUrl}" style="color:${PRIMARY_DARK};text-decoration:underline;">${verifyUrl}</a>
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:18px 0 0 0;color:${MUTED};font-size:13px;line-height:1.6;">
+                  Heb je dit niet aangevraagd? Dan kun je deze e-mail veilig negeren.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 28px 24px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+                       style="border-top:1px solid #e8efea;">
+                  <tr>
+                    <td style="padding-top:14px;font-size:12px;color:${MUTED};line-height:1.5;">
+                      © ${new Date().getFullYear()} Kookkeuze
+                    </td>
+                    <td align="right" style="padding-top:14px;font-size:12px;color:${ACCENT};font-weight:700;letter-spacing:.02em;">
+                      kookkeuze.nl
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
         </td>
       </tr>
     </table>

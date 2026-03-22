@@ -742,6 +742,22 @@ const authStatusBadge = document.getElementById('authStatusBadge');
 const authModal    = document.getElementById('authModal');
 const loginText    = document.querySelector('.login-text');
 
+function setSubmitLoading(formId, isLoading, loadingText) {
+  const form = document.getElementById(formId);
+  const submitBtn = form?.querySelector('button[type="submit"]');
+  if (!submitBtn) return;
+
+  if (!submitBtn.dataset.defaultText) {
+    submitBtn.dataset.defaultText = submitBtn.textContent.trim();
+  }
+
+  submitBtn.disabled = isLoading;
+  submitBtn.classList.toggle('is-loading', isLoading);
+  submitBtn.textContent = isLoading
+    ? loadingText
+    : submitBtn.dataset.defaultText;
+}
+
 function setAuthPane(targetPane) {
   [loggedInPane, loginPane, registerPane, forgotPane, resetPane].forEach(p => {
     if (!p) return;
@@ -798,6 +814,7 @@ document.getElementById('register-form').addEventListener('submit', async e => {
   e.preventDefault();
   const email    = document.getElementById('register-email').value;
   const password = document.getElementById('register-password').value;
+  setSubmitLoading('register-form', true, 'Registreren...');
 
   try {
     const res  = await fetch(`${API_BASE}/api/register`, {
@@ -810,6 +827,8 @@ document.getElementById('register-form').addEventListener('submit', async e => {
   } catch (err) {
     console.error(err);
     showMsg('Server niet bereikbaar.', false);
+  } finally {
+    setSubmitLoading('register-form', false, 'Registreren...');
   }
 });
 
@@ -819,6 +838,7 @@ document.getElementById('login-form').addEventListener('submit', async e => {
 
   const email    = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
+  setSubmitLoading('login-form', true, 'Inloggen...');
 
   try {
     const res  = await fetch(`${API_BASE}/api/login`, {
@@ -841,6 +861,8 @@ document.getElementById('login-form').addEventListener('submit', async e => {
   } catch (err) {
     console.error(err);
     showMsg('Server niet bereikbaar.', false);
+  } finally {
+    setSubmitLoading('login-form', false, 'Inloggen...');
   }
 });
 
