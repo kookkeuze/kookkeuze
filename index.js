@@ -469,7 +469,7 @@ function showRecipes(arr) {
           <div class="recipe-card-actions">
             <p class="recipe-link"><a href="${r.url}" target="_blank" class="ext-link">
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
-            <button type="button" class="green-btn plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${(r.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
+            <button type="button" class="plan-weekmenu-btn plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${(r.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
           </div>
           <div class="recipe-meta-row">
             <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
@@ -500,8 +500,7 @@ const weekmenuSlotSelect = document.getElementById('weekmenuSlotSelect');
 const assignModal = document.getElementById('assignModal');
 const closeAssignModal = document.getElementById('closeAssignModal');
 const assignModalRecipeTitle = document.getElementById('assignModalRecipeTitle');
-const assignDaySelect = document.getElementById('assignDaySelect');
-const assignSlotSelect = document.getElementById('assignSlotSelect');
+const assignCalendarPicker = document.getElementById('assignCalendarPicker');
 const assignModalSaveBtn = document.getElementById('assignModalSaveBtn');
 
 const plannerDays = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
@@ -510,6 +509,8 @@ let plannerInitialized = false;
 let plannerRecipes = [];
 let plannerEntries = new Map();
 let pendingAssignRecipeId = null;
+let assignSelectedDay = 1;
+let assignSelectedSlot = 'dinner';
 
 function getMonday(date) {
   const d = new Date(date);
@@ -551,13 +552,52 @@ function plannerSlotKey(day, slot) {
   return `${day}-${slot}`;
 }
 
+function renderAssignCalendarPicker() {
+  if (!assignCalendarPicker || !plannerWeekStart) return;
+  const slots = [
+    { key: 'breakfast', label: 'Ontbijt' },
+    { key: 'lunch', label: 'Lunch' },
+    { key: 'snack', label: 'Tussendoor' },
+    { key: 'dinner', label: 'Avondeten' }
+  ];
+
+  let html = '<div class="assign-picker-days">';
+  plannerDays.forEach((dayName, idx) => {
+    const dayNumber = idx + 1;
+    const activeClass = assignSelectedDay === dayNumber ? ' active' : '';
+    html += `<button type="button" class="assign-day-btn${activeClass}" data-day="${dayNumber}">${dayName}<span>${formatDayNumber(plannerWeekStart, idx)}</span></button>`;
+  });
+  html += '</div><div class="assign-picker-slots">';
+
+  slots.forEach(slot => {
+    const activeClass = assignSelectedSlot === slot.key ? ' active' : '';
+    html += `<button type="button" class="assign-slot-btn${activeClass}" data-slot="${slot.key}">${slot.label}</button>`;
+  });
+  html += '</div>';
+  assignCalendarPicker.innerHTML = html;
+
+  assignCalendarPicker.querySelectorAll('.assign-day-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      assignSelectedDay = Number(btn.dataset.day);
+      renderAssignCalendarPicker();
+    });
+  });
+  assignCalendarPicker.querySelectorAll('.assign-slot-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      assignSelectedSlot = btn.dataset.slot;
+      renderAssignCalendarPicker();
+    });
+  });
+}
+
 function openAssignModalForRecipe(recipeId, recipeTitle) {
   if (!ensureLoggedInOrNotify(resultDiv)) return;
   if (!plannerWeekStart) plannerWeekStart = toIsoDate(getMonday(new Date()));
   pendingAssignRecipeId = Number(recipeId);
   if (assignModalRecipeTitle) assignModalRecipeTitle.textContent = recipeTitle || 'Recept';
-  if (assignDaySelect && weekmenuDaySelect) assignDaySelect.value = weekmenuDaySelect.value || '1';
-  if (assignSlotSelect && weekmenuSlotSelect) assignSlotSelect.value = weekmenuSlotSelect.value || 'dinner';
+  assignSelectedDay = Number(weekmenuDaySelect?.value || '1');
+  assignSelectedSlot = weekmenuSlotSelect?.value || 'dinner';
+  renderAssignCalendarPicker();
   assignModal?.classList.remove('hidden');
 }
 
@@ -670,16 +710,14 @@ function renderPlannerSearchResults() {
     html += `
       <div class="weekmenu-search-item">
         <a href="${recipe.url}" target="_blank" class="weekmenu-search-title">${recipe.title}</a>
-        <button type="button" class="green-btn weekmenu-assign-btn" data-recipe-id="${recipe.id}">Plan</button>
+        <button type="button" class="plan-weekmenu-btn weekmenu-assign-btn" data-recipe-id="${recipe.id}" data-recipe-title="${(recipe.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
       </div>`;
   });
   weekmenuSearchResults.innerHTML = html;
 
   weekmenuSearchResults.querySelectorAll('.weekmenu-assign-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const day = Number(weekmenuDaySelect?.value || '1');
-      const slot = weekmenuSlotSelect?.value || 'dinner';
-      await assignRecipeToPlanner(Number(btn.dataset.recipeId), day, slot);
+    btn.addEventListener('click', () => {
+      openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
     });
   });
 }
@@ -762,9 +800,7 @@ async function initWeekPlanner() {
   });
   assignModalSaveBtn?.addEventListener('click', async () => {
     if (!pendingAssignRecipeId) return;
-    const day = Number(assignDaySelect?.value || '1');
-    const slot = assignSlotSelect?.value || 'dinner';
-    await assignRecipeToPlanner(pendingAssignRecipeId, day, slot);
+    await assignRecipeToPlanner(pendingAssignRecipeId, assignSelectedDay, assignSelectedSlot);
     closeAssignModalPanel();
   });
 }

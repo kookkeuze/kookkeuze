@@ -1151,12 +1151,6 @@ select:focus {
   gap: 10px;
 }
 
-.recipe-card-actions .plan-recipe-btn {
-  min-width: 148px;
-  padding: 8px 14px;
-  font-size: 13px;
-}
-
 .recipe-card p a {
   color: #ffffff;
   text-decoration: none;
@@ -1342,7 +1336,7 @@ select:focus {
 .weekmenu-search {
   display: grid;
   gap: 10px;
-  margin-bottom: 18px;
+  margin: 16px 0 8px;
 }
 
 .weekmenu-search input {
@@ -1357,6 +1351,7 @@ select:focus {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .weekmenu-search-controls select {
@@ -1379,6 +1374,21 @@ select:focus {
   padding: 10px 12px;
 }
 
+.plan-weekmenu-btn {
+  background: #ffffff;
+  color: #235b2a;
+  border: 2px solid #235b2a;
+  padding: 8px 14px;
+  font-size: 12px;
+  min-width: 126px;
+}
+
+.plan-weekmenu-btn:hover {
+  background: #235b2a;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
 .weekmenu-search-title {
   color: #2e3934;
   text-decoration: none;
@@ -1395,49 +1405,7 @@ select:focus {
 }
 
 .weekmenu-grid {
-  overflow: visible;
-}
-
-.weekmenu-table {
-  width: 100%;
-  min-width: 850px;
-  border-collapse: collapse;
-  background: #fff;
-  border: 1px solid #e3ebe5;
-  border-radius: 12px;
   overflow: hidden;
-}
-
-.weekmenu-table th,
-.weekmenu-table td {
-  border-bottom: 1px solid #edf2ef;
-  border-right: 1px solid #edf2ef;
-  padding: 10px;
-  vertical-align: top;
-}
-
-.weekmenu-table th {
-  background: #f5faf6;
-  color: #235b2a;
-  font-size: 13px;
-  text-transform: uppercase;
-}
-
-.weekmenu-slot-label {
-  font-weight: 700;
-  color: #2f3a35;
-  background: #f9fcf9;
-  min-width: 95px;
-}
-
-.weekmenu-cell {
-  display: grid;
-  gap: 8px;
-  min-height: 110px;
-}
-
-.weekmenu-cell.has-recipe {
-  grid-template-rows: auto auto;
 }
 
 .weekmenu-cell-title {
@@ -1453,6 +1421,7 @@ select:focus {
 .weekmenu-empty {
   color: #7a8780;
   font-size: 13px;
+  margin: 0;
 }
 
 .weekmenu-cell-actions {
@@ -1464,22 +1433,21 @@ select:focus {
 .weekmenu-cell-actions .green-btn,
 .weekmenu-cell-actions .pink-btn,
 .weekmenu-cell .green-btn {
-  padding: 7px 12px;
-  min-width: 82px;
-  font-size: 12px;
+  padding: 6px 10px;
+  min-width: 74px;
+  font-size: 11px;
 }
 
 .weekmenu-calendar {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .weekmenu-day-card {
   border: 1px solid #dde8df;
   border-radius: 12px;
   background: #fff;
-  min-height: 260px;
   display: grid;
   grid-template-rows: auto 1fr;
   overflow: hidden;
@@ -1504,17 +1472,17 @@ select:focus {
 }
 
 .weekmenu-day-body {
-  padding: 10px;
+  padding: 8px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .weekmenu-slot-item {
   border: 1px solid #edf3ee;
   border-radius: 10px;
-  padding: 8px;
+  padding: 7px;
   display: grid;
-  gap: 7px;
+  gap: 6px;
   align-content: start;
   background: #fbfdfb;
 }
@@ -1528,8 +1496,15 @@ select:focus {
   font-weight: 700;
 }
 
+.weekmenu-slot-item .weekmenu-replace-btn,
+.weekmenu-slot-item .weekmenu-clear-btn {
+  padding: 6px 10px;
+  min-width: 0;
+  font-size: 11px;
+}
+
 .assign-modal-content {
-  max-width: 540px;
+  max-width: 620px;
 }
 
 .assign-modal-title {
@@ -1545,13 +1520,88 @@ select:focus {
 
 .assign-modal-controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
+  justify-content: flex-end;
+  margin-top: 12px;
 }
 
-.assign-modal-controls select {
-  min-width: 170px;
+.assign-modal-controls .pink-btn {
+  padding: 9px 16px;
+  font-size: 12px;
+  min-width: 120px;
+}
+
+.assign-calendar-picker {
+  display: grid;
+  gap: 10px;
+}
+
+.assign-picker-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.assign-day-btn {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  border: 1px solid #d9e7dc;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #3e4a44;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.assign-day-btn span {
+  color: #6d7a74;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.assign-day-btn.active {
+  border-color: #63D671;
+  background: #f5fff6;
+  color: #235b2a;
+}
+
+.assign-picker-slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.assign-slot-btn {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #d9e7dc;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #3e4a44;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.assign-slot-btn.active {
+  border-color: #63D671;
+  background: #f5fff6;
+  color: #235b2a;
+}
+
+.recipe-card-actions .plan-recipe-btn {
+  min-width: 0;
+  padding: 8px 14px;
+  font-size: 12px;
+}
+
+.weekmenu-search-item .weekmenu-assign-btn {
+  min-width: 0;
+  padding: 7px 12px;
+  font-size: 12px;
 }
 
 @media (max-width: 1200px) {
@@ -1564,10 +1614,62 @@ select:focus {
   .weekmenu-calendar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .assign-picker-days {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .assign-picker-slots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
+  .weekmenu-toolbar {
+    gap: 8px;
+  }
+
+  .weekmenu-toolbar .overview-view-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
   .weekmenu-calendar {
+    grid-template-columns: 1fr;
+  }
+
+  .weekmenu-day-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .weekmenu-search-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .assign-modal-content {
+    max-width: 94vw;
+  }
+
+  .assign-picker-days {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .assign-modal-controls {
+    justify-content: stretch;
+  }
+
+  .assign-modal-controls .pink-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .weekmenu-day-body {
+    grid-template-columns: 1fr;
+  }
+
+  .assign-picker-slots {
     grid-template-columns: 1fr;
   }
 }

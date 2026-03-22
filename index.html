@@ -431,6 +431,8 @@
         <button id="weekNextBtn" type="button" class="overview-view-btn">Volgende week <i class="fas fa-chevron-right"></i></button>
       </div>
 
+      <div id="weekmenuGrid" class="weekmenu-grid"></div>
+
       <div class="weekmenu-search">
         <input id="weekmenuSearchInput" type="text" placeholder="Zoek in je recepten om te plannen..." />
         <div class="weekmenu-search-controls">
@@ -452,8 +454,6 @@
         </div>
         <div id="weekmenuSearchResults" class="weekmenu-search-results"></div>
       </div>
-
-      <div id="weekmenuGrid" class="weekmenu-grid"></div>
     </div>
 
     <div id="assignModal" class="modal hidden" aria-hidden="true">
@@ -463,23 +463,9 @@
         </button>
         <h3 class="assign-modal-title">Plan recept in weekmenu</h3>
         <p id="assignModalRecipeTitle" class="assign-modal-sub"></p>
+        <div id="assignCalendarPicker" class="assign-calendar-picker"></div>
         <div class="assign-modal-controls">
-          <select id="assignDaySelect">
-            <option value="1">Maandag</option>
-            <option value="2">Dinsdag</option>
-            <option value="3">Woensdag</option>
-            <option value="4">Donderdag</option>
-            <option value="5">Vrijdag</option>
-            <option value="6">Zaterdag</option>
-            <option value="7">Zondag</option>
-          </select>
-          <select id="assignSlotSelect">
-            <option value="breakfast">Ontbijt</option>
-            <option value="lunch">Lunch</option>
-            <option value="snack">Tussendoor</option>
-            <option value="dinner">Avondeten</option>
-          </select>
-          <button id="assignModalSaveBtn" type="button" class="green-btn">Inplannen</button>
+          <button id="assignModalSaveBtn" type="button" class="pink-btn">Inplannen</button>
         </div>
       </div>
     </div>
