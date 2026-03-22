@@ -243,6 +243,17 @@ function getSelectedValues(select) {
   return [];
 }
 
+function extractSelectedOptions(options, rawValue) {
+  const text = String(rawValue || '').trim();
+  if (!text) return [];
+  return options.filter(opt =>
+    text === opt ||
+    text.startsWith(`${opt}, `) ||
+    text.endsWith(`, ${opt}`) ||
+    text.includes(`, ${opt}, `)
+  );
+}
+
 function setMultiSelectValues(selectId, values) {
   const select = document.getElementById(selectId);
   if (!select) return;
@@ -795,10 +806,10 @@ function renderOverviewPage() {
         </td>
         <td contenteditable>${r.title}</td>
         <td contenteditable>${r.url}</td>
-        <td>${dropdown(dishOpt,  r.dish_type)}</td>
-        <td>${dropdown(catOpt,   r.meal_category)}</td>
-        <td>${dropdown(mealOpt,  r.meal_type)}</td>
-        <td>${dropdown(timeOpt,  r.time_required)}</td>
+        <td>${dropdown(dishOpt,  r.dish_type, 'Soort')}</td>
+        <td>${dropdown(catOpt,   r.meal_category, 'Menugang')}</td>
+        <td>${dropdown(mealOpt,  r.meal_type, 'Doel gerecht')}</td>
+        <td>${dropdown(timeOpt,  r.time_required, 'Tijd')}</td>
         <td><input class="calories-field" type="number" value="${cals}" /></td>
         <td><button class="green-btn edit-btn">Opslaan</button></td>
         <td><button class="pink-btn  delete-btn">Verwijder</button></td>
@@ -830,6 +841,9 @@ function renderOverviewPage() {
 
   hydrateOverviewImages();
   hydrateResultImages();
+  document.querySelectorAll('.overview-multi-select').forEach(select => {
+    createMultiSelect(select, select.dataset.placeholder || 'Selecteer');
+  });
   renderOverviewPagination(overviewAllRecipes.length);
   applyOverviewViewMode();
   document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', onUpdateRecipe));
@@ -860,23 +874,26 @@ function showAllRecipes(recipes) {
   renderOverviewPage();
 }
 
-function dropdown(options, sel){
-  const hasMatch = options.includes(sel);
-  const extra = sel && !hasMatch ? `<option selected>${sel}</option>` : '';
-  return `<select>${extra}${options.map(o=>`<option${o===sel?' selected':''}>${o}</option>`).join('')}</select>`;
+function dropdown(options, sel, placeholder = 'Selecteer'){
+  const selectedValues = extractSelectedOptions(options, sel);
+  return `<select class="overview-multi-select" data-placeholder="${placeholder}" multiple>${options.map(o=>`<option${selectedValues.includes(o)?' selected':''}>${o}</option>`).join('')}</select>`;
 }
 
 function onUpdateRecipe(e){
   if (!ensureLoggedInOrNotify()) return;
   const row = e.target.closest('tr');
   const id  = row.dataset.id;
+  const dishSelect = row.cells[3].querySelector('select');
+  const catSelect = row.cells[4].querySelector('select');
+  const mealSelect = row.cells[5].querySelector('select');
+  const timeSelect = row.cells[6].querySelector('select');
   const data = {
     title:         row.cells[1].innerText.trim(),
     url:           row.cells[2].innerText.trim(),
-    dish_type:     row.cells[3].querySelector('select').value,
-    meal_category: row.cells[4].querySelector('select').value,
-    meal_type:     row.cells[5].querySelector('select').value,
-    time_required: row.cells[6].querySelector('select').value,
+    dish_type:     getSelectedValues(dishSelect),
+    meal_category: getSelectedValues(catSelect),
+    meal_type:     getSelectedValues(mealSelect),
+    time_required: getSelectedValues(timeSelect),
     calories:      row.cells[7].querySelector('.calories-field').value.trim() || null
   };
 

@@ -394,7 +394,7 @@ button {
 }
 
 
-#addRecipeForm label {
+#addRecipeForm > div > label {
   font-weight: 700;
     color: #333;
     margin-top: 8px;
@@ -546,11 +546,15 @@ select:focus {
 .multi-select-option {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
   padding: 7px 8px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
+  margin-top: 0 !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 500 !important;
 }
 
 .multi-select-option:hover {
@@ -559,6 +563,15 @@ select:focus {
 
 .multi-select-option input {
   accent-color: #63D671;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.multi-select-option span {
+  line-height: 1.3;
+  text-align: left;
 }
 
 /* Hero filters (Kies een recept tab) */
@@ -820,6 +833,21 @@ select:focus {
   min-width: 120px;
   padding: 8px 32px 8px 12px;
   font-size: 13px;
+}
+
+.overview-table .multi-select {
+  min-width: 120px;
+}
+
+.overview-table .multi-select-trigger {
+  min-width: 120px;
+  height: 36px;
+  padding: 7px 28px 7px 10px;
+  font-size: 13px;
+}
+
+.overview-table .multi-select-menu {
+  max-height: 170px;
 }
 
 /* Media query aanpassingen */
@@ -1414,6 +1442,7 @@ select:focus {
 
 .install-app-btn .action-icon-shell {
   color: inherit;
+  top: 1px;
 }
 
 .install-text,
