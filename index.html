@@ -201,6 +201,7 @@
     <option value="#kiesRecept">Kies een recept</option>
     <option value="#voegReceptToe">Voeg een recept toe</option>
     <option value="#overzichtRecepten">Overzicht recepten</option>
+    <option value="#weekmenuPlanner">Weekmenu planner</option>
   </select>
   <span class="dropdown-icon"><i class="fas fa-chevron-down"></i></span>
 </div>
@@ -209,6 +210,7 @@
   <li><a href="#kiesRecept"  class="tab-link active">Kies een recept</a></li>
   <li><a href="#voegReceptToe" class="tab-link">Voeg een recept toe</a></li>
   <li><a href="#overzichtRecepten" class="tab-link">Overzicht recepten</a></li>
+  <li><a href="#weekmenuPlanner" class="tab-link">Weekmenu planner</a></li>
 </ul>
 
     <!-- TAB 1: KIES EEN RECEPT -->
@@ -418,6 +420,68 @@
       </div>
       <div id="overviewGridContainer" class="overview-grid-container"></div>
       <div id="overviewPagination" class="overview-pagination"></div>
+    </div>
+
+    <!-- TAB 4: WEEKMENU PLANNER -->
+    <div id="weekmenuPlanner" class="tab-content">
+      <h2>Weekmenu planner</h2>
+      <div class="weekmenu-toolbar">
+        <button id="weekPrevBtn" type="button" class="overview-view-btn"><i class="fas fa-chevron-left"></i> Vorige week</button>
+        <p id="weekLabel" class="weekmenu-label">Week</p>
+        <button id="weekNextBtn" type="button" class="overview-view-btn">Volgende week <i class="fas fa-chevron-right"></i></button>
+      </div>
+
+      <div class="weekmenu-search">
+        <input id="weekmenuSearchInput" type="text" placeholder="Zoek in je recepten om te plannen..." />
+        <div class="weekmenu-search-controls">
+          <select id="weekmenuDaySelect">
+            <option value="1">Maandag</option>
+            <option value="2">Dinsdag</option>
+            <option value="3">Woensdag</option>
+            <option value="4">Donderdag</option>
+            <option value="5">Vrijdag</option>
+            <option value="6">Zaterdag</option>
+            <option value="7">Zondag</option>
+          </select>
+          <select id="weekmenuSlotSelect">
+            <option value="breakfast">Ontbijt</option>
+            <option value="lunch">Lunch</option>
+            <option value="snack">Tussendoor</option>
+            <option value="dinner">Avondeten</option>
+          </select>
+        </div>
+        <div id="weekmenuSearchResults" class="weekmenu-search-results"></div>
+      </div>
+
+      <div id="weekmenuGrid" class="weekmenu-grid"></div>
+    </div>
+
+    <div id="assignModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content assign-modal-content">
+        <button id="closeAssignModal" class="modal-close" aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+        <h3 class="assign-modal-title">Plan recept in weekmenu</h3>
+        <p id="assignModalRecipeTitle" class="assign-modal-sub"></p>
+        <div class="assign-modal-controls">
+          <select id="assignDaySelect">
+            <option value="1">Maandag</option>
+            <option value="2">Dinsdag</option>
+            <option value="3">Woensdag</option>
+            <option value="4">Donderdag</option>
+            <option value="5">Vrijdag</option>
+            <option value="6">Zaterdag</option>
+            <option value="7">Zondag</option>
+          </select>
+          <select id="assignSlotSelect">
+            <option value="breakfast">Ontbijt</option>
+            <option value="lunch">Lunch</option>
+            <option value="snack">Tussendoor</option>
+            <option value="dinner">Avondeten</option>
+          </select>
+          <button id="assignModalSaveBtn" type="button" class="green-btn">Inplannen</button>
+        </div>
+      </div>
     </div>
 
     <!-- Scripts -->

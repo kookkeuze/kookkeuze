@@ -339,7 +339,10 @@ const {
   verifyUserById,
   setPasswordResetToken,
   getUserByPasswordResetToken,
-  updateUserPasswordById
+  updateUserPasswordById,
+  getMealPlanForWeek,
+  upsertMealPlanEntry,
+  deleteMealPlanEntry
 } = require('./database');
 
 app.use(bodyParser.json());
@@ -922,6 +925,12 @@ function normalizeRecipeField(raw) {
   return values.join('||');
 }
 
+function isValidWeekStart(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
+  const dt = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(dt.getTime());
+}
+
 // 1. Haal (gefilterde) recepten op
 app.get('/api/recipes', (req, res) => {
   const { dish_type, meal_category, meal_type, time_required, search, calorieRange } = req.query;
@@ -1037,6 +1046,89 @@ app.delete('/api/recipes/:id', (req, res) => {
   deleteRecipe(recipeId, (err) => {
     if (err) return res.status(500).json({ error: 'Er ging iets mis bij het verwijderen.' });
     res.json({ message: 'Recept verwijderd!' });
+  });
+});
+
+// 6. Weekmenu ophalen
+app.get('/api/meal-plan', (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om je weekmenu te zien.' });
+  }
+
+  const { weekStart } = req.query;
+  if (!isValidWeekStart(weekStart)) {
+    return res.status(400).json({ error: 'Ongeldige weekStart. Gebruik YYYY-MM-DD.' });
+  }
+
+  getMealPlanForWeek({
+    user_id: req.user.id,
+    week_start: weekStart
+  }, (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Kon weekmenu niet ophalen.' });
+    return res.json(rows);
+  });
+});
+
+// 7. Weekmenu-slot opslaan/updaten
+app.put('/api/meal-plan', (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om je weekmenu te bewerken.' });
+  }
+
+  const { week_start, day_of_week, meal_slot, recipe_id } = req.body;
+  if (!isValidWeekStart(week_start)) {
+    return res.status(400).json({ error: 'Ongeldige week_start. Gebruik YYYY-MM-DD.' });
+  }
+  const dayNum = Number(day_of_week);
+  if (!Number.isInteger(dayNum) || dayNum < 1 || dayNum > 7) {
+    return res.status(400).json({ error: 'day_of_week moet tussen 1 en 7 liggen.' });
+  }
+  if (!['breakfast', 'lunch', 'snack', 'dinner'].includes(String(meal_slot || ''))) {
+    return res.status(400).json({ error: 'meal_slot moet breakfast, lunch, snack of dinner zijn.' });
+  }
+  const recipeIdNum = Number(recipe_id);
+  if (!Number.isInteger(recipeIdNum) || recipeIdNum <= 0) {
+    return res.status(400).json({ error: 'recipe_id ontbreekt of is ongeldig.' });
+  }
+
+  upsertMealPlanEntry({
+    user_id: req.user.id,
+    week_start,
+    day_of_week: dayNum,
+    meal_slot,
+    recipe_id: recipeIdNum
+  }, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Opslaan van weekmenu mislukt.' });
+    return res.json({ message: 'Weekmenu bijgewerkt.' });
+  });
+});
+
+// 8. Weekmenu-slot verwijderen
+app.delete('/api/meal-plan', (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om je weekmenu te bewerken.' });
+  }
+
+  const { week_start, day_of_week, meal_slot } = req.body || {};
+  if (!isValidWeekStart(week_start)) {
+    return res.status(400).json({ error: 'Ongeldige week_start. Gebruik YYYY-MM-DD.' });
+  }
+  const dayNum = Number(day_of_week);
+  if (!Number.isInteger(dayNum) || dayNum < 1 || dayNum > 7) {
+    return res.status(400).json({ error: 'day_of_week moet tussen 1 en 7 liggen.' });
+  }
+  if (!['breakfast', 'lunch', 'snack', 'dinner'].includes(String(meal_slot || ''))) {
+    return res.status(400).json({ error: 'meal_slot moet breakfast, lunch, snack of dinner zijn.' });
+  }
+
+  deleteMealPlanEntry({
+    user_id: req.user.id,
+    week_start,
+    day_of_week: dayNum,
+    meal_slot
+  }, (err) => {
+    if (err) return res.status(500).json({ error: 'Verwijderen van weekmenu-slot mislukt.' });
+    return res.json({ message: 'Weekmenu-slot verwijderd.' });
   });
 });
 // ===========================================================================

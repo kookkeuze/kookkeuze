@@ -75,6 +75,41 @@ async function initializeDatabase() {
     `);
     console.log('✅ Recipe category columns converted to TEXT');
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS meal_plans (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        week_start DATE NOT NULL,
+        day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 1 AND 7),
+        meal_slot VARCHAR(20) NOT NULL CHECK (meal_slot IN ('breakfast', 'lunch', 'snack', 'dinner')),
+        recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (user_id, week_start, day_of_week, meal_slot)
+      )
+    `);
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conname = 'meal_plans_meal_slot_check'
+        ) THEN
+          ALTER TABLE meal_plans
+            DROP CONSTRAINT meal_plans_meal_slot_check;
+        END IF;
+        ALTER TABLE meal_plans
+          ADD CONSTRAINT meal_plans_meal_slot_check
+          CHECK (meal_slot IN ('breakfast', 'lunch', 'snack', 'dinner'));
+      END $$;
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_meal_plans_user_week
+      ON meal_plans (user_id, week_start)
+    `);
+    console.log('✅ Meal plans table created/verified');
+
     // Check if tables have data
     const userCount = await pool.query('SELECT COUNT(*) FROM users');
     const recipeCount = await pool.query('SELECT COUNT(*) FROM recipes');
@@ -336,6 +371,91 @@ function deleteRecipe(id, callback) {
   });
 }
 
+function getMealPlanForWeek(filters, callback) {
+  const { user_id, week_start } = filters;
+  const query = `
+    SELECT
+      mp.week_start,
+      mp.day_of_week,
+      mp.meal_slot,
+      mp.recipe_id,
+      r.title,
+      r.url,
+      r.dish_type,
+      r.meal_category,
+      r.meal_type,
+      r.time_required,
+      r.calories
+    FROM meal_plans mp
+    JOIN recipes r
+      ON r.id = mp.recipe_id
+     AND r.user_id = mp.user_id
+    WHERE mp.user_id = $1
+      AND mp.week_start = $2
+    ORDER BY mp.day_of_week, mp.meal_slot
+  `;
+
+  pool.query(query, [user_id, week_start], (err, result) => {
+    if (err) {
+      console.error('Fout bij ophalen weekmenu:', err);
+      return callback(err);
+    }
+    const rows = result.rows.map(row => ({
+      ...row,
+      dish_type: toDisplayValue(row.dish_type),
+      meal_category: toDisplayValue(row.meal_category),
+      meal_type: toDisplayValue(row.meal_type),
+      time_required: toDisplayValue(row.time_required)
+    }));
+    callback(null, rows);
+  });
+}
+
+function upsertMealPlanEntry(entry, callback) {
+  const { user_id, week_start, day_of_week, meal_slot, recipe_id } = entry;
+
+  const query = `
+    INSERT INTO meal_plans (user_id, week_start, day_of_week, meal_slot, recipe_id, updated_at)
+    SELECT $1, $2, $3, $4, r.id, NOW()
+    FROM recipes r
+    WHERE r.id = $5 AND r.user_id = $1
+    ON CONFLICT (user_id, week_start, day_of_week, meal_slot)
+    DO UPDATE
+      SET recipe_id = EXCLUDED.recipe_id,
+          updated_at = NOW()
+    RETURNING id
+  `;
+
+  pool.query(query, [user_id, week_start, day_of_week, meal_slot, recipe_id], (err, result) => {
+    if (err) {
+      console.error('Fout bij opslaan weekmenu-slot:', err);
+      return callback(err);
+    }
+    if (!result.rows[0]) {
+      return callback(new Error('Recept niet gevonden voor deze gebruiker.'));
+    }
+    callback(null, result.rows[0]);
+  });
+}
+
+function deleteMealPlanEntry(entry, callback) {
+  const { user_id, week_start, day_of_week, meal_slot } = entry;
+  const query = `
+    DELETE FROM meal_plans
+    WHERE user_id = $1
+      AND week_start = $2
+      AND day_of_week = $3
+      AND meal_slot = $4
+  `;
+  pool.query(query, [user_id, week_start, day_of_week, meal_slot], (err) => {
+    if (err) {
+      console.error('Fout bij verwijderen weekmenu-slot:', err);
+      return callback(err);
+    }
+    callback(null);
+  });
+}
+
 // Gebruiker toevoegen
 function addUser(email, passwordHash, callback) {
   const query = 'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id';
@@ -455,5 +575,8 @@ module.exports = {
   verifyUserById,
   setPasswordResetToken,
   getUserByPasswordResetToken,
-  updateUserPasswordById
+  updateUserPasswordById,
+  getMealPlanForWeek,
+  upsertMealPlanEntry,
+  deleteMealPlanEntry
 };

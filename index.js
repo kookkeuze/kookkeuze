@@ -216,6 +216,7 @@ tabLinks.forEach(link => {
 
     if (navDropdown) navDropdown.value = targetId;
     if (targetId === '#overzichtRecepten') fetchAllRecipes();
+    if (targetId === '#weekmenuPlanner') initWeekPlanner();
   });
 });
 
@@ -465,8 +466,11 @@ function showRecipes(arr) {
         </div>
         <div class="recipe-card-content">
           <h3>${r.title}</h3>
-          <p class="recipe-link"><a href="${r.url}" target="_blank" class="ext-link">
-            Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
+          <div class="recipe-card-actions">
+            <p class="recipe-link"><a href="${r.url}" target="_blank" class="ext-link">
+              Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
+            <button type="button" class="green-btn plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${(r.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
+          </div>
           <div class="recipe-meta-row">
             <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
             <span class="recipe-meta-pill"><i class="fas fa-fire"></i> ${r.calories ?? '-'} kcal</span>
@@ -482,6 +486,287 @@ function showRecipes(arr) {
   html += '</div>';
   resultDiv.innerHTML = html;
   hydrateResultImages();
+}
+
+/* ========= WEEKMENU PLANNER ========= */
+const weekmenuGrid = document.getElementById('weekmenuGrid');
+const weekLabel = document.getElementById('weekLabel');
+const weekPrevBtn = document.getElementById('weekPrevBtn');
+const weekNextBtn = document.getElementById('weekNextBtn');
+const weekmenuSearchInput = document.getElementById('weekmenuSearchInput');
+const weekmenuSearchResults = document.getElementById('weekmenuSearchResults');
+const weekmenuDaySelect = document.getElementById('weekmenuDaySelect');
+const weekmenuSlotSelect = document.getElementById('weekmenuSlotSelect');
+const assignModal = document.getElementById('assignModal');
+const closeAssignModal = document.getElementById('closeAssignModal');
+const assignModalRecipeTitle = document.getElementById('assignModalRecipeTitle');
+const assignDaySelect = document.getElementById('assignDaySelect');
+const assignSlotSelect = document.getElementById('assignSlotSelect');
+const assignModalSaveBtn = document.getElementById('assignModalSaveBtn');
+
+const plannerDays = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
+let plannerWeekStart = null;
+let plannerInitialized = false;
+let plannerRecipes = [];
+let plannerEntries = new Map();
+let pendingAssignRecipeId = null;
+
+function getMonday(date) {
+  const d = new Date(date);
+  const day = (d.getDay() + 6) % 7; // maandag = 0
+  d.setDate(d.getDate() - day);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function toIsoDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function isoPlusDays(iso, days) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return toIsoDate(dt);
+}
+
+function formatWeekLabel(weekStartIso) {
+  const start = new Date(`${weekStartIso}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const formatter = new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'long' });
+  return `Week van ${formatter.format(start)} t/m ${formatter.format(end)}`;
+}
+
+function formatDayNumber(weekStartIso, offset) {
+  const dt = new Date(`${weekStartIso}T00:00:00`);
+  dt.setDate(dt.getDate() + offset);
+  return new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'short' }).format(dt);
+}
+
+function plannerSlotKey(day, slot) {
+  return `${day}-${slot}`;
+}
+
+function openAssignModalForRecipe(recipeId, recipeTitle) {
+  if (!ensureLoggedInOrNotify(resultDiv)) return;
+  if (!plannerWeekStart) plannerWeekStart = toIsoDate(getMonday(new Date()));
+  pendingAssignRecipeId = Number(recipeId);
+  if (assignModalRecipeTitle) assignModalRecipeTitle.textContent = recipeTitle || 'Recept';
+  if (assignDaySelect && weekmenuDaySelect) assignDaySelect.value = weekmenuDaySelect.value || '1';
+  if (assignSlotSelect && weekmenuSlotSelect) assignSlotSelect.value = weekmenuSlotSelect.value || 'dinner';
+  assignModal?.classList.remove('hidden');
+}
+
+function closeAssignModalPanel() {
+  pendingAssignRecipeId = null;
+  assignModal?.classList.add('hidden');
+}
+
+async function loadPlannerRecipes() {
+  if (!getValidToken()) {
+    plannerRecipes = [];
+    return;
+  }
+  const res = await fetch(`${API_BASE}/api/recipes`, { headers: authHeaders() });
+  const data = await res.json();
+  plannerRecipes = Array.isArray(data) ? data : [];
+}
+
+async function loadWeekMenu() {
+  if (!ensureLoggedInOrNotify(weekmenuGrid)) return;
+  const res = await fetch(`${API_BASE}/api/meal-plan?weekStart=${encodeURIComponent(plannerWeekStart)}`, {
+    headers: authHeaders()
+  });
+  const rows = await res.json();
+  plannerEntries = new Map();
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    plannerEntries.set(plannerSlotKey(Number(row.day_of_week), row.meal_slot), row);
+  });
+  renderWeekMenuGrid();
+}
+
+function renderWeekMenuGrid() {
+  if (!weekmenuGrid) return;
+  let html = '<div class="weekmenu-calendar">';
+
+  const daySlots = [
+    { key: 'breakfast', label: 'Ontbijt' },
+    { key: 'lunch', label: 'Lunch' },
+    { key: 'snack', label: 'Tussendoor' },
+    { key: 'dinner', label: 'Avondeten' }
+  ];
+
+  for (let day = 1; day <= 7; day++) {
+
+    const renderSlot = (slotKey, slotLabel, entry) => {
+      if (entry) {
+        return `
+          <div class="weekmenu-slot-item">
+            <p class="weekmenu-slot-name">${slotLabel}</p>
+            <a href="${entry.url}" target="_blank" class="weekmenu-cell-title">${entry.title}</a>
+            <div class="weekmenu-cell-actions">
+              <button type="button" class="green-btn weekmenu-replace-btn" data-day="${day}" data-slot="${slotKey}">Wijzig</button>
+              <button type="button" class="pink-btn weekmenu-clear-btn" data-day="${day}" data-slot="${slotKey}">Wis</button>
+            </div>
+          </div>`;
+      }
+      return `
+        <div class="weekmenu-slot-item">
+          <p class="weekmenu-slot-name">${slotLabel}</p>
+          <p class="weekmenu-empty">Nog niets gepland</p>
+          <button type="button" class="green-btn weekmenu-replace-btn" data-day="${day}" data-slot="${slotKey}">Kies recept</button>
+        </div>`;
+    };
+
+    html += `
+      <article class="weekmenu-day-card">
+        <header class="weekmenu-day-header">
+          <p class="weekmenu-day-name">${plannerDays[day - 1]}</p>
+          <p class="weekmenu-day-date">${formatDayNumber(plannerWeekStart, day - 1)}</p>
+        </header>
+        <div class="weekmenu-day-body">
+          ${daySlots.map(slot => renderSlot(slot.key, slot.label, plannerEntries.get(plannerSlotKey(day, slot.key)))).join('')}
+        </div>
+      </article>`;
+  }
+
+  html += '</div>';
+  weekmenuGrid.innerHTML = html;
+
+  weekmenuGrid.querySelectorAll('.weekmenu-clear-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await clearPlannerSlot(Number(btn.dataset.day), btn.dataset.slot);
+    });
+  });
+
+  weekmenuGrid.querySelectorAll('.weekmenu-replace-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (weekmenuDaySelect) weekmenuDaySelect.value = String(btn.dataset.day);
+      if (weekmenuSlotSelect) weekmenuSlotSelect.value = btn.dataset.slot;
+      weekmenuSearchInput?.focus();
+      weekmenuSearchInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+}
+
+function renderPlannerSearchResults() {
+  if (!weekmenuSearchResults) return;
+  const term = (weekmenuSearchInput?.value || '').trim().toLowerCase();
+  const filtered = plannerRecipes
+    .filter(r => (r.title || '').toLowerCase().includes(term))
+    .slice(0, 25);
+
+  if (filtered.length === 0) {
+    weekmenuSearchResults.innerHTML = '<p class="weekmenu-search-empty">Geen recepten gevonden.</p>';
+    return;
+  }
+
+  let html = '';
+  filtered.forEach(recipe => {
+    html += `
+      <div class="weekmenu-search-item">
+        <a href="${recipe.url}" target="_blank" class="weekmenu-search-title">${recipe.title}</a>
+        <button type="button" class="green-btn weekmenu-assign-btn" data-recipe-id="${recipe.id}">Plan</button>
+      </div>`;
+  });
+  weekmenuSearchResults.innerHTML = html;
+
+  weekmenuSearchResults.querySelectorAll('.weekmenu-assign-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const day = Number(weekmenuDaySelect?.value || '1');
+      const slot = weekmenuSlotSelect?.value || 'dinner';
+      await assignRecipeToPlanner(Number(btn.dataset.recipeId), day, slot);
+    });
+  });
+}
+
+async function assignRecipeToPlanner(recipeId, dayOfWeek, slot) {
+  if (!ensureLoggedInOrNotify(weekmenuGrid)) return;
+  const res = await fetch(`${API_BASE}/api/meal-plan`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({
+      week_start: plannerWeekStart,
+      day_of_week: dayOfWeek,
+      meal_slot: slot,
+      recipe_id: recipeId
+    })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) {
+    alert(data.error || 'Opslaan in weekmenu mislukt.');
+    return;
+  }
+  await loadWeekMenu();
+}
+
+async function clearPlannerSlot(dayOfWeek, slot) {
+  if (!ensureLoggedInOrNotify(weekmenuGrid)) return;
+  const res = await fetch(`${API_BASE}/api/meal-plan`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({
+      week_start: plannerWeekStart,
+      day_of_week: dayOfWeek,
+      meal_slot: slot
+    })
+  });
+  if (!res.ok) {
+    alert('Verwijderen uit weekmenu mislukt.');
+    return;
+  }
+  await loadWeekMenu();
+}
+
+async function initWeekPlanner() {
+  if (!plannerWeekStart) plannerWeekStart = toIsoDate(getMonday(new Date()));
+  if (weekLabel) weekLabel.textContent = formatWeekLabel(plannerWeekStart);
+
+  try {
+    await loadPlannerRecipes();
+    renderPlannerSearchResults();
+    await loadWeekMenu();
+  } catch (err) {
+    console.error(err);
+    if (weekmenuGrid) weekmenuGrid.innerHTML = '<p>Kon weekmenu niet laden.</p>';
+  }
+
+  if (plannerInitialized) return;
+  plannerInitialized = true;
+
+  weekmenuSearchInput?.addEventListener('input', renderPlannerSearchResults);
+  weekPrevBtn?.addEventListener('click', async () => {
+    plannerWeekStart = isoPlusDays(plannerWeekStart, -7);
+    if (weekLabel) weekLabel.textContent = formatWeekLabel(plannerWeekStart);
+    await loadWeekMenu();
+  });
+  weekNextBtn?.addEventListener('click', async () => {
+    plannerWeekStart = isoPlusDays(plannerWeekStart, 7);
+    if (weekLabel) weekLabel.textContent = formatWeekLabel(plannerWeekStart);
+    await loadWeekMenu();
+  });
+
+  resultDiv?.addEventListener('click', e => {
+    const btn = e.target.closest('.plan-recipe-btn');
+    if (!btn) return;
+    openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
+  });
+
+  closeAssignModal?.addEventListener('click', closeAssignModalPanel);
+  assignModal?.addEventListener('click', e => {
+    if (e.target === assignModal) closeAssignModalPanel();
+  });
+  assignModalSaveBtn?.addEventListener('click', async () => {
+    if (!pendingAssignRecipeId) return;
+    const day = Number(assignDaySelect?.value || '1');
+    const slot = assignSlotSelect?.value || 'dinner';
+    await assignRecipeToPlanner(pendingAssignRecipeId, day, slot);
+    closeAssignModalPanel();
+  });
 }
 
 window.addEventListener('beforeinstallprompt', (event) => {
