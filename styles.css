@@ -1504,6 +1504,7 @@ select:focus {
 }
 
 .assign-modal-content {
+  width: min(620px, 92vw);
   max-width: 620px;
 }
 
@@ -1554,6 +1555,8 @@ select:focus {
   font-family: inherit;
   font-weight: 700;
   font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .assign-day-btn span {
@@ -1616,7 +1619,17 @@ select:focus {
   }
 
   .assign-picker-days {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
+  .assign-day-btn {
+    flex: 0 0 96px;
+    min-width: 96px;
   }
 
   .assign-picker-slots {
@@ -1649,10 +1662,11 @@ select:focus {
 
   .assign-modal-content {
     max-width: 94vw;
+    padding: 24px 18px;
   }
 
   .assign-picker-days {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
   }
 
   .assign-modal-controls {
@@ -1767,7 +1781,7 @@ select:focus {
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -1788,22 +1802,25 @@ select:focus {
   color: #30363f;
   font-size: 14px;
   font-weight: 600;
-  min-height: 32px;
+  min-height: 34px;
+  line-height: 1;
 }
 
 .action-icon-shell {
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 25px;
+  font-size: 18px;
   color: #2f3740;
+  flex-shrink: 0;
 }
 
 .action-icon-shell i {
   line-height: 1;
+  display: block;
 }
 
 .install-app-btn {
@@ -1812,18 +1829,18 @@ select:focus {
 
 .install-app-btn .action-icon-shell {
   color: inherit;
-  top: 1px;
+  top: 0;
 }
 
 .install-text,
 .login-text {
   font-size: 14px;
-  line-height: 1;
+  line-height: 1.1;
   color: #2f3740;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
-  min-height: 24px;
+  min-height: 22px;
 }
 
 .topbar-chevron {
@@ -1834,6 +1851,7 @@ select:focus {
 
 .auth-icon-shell {
   color: #2f3740;
+  padding-right: 2px;
 }
 
 .auth-status-badge {
@@ -1866,12 +1884,12 @@ select:focus {
   }
 
   .logo-img {
-    height: 40px;
+    height: 36px;
     width: auto;
   }
 
   .topbar-actions {
-    gap: 4px;
+    gap: 8px;
   }
 
   .topbar-action-btn {
@@ -1880,9 +1898,9 @@ select:focus {
   }
 
   .action-icon-shell {
-    width: 24px;
-    height: 24px;
-    font-size: 25px;
+    width: 20px;
+    height: 20px;
+    font-size: 17px;
   }
 
   .install-text,
@@ -1904,25 +1922,30 @@ select:focus {
     gap: 6px;
   }
 
+  .logo-img {
+    height: 30px;
+  }
+
   .topbar-action-btn {
-    padding: 3px;
+    padding: 3px 2px;
     gap: 4px;
   }
 
   .action-icon-shell {
-    width: 20px;
-    height: 20px;
-    font-size: 20px;
+    width: 18px;
+    height: 18px;
+    font-size: 15px;
   }
 
   .login-text,
   .install-text {
-    font-size: 12px;
+    font-size: 11px;
     display: none;
   }
 
   .login-text {
-    display: inline;
+    display: inline-flex;
+    align-items: center;
   }
 
   .topbar-chevron {
