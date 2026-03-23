@@ -1536,14 +1536,53 @@ select:focus {
   gap: 10px;
 }
 
+.assign-picker-days-wrap {
+  position: relative;
+}
+
+.assign-picker-days-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 44px;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0), #ffffff 68%);
+}
+
+.assign-picker-days-wrap::after {
+  content: '\f054';
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: #6f7d76;
+  border: 1px solid #dce7df;
+  pointer-events: none;
+}
+
 .assign-picker-days {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  display: flex;
   gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  padding: 2px 28px 6px 0;
 }
 
 .assign-day-btn {
-  min-width: 0;
+  flex: 0 0 114px;
+  min-width: 114px;
   display: grid;
   justify-items: center;
   gap: 2px;
@@ -1557,6 +1596,7 @@ select:focus {
   font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .assign-day-btn span {
@@ -1618,18 +1658,9 @@ select:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .assign-picker-days {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-bottom: 4px;
-    scrollbar-width: thin;
-  }
-
   .assign-day-btn {
-    flex: 0 0 96px;
-    min-width: 96px;
+    flex: 0 0 104px;
+    min-width: 104px;
   }
 
   .assign-picker-slots {
@@ -1667,6 +1698,12 @@ select:focus {
 
   .assign-picker-days {
     gap: 6px;
+    padding-right: 20px;
+  }
+
+  .assign-picker-days-wrap::before,
+  .assign-picker-days-wrap::after {
+    display: none;
   }
 
   .assign-modal-controls {
@@ -1781,7 +1818,7 @@ select:focus {
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   flex-shrink: 0;
 }
 
@@ -1794,26 +1831,29 @@ select:focus {
 .topbar-action-btn {
   border: none;
   background: transparent;
-  padding: 4px 6px;
+  padding: 0 4px;
   min-width: unset;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 8px;
   color: #30363f;
   font-size: 14px;
   font-weight: 600;
-  min-height: 34px;
+  min-height: 40px;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  letter-spacing: 0.4px;
   line-height: 1;
 }
 
 .action-icon-shell {
   position: relative;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 24px;
   color: #2f3740;
   flex-shrink: 0;
 }
@@ -1841,17 +1881,21 @@ select:focus {
   display: inline-flex;
   align-items: center;
   min-height: 22px;
+  margin-top: 1px;
 }
 
 .topbar-chevron {
-  font-size: 13px;
+  font-size: 14px;
   color: #2f3740;
-  margin-left: 1px;
+  margin-left: 2px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 
 .auth-icon-shell {
   color: #2f3740;
-  padding-right: 2px;
+  padding-right: 0;
 }
 
 .auth-status-badge {
@@ -1884,23 +1928,24 @@ select:focus {
   }
 
   .logo-img {
-    height: 36px;
+    height: 34px;
     width: auto;
   }
 
   .topbar-actions {
-    gap: 8px;
+    gap: 10px;
   }
 
   .topbar-action-btn {
-    padding: 4px;
+    min-height: 36px;
+    padding: 0 2px;
     gap: 5px;
   }
 
   .action-icon-shell {
-    width: 20px;
-    height: 20px;
-    font-size: 17px;
+    width: 24px;
+    height: 24px;
+    font-size: 21px;
   }
 
   .install-text,
@@ -1923,23 +1968,24 @@ select:focus {
   }
 
   .logo-img {
-    height: 30px;
+    height: 26px;
   }
 
   .topbar-action-btn {
-    padding: 3px 2px;
+    min-height: 32px;
+    padding: 0 1px;
     gap: 4px;
   }
 
   .action-icon-shell {
-    width: 18px;
-    height: 18px;
-    font-size: 15px;
+    width: 22px;
+    height: 22px;
+    font-size: 19px;
   }
 
   .login-text,
   .install-text {
-    font-size: 11px;
+    font-size: 12px;
     display: none;
   }
 
@@ -1949,7 +1995,7 @@ select:focus {
   }
 
   .topbar-chevron {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .auth-status-badge {

@@ -561,13 +561,13 @@ function renderAssignCalendarPicker() {
     { key: 'dinner', label: 'Avondeten' }
   ];
 
-  let html = '<div class="assign-picker-days">';
+  let html = '<div class="assign-picker-days-wrap"><div class="assign-picker-days">';
   plannerDays.forEach((dayName, idx) => {
     const dayNumber = idx + 1;
     const activeClass = assignSelectedDay === dayNumber ? ' active' : '';
     html += `<button type="button" class="assign-day-btn${activeClass}" data-day="${dayNumber}">${dayName}<span>${formatDayNumber(plannerWeekStart, idx)}</span></button>`;
   });
-  html += '</div><div class="assign-picker-slots">';
+  html += '</div></div><div class="assign-picker-slots">';
 
   slots.forEach(slot => {
     const activeClass = assignSelectedSlot === slot.key ? ' active' : '';
@@ -808,8 +808,8 @@ async function initWeekPlanner() {
 window.addEventListener('beforeinstallprompt', (event) => {
   event.preventDefault();
   deferredInstallPrompt = event;
-  if (installAppBtn) installAppBtn.style.display = 'inline-block';
-  if (installAppText) installAppText.style.display = 'inline-block';
+  if (installAppBtn) installAppBtn.style.display = 'inline-flex';
+  if (installAppText) installAppText.style.display = 'inline-flex';
 });
 
 if (installAppBtn) {
