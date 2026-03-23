@@ -124,6 +124,33 @@ function setResultCardImage(container, imageUrl, title) {
   container.innerHTML = '<div class="recipe-card-image-fallback">Geen foto</div>';
 }
 
+function setWeekmenuSlotImage(container, imageUrl) {
+  if (!container) return;
+  container.innerHTML = '';
+  if (imageUrl) {
+    const img = document.createElement('img');
+    img.className = 'weekmenu-slot-thumb';
+    img.alt = 'Receptfoto';
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    img.src = imageUrl;
+    img.addEventListener('error', () => {
+      container.innerHTML = '<div class="weekmenu-slot-thumb-fallback">Geen foto</div>';
+    });
+    container.appendChild(img);
+    return;
+  }
+  container.innerHTML = '<div class="weekmenu-slot-thumb-fallback">Geen foto</div>';
+}
+
+function hydrateWeekmenuImages() {
+  const cells = document.querySelectorAll('.weekmenu-slot-thumb-wrap[data-url]');
+  cells.forEach(cell => {
+    const url = decodeURIComponent(cell.dataset.url || '');
+    fetchRecipeImage(url).then(imageUrl => setWeekmenuSlotImage(cell, imageUrl));
+  });
+}
+
 function renderImageFallback(cell, title) {
   cell.innerHTML = '';
   const fallback = document.createElement('div');
@@ -706,9 +733,13 @@ function renderWeekMenuGrid() {
 
     const renderSlot = (slotKey, slotLabel, entry) => {
       if (entry) {
+        const safeUrl = encodeURIComponent(entry.url || '');
         return `
           <div class="weekmenu-slot-item">
             <p class="weekmenu-slot-name">${slotLabel}</p>
+            <div class="weekmenu-slot-thumb-wrap" data-url="${safeUrl}">
+              <div class="weekmenu-slot-thumb-skeleton"></div>
+            </div>
             <a href="${entry.url}" target="_blank" class="weekmenu-cell-title">${entry.title}</a>
             <div class="weekmenu-cell-actions">
               <button type="button" class="green-btn weekmenu-replace-btn" data-day="${day}" data-slot="${slotKey}">Wijzig</button>
@@ -738,6 +769,7 @@ function renderWeekMenuGrid() {
 
   html += '</div>';
   weekmenuGrid.innerHTML = html;
+  hydrateWeekmenuImages();
 
   weekmenuGrid.querySelectorAll('.weekmenu-clear-btn').forEach(btn => {
     btn.addEventListener('click', async () => {

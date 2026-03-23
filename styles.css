@@ -1524,8 +1524,8 @@ select:focus {
 }
 
 .assign-modal-content {
-  width: min(920px, 94vw);
-  max-width: 920px;
+  width: min(980px, 96vw);
+  max-width: 980px;
 }
 
 .assign-modal-title {
@@ -1596,55 +1596,13 @@ select:focus {
 }
 
 .assign-picker-days-wrap {
-  position: relative;
-  padding: 0 40px;
-}
-
-.assign-picker-days-wrap::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  height: 100%;
-  width: 44px;
-  pointer-events: none;
-  background: linear-gradient(to right, rgba(255, 255, 255, 0), #ffffff 68%);
-}
-
-.assign-picker-days-wrap::after {
-  content: '\f054';
-  font-family: "Font Awesome 6 Free";
-  font-weight: 900;
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: center;
-  background: #ffffff;
-  color: #6f7d76;
-  border: 1px solid #dce7df;
-  pointer-events: none;
-}
-
-.assign-picker-days-wrap.at-end::before,
-.assign-picker-days-wrap.at-end::after {
-  opacity: 0;
-}
-
-.assign-picker-days-wrap:not(.has-overflow)::before,
-.assign-picker-days-wrap:not(.has-overflow)::after {
-  display: none;
+  gap: 8px;
 }
 
 .assign-days-scroll-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
   width: 30px;
   height: 30px;
   border-radius: 999px;
@@ -1654,21 +1612,17 @@ select:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
-}
-
-.assign-days-scroll-btn.prev {
-  left: 4px;
-}
-
-.assign-days-scroll-btn.next {
-  right: 4px;
+  transition: opacity .15s ease;
 }
 
 .assign-picker-days-wrap.at-start .assign-days-scroll-btn.prev,
-.assign-picker-days-wrap.at-end .assign-days-scroll-btn.next,
-.assign-picker-days-wrap:not(.has-overflow) .assign-days-scroll-btn {
+.assign-picker-days-wrap.at-end .assign-days-scroll-btn.next {
   opacity: 0.35;
+  pointer-events: none;
+}
+
+.assign-picker-days-wrap:not(.has-overflow) .assign-days-scroll-btn {
+  display: none;
 }
 
 .assign-picker-days {
@@ -1677,12 +1631,12 @@ select:focus {
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
-  padding: 2px 28px 6px 0;
+  padding: 2px 0 6px;
 }
 
 .assign-day-btn {
-  flex: 0 0 114px;
-  min-width: 114px;
+  flex: 0 0 152px;
+  min-width: 152px;
   display: grid;
   justify-items: center;
   gap: 2px;
@@ -1713,7 +1667,7 @@ select:focus {
 
 .assign-picker-slots {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 8px;
 }
 
@@ -1747,6 +1701,44 @@ select:focus {
   font-size: 12px;
 }
 
+.weekmenu-slot-thumb-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.weekmenu-slot-thumb,
+.weekmenu-slot-thumb-fallback,
+.weekmenu-slot-thumb-skeleton {
+  width: 54px;
+  height: 54px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.weekmenu-slot-thumb {
+  object-fit: cover;
+  border: 1px solid rgba(99, 214, 113, 0.35);
+}
+
+.weekmenu-slot-thumb-fallback {
+  font-size: 11px;
+  font-weight: 700;
+  color: #708079;
+  background: #f3f8f4;
+  border: 1px solid #e2ece5;
+}
+
+.weekmenu-slot-thumb-skeleton {
+  background: linear-gradient(90deg, #eef7f0 0%, #f9fffb 50%, #eef7f0 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border: 1px solid #e5f3e7;
+}
+
 @media (max-width: 1200px) {
   .weekmenu-calendar {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1759,8 +1751,8 @@ select:focus {
   }
 
   .assign-day-btn {
-    flex: 0 0 104px;
-    min-width: 104px;
+    flex: 0 0 124px;
+    min-width: 124px;
   }
 
   .assign-picker-slots {
@@ -1773,6 +1765,15 @@ select:focus {
 
   .assign-week-label {
     font-size: 13px;
+  }
+
+  .assign-picker-days-wrap {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .assign-days-scroll-btn {
+    display: none;
   }
 }
 
@@ -1806,13 +1807,6 @@ select:focus {
 
   .assign-picker-days {
     gap: 6px;
-    padding-right: 20px;
-  }
-
-  .assign-picker-days-wrap::before,
-  .assign-picker-days-wrap::after,
-  .assign-days-scroll-btn {
-    display: none;
   }
 
   .assign-modal-controls {
@@ -2145,9 +2139,9 @@ select:focus {
 }
 
 .modal-content.assign-modal-content {
-  width: min(920px, 94vw);
-  max-width: min(920px, 94vw);
-  overflow-x: hidden;
+  width: min(980px, 96vw);
+  max-width: min(980px, 96vw);
+  overflow-x: visible;
 }
 
 .modal-close {
