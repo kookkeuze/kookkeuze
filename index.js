@@ -542,6 +542,19 @@ function formatWeekLabel(weekStartIso) {
   return `Week van ${formatter.format(start)} t/m ${formatter.format(end)}`;
 }
 
+function formatShortWeekLabel(weekStartIso) {
+  const start = new Date(`${weekStartIso}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const monthFmt = new Intl.DateTimeFormat('nl-NL', { month: 'short' });
+  const yearFmt = new Intl.DateTimeFormat('nl-NL', { year: 'numeric' });
+  const startMonth = monthFmt.format(start);
+  const endMonth = monthFmt.format(end);
+  const year = yearFmt.format(end);
+  if (startMonth === endMonth) return `${startMonth} ${year}`;
+  return `${startMonth}/${endMonth} ${year}`;
+}
+
 function formatDayNumber(weekStartIso, offset) {
   const dt = new Date(`${weekStartIso}T00:00:00`);
   dt.setDate(dt.getDate() + offset);
@@ -561,13 +574,32 @@ function renderAssignCalendarPicker() {
     { key: 'dinner', label: 'Avondeten' }
   ];
 
-  let html = '<div class="assign-picker-days-wrap"><div class="assign-picker-days">';
+  let html = `
+    <div class="assign-picker-weeknav">
+      <button type="button" class="assign-week-btn" data-shift="-7" aria-label="Vorige week">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <p class="assign-week-label">${formatWeekLabel(plannerWeekStart)} <span>(${formatShortWeekLabel(plannerWeekStart)})</span></p>
+      <button type="button" class="assign-week-btn" data-shift="7" aria-label="Volgende week">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+    <div class="assign-picker-days-wrap">
+      <button type="button" class="assign-days-scroll-btn prev" data-scroll="prev" aria-label="Scroll dagen naar links">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <div class="assign-picker-days">`;
   plannerDays.forEach((dayName, idx) => {
     const dayNumber = idx + 1;
     const activeClass = assignSelectedDay === dayNumber ? ' active' : '';
     html += `<button type="button" class="assign-day-btn${activeClass}" data-day="${dayNumber}">${dayName}<span>${formatDayNumber(plannerWeekStart, idx)}</span></button>`;
   });
-  html += '</div></div><div class="assign-picker-slots">';
+  html += `</div>
+      <button type="button" class="assign-days-scroll-btn next" data-scroll="next" aria-label="Scroll dagen naar rechts">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+    <div class="assign-picker-slots">`;
 
   slots.forEach(slot => {
     const activeClass = assignSelectedSlot === slot.key ? ' active' : '';
@@ -588,10 +620,40 @@ function renderAssignCalendarPicker() {
       renderAssignCalendarPicker();
     });
   });
+
+  assignCalendarPicker.querySelectorAll('.assign-week-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      plannerWeekStart = isoPlusDays(plannerWeekStart, Number(btn.dataset.shift || '0'));
+      if (weekLabel) weekLabel.textContent = formatWeekLabel(plannerWeekStart);
+      renderAssignCalendarPicker();
+      await loadWeekMenu();
+    });
+  });
+
+  const dayScroller = assignCalendarPicker.querySelector('.assign-picker-days');
+  const dayWrap = assignCalendarPicker.querySelector('.assign-picker-days-wrap');
+  const updateScrollerState = () => {
+    if (!dayScroller || !dayWrap) return;
+    const maxScrollLeft = Math.max(0, dayScroller.scrollWidth - dayScroller.clientWidth);
+    dayWrap.classList.toggle('has-overflow', maxScrollLeft > 6);
+    dayWrap.classList.toggle('at-start', dayScroller.scrollLeft <= 2);
+    dayWrap.classList.toggle('at-end', dayScroller.scrollLeft >= maxScrollLeft - 2);
+  };
+
+  assignCalendarPicker.querySelectorAll('.assign-days-scroll-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!dayScroller) return;
+      const dir = btn.dataset.scroll === 'prev' ? -1 : 1;
+      dayScroller.scrollBy({ left: 240 * dir, behavior: 'smooth' });
+    });
+  });
+
+  dayScroller?.addEventListener('scroll', updateScrollerState, { passive: true });
+  requestAnimationFrame(updateScrollerState);
 }
 
 function openAssignModalForRecipe(recipeId, recipeTitle) {
-  if (!ensureLoggedInOrNotify(resultDiv)) return;
+  if (!ensureLoggedInOrNotify(weekmenuGrid || resultDiv)) return;
   if (!plannerWeekStart) plannerWeekStart = toIsoDate(getMonday(new Date()));
   pendingAssignRecipeId = Number(recipeId);
   if (assignModalRecipeTitle) assignModalRecipeTitle.textContent = recipeTitle || 'Recept';
@@ -687,6 +749,10 @@ function renderWeekMenuGrid() {
     btn.addEventListener('click', () => {
       if (weekmenuDaySelect) weekmenuDaySelect.value = String(btn.dataset.day);
       if (weekmenuSlotSelect) weekmenuSlotSelect.value = btn.dataset.slot;
+      if (weekmenuSearchInput) {
+        weekmenuSearchInput.value = '';
+        renderPlannerSearchResults();
+      }
       weekmenuSearchInput?.focus();
       weekmenuSearchInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
@@ -715,11 +781,6 @@ function renderPlannerSearchResults() {
   });
   weekmenuSearchResults.innerHTML = html;
 
-  weekmenuSearchResults.querySelectorAll('.weekmenu-assign-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
-    });
-  });
 }
 
 async function assignRecipeToPlanner(recipeId, dayOfWeek, slot) {
@@ -777,6 +838,11 @@ async function initWeekPlanner() {
   plannerInitialized = true;
 
   weekmenuSearchInput?.addEventListener('input', renderPlannerSearchResults);
+  weekmenuSearchResults?.addEventListener('click', e => {
+    const btn = e.target.closest('.weekmenu-assign-btn');
+    if (!btn) return;
+    openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
+  });
   weekPrevBtn?.addEventListener('click', async () => {
     plannerWeekStart = isoPlusDays(plannerWeekStart, -7);
     if (weekLabel) weekLabel.textContent = formatWeekLabel(plannerWeekStart);

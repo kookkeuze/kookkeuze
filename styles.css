@@ -1335,16 +1335,28 @@ select:focus {
 
 .weekmenu-search {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   margin: 16px 0 8px;
+  padding: 14px;
+  border: 1px solid #d9e8dc;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fbfffc 0%, #f5faf6 100%);
 }
 
 .weekmenu-search input {
   width: 100%;
-  padding: 12px 14px;
-  border: 2px solid #dbe5dd;
-  border-radius: 10px;
+  padding: 13px 14px;
+  border: 2px solid #63D671;
+  border-radius: 12px;
   font-size: 15px;
+  background: #ffffff;
+  box-shadow: 0 6px 14px rgba(67, 115, 75, 0.08);
+}
+
+.weekmenu-search input:focus {
+  outline: none;
+  border-color: #4ac858;
+  box-shadow: 0 0 0 4px rgba(99, 214, 113, 0.16), 0 6px 14px rgba(67, 115, 75, 0.08);
 }
 
 .weekmenu-search-controls {
@@ -1355,7 +1367,15 @@ select:focus {
 }
 
 .weekmenu-search-controls select {
-  min-width: 170px;
+  min-width: 180px;
+  border-color: #c2d4c7;
+  background-color: #ffffff;
+  box-shadow: 0 3px 9px rgba(67, 115, 75, 0.06);
+}
+
+.weekmenu-search-controls select:focus {
+  border-color: #63D671;
+  box-shadow: 0 0 0 4px rgba(99, 214, 113, 0.12), 0 3px 9px rgba(67, 115, 75, 0.06);
 }
 
 .weekmenu-search-results {
@@ -1504,8 +1524,8 @@ select:focus {
 }
 
 .assign-modal-content {
-  width: min(620px, 92vw);
-  max-width: 620px;
+  width: min(920px, 94vw);
+  max-width: 920px;
 }
 
 .assign-modal-title {
@@ -1533,11 +1553,51 @@ select:focus {
 
 .assign-calendar-picker {
   display: grid;
+  gap: 12px;
+}
+
+.assign-picker-weeknav {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
   gap: 10px;
+}
+
+.assign-week-btn {
+  min-width: 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid #d6e3d9;
+  background: #ffffff;
+  color: #2f3a35;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.assign-week-btn:hover {
+  background: #f2faf3;
+}
+
+.assign-week-label {
+  margin: 0;
+  text-align: center;
+  color: #2f3a35;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.assign-week-label span {
+  color: #65736d;
+  font-weight: 500;
+  font-size: 13px;
 }
 
 .assign-picker-days-wrap {
   position: relative;
+  padding: 0 40px;
 }
 
 .assign-picker-days-wrap::before {
@@ -1569,6 +1629,46 @@ select:focus {
   color: #6f7d76;
   border: 1px solid #dce7df;
   pointer-events: none;
+}
+
+.assign-picker-days-wrap.at-end::before,
+.assign-picker-days-wrap.at-end::after {
+  opacity: 0;
+}
+
+.assign-picker-days-wrap:not(.has-overflow)::before,
+.assign-picker-days-wrap:not(.has-overflow)::after {
+  display: none;
+}
+
+.assign-days-scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid #d6e3d9;
+  background: #ffffff;
+  color: #4a5953;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.assign-days-scroll-btn.prev {
+  left: 4px;
+}
+
+.assign-days-scroll-btn.next {
+  right: 4px;
+}
+
+.assign-picker-days-wrap.at-start .assign-days-scroll-btn.prev,
+.assign-picker-days-wrap.at-end .assign-days-scroll-btn.next,
+.assign-picker-days-wrap:not(.has-overflow) .assign-days-scroll-btn {
+  opacity: 0.35;
 }
 
 .assign-picker-days {
@@ -1666,6 +1766,14 @@ select:focus {
   .assign-picker-slots {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .assign-picker-weeknav {
+    gap: 6px;
+  }
+
+  .assign-week-label {
+    font-size: 13px;
+  }
 }
 
 @media (max-width: 560px) {
@@ -1702,7 +1810,8 @@ select:focus {
   }
 
   .assign-picker-days-wrap::before,
-  .assign-picker-days-wrap::after {
+  .assign-picker-days-wrap::after,
+  .assign-days-scroll-btn {
     display: none;
   }
 
@@ -2033,6 +2142,12 @@ select:focus {
   box-shadow: 0 12px 40px rgba(0,0,0,.15);
   position: relative;
   margin: auto;
+}
+
+.modal-content.assign-modal-content {
+  width: min(920px, 94vw);
+  max-width: min(920px, 94vw);
+  overflow-x: hidden;
 }
 
 .modal-close {
