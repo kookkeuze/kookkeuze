@@ -30,6 +30,10 @@ h2 {
   padding: 0;
 }
 
+.hidden {
+  display: none !important;
+}
+
 /* voorkom auto-zoom op mobiel */
 input,
 select,
@@ -214,6 +218,123 @@ html {
   animation: tabFadeIn 280ms ease forwards;
 }
 
+.database-bar {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #dce8df;
+  border-radius: 12px;
+  background: #f7fbf8;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.database-bar-main {
+  display: grid;
+  gap: 6px;
+}
+
+.database-bar-main label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3d4d44;
+}
+
+.database-bar-main select {
+  min-width: 320px;
+}
+
+.share-panel {
+  margin: 0 0 18px;
+  padding: 14px;
+  border: 1px solid #dbe8df;
+  border-radius: 12px;
+  background: #ffffff;
+  display: grid;
+  gap: 12px;
+}
+
+.share-panel h3 {
+  margin: 0;
+  color: #235b2a;
+}
+
+.share-invite-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.share-invite-row input {
+  flex: 1 1 300px;
+  border: 2px solid #d9e4dc;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.share-columns {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.share-columns h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: #4a5851;
+}
+
+.share-list {
+  display: grid;
+  gap: 8px;
+}
+
+.share-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e2ebe4;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #fbfdfb;
+}
+
+.share-item span {
+  color: #2f3a35;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.share-item .pink-btn {
+  min-width: 92px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.share-panel-msg {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4e5c55;
+}
+
+.share-panel-msg.error {
+  color: #b34d4d;
+}
+
+.share-panel-msg.success {
+  color: #2f8d46;
+}
+
+.share-empty {
+  margin: 0;
+  color: #6b776f;
+  font-size: 13px;
+}
+
 @keyframes tabFadeIn {
   from {
     opacity: 0;
@@ -363,6 +484,7 @@ button {
   background-color: var(--accent-color);
   color: white;
 }
+
 
 /* Formulier spacing voor 'Voeg een recept toe' */
 .add-recipe-form {
@@ -1394,6 +1516,11 @@ select:focus {
   padding: 10px 12px;
 }
 
+.weekmenu-search-item:hover {
+  border-color: #e0e9e2;
+  background: #fff;
+}
+
 .plan-weekmenu-btn {
   background: #ffffff;
   color: #235b2a;
@@ -1879,6 +2006,15 @@ select:focus {
     font-size: 15px;
     pointer-events: none;
   }
+
+  .database-bar-main select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .share-columns {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* om de icon-positionering te behouden nu het select buiten .container staat */
@@ -1894,6 +2030,7 @@ select:focus {
   border:none;
   padding: 20px 0px;
 }
+
 
 /* ══════════════ TOP-BAR ══════════════ */
 .topbar {
@@ -2430,10 +2567,10 @@ select:focus {
     padding: 16px 34px;
     border-radius: 999px;
     background: #fff;
-    color: #2dbd6a;
-    border: 0px solid #2dbd6a;
+    color: #235b2a;
+    border: 2px solid #235b2a;
     margin: 0 0 10px 0;
-    box-shadow: 0 0 10px 0px #b4b4b4;
+    box-shadow: none;
     font-size: clamp(1.8rem, 1.2vw, 1.6rem);
     font-family: 'EatingPasta', Arial, sans-serif;
     letter-spacing: 1px;

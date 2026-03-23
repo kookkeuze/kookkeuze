@@ -48,6 +48,39 @@ function getValidToken() {
   return token;
 }
 
+function getCurrentUserPayload() {
+  const token = getValidToken();
+  if (!token) return null;
+  return decodeJwtPayload(token);
+}
+
+function getCurrentUserId() {
+  return Number(getCurrentUserPayload()?.id || 0) || null;
+}
+
+function getActiveDatabaseOwnerId() {
+  const ownId = getCurrentUserId();
+  if (!ownId) return null;
+  const stored = Number(localStorage.getItem('activeDatabaseOwnerId') || ownId);
+  return Number.isInteger(stored) && stored > 0 ? stored : ownId;
+}
+
+function isSharedDatabaseActive() {
+  const ownId = getCurrentUserId();
+  const activeId = getActiveDatabaseOwnerId();
+  return !!ownId && !!activeId && ownId !== activeId;
+}
+
+function appendActiveDatabaseParam(params) {
+  const ownerId = getActiveDatabaseOwnerId();
+  if (ownerId) params.set('dbOwnerId', String(ownerId));
+}
+
+function withActiveDatabaseBody(payload = {}) {
+  const ownerId = getActiveDatabaseOwnerId();
+  return ownerId ? { ...payload, dbOwnerId: ownerId } : payload;
+}
+
 function ensureLoggedInOrNotify(targetEl) {
   if (getValidToken()) return true;
 
@@ -227,7 +260,18 @@ const tabContents  = document.querySelectorAll('.tab-content');
 const navDropdown  = document.getElementById('navDropdown');
 const installAppBtn = document.getElementById('installAppBtn');
 const installAppText = document.getElementById('installAppText');
+const databaseBar = document.getElementById('databaseBar');
+const activeDatabaseSelect = document.getElementById('activeDatabaseSelect');
+const toggleSharePanelBtn = document.getElementById('toggleSharePanelBtn');
+const sharePanel = document.getElementById('sharePanel');
+const shareInviteEmail = document.getElementById('shareInviteEmail');
+const shareInviteBtn = document.getElementById('shareInviteBtn');
+const sharePanelMsg = document.getElementById('sharePanelMsg');
+const shareMembersList = document.getElementById('shareMembersList');
+const shareInvitesList = document.getElementById('shareInvitesList');
 let deferredInstallPrompt = null;
+let accessibleDatabases = [];
+let activeDatabaseOwnerId = null;
 
 tabLinks.forEach(link => {
   link.addEventListener('click', e => {
@@ -255,6 +299,146 @@ if (navDropdown) {
   const active = document.querySelector('.tab-link.active');
   if (active) navDropdown.value = active.getAttribute('href');
 }
+
+function setSharePanelMessage(text, isError = false) {
+  if (!sharePanelMsg) return;
+  sharePanelMsg.textContent = text || '';
+  sharePanelMsg.classList.toggle('error', !!isError);
+  sharePanelMsg.classList.toggle('success', !!text && !isError);
+}
+
+function renderDatabaseSelect() {
+  if (!activeDatabaseSelect) return;
+  const ownId = getCurrentUserId();
+  const selectedId = getActiveDatabaseOwnerId();
+  activeDatabaseSelect.innerHTML = accessibleDatabases.map(db => {
+    const label = db.is_owner ? `Mijn database (${db.owner_email})` : `Gedeeld door ${db.owner_email}`;
+    return `<option value="${db.owner_user_id}" ${Number(db.owner_user_id) === Number(selectedId) ? 'selected' : ''}>${label}</option>`;
+  }).join('');
+  if (selectedId && !accessibleDatabases.some(db => Number(db.owner_user_id) === Number(selectedId))) {
+    localStorage.setItem('activeDatabaseOwnerId', String(ownId || ''));
+  }
+}
+
+async function loadSharePanelData() {
+  if (!getValidToken() || !shareMembersList || !shareInvitesList) return;
+  const ownId = getCurrentUserId();
+  const activeId = getActiveDatabaseOwnerId();
+  const canManage = ownId && activeId && Number(ownId) === Number(activeId);
+  if (!canManage) {
+    shareMembersList.innerHTML = '<p class="share-empty">Schakel naar je eigen database om delen te beheren.</p>';
+    shareInvitesList.innerHTML = '<p class="share-empty">Schakel naar je eigen database om uitnodigingen te beheren.</p>';
+    return;
+  }
+
+  const res = await fetch(`${API_BASE}/api/databases/shares`, { headers: authHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    shareMembersList.innerHTML = '<p class="share-empty">Kon leden niet laden.</p>';
+    shareInvitesList.innerHTML = '<p class="share-empty">Kon uitnodigingen niet laden.</p>';
+    return;
+  }
+
+  const members = Array.isArray(data.members) ? data.members : [];
+  const invites = Array.isArray(data.invites) ? data.invites : [];
+
+  shareMembersList.innerHTML = members.length
+    ? members.map(m => `
+        <div class="share-item">
+          <span>${m.email}</span>
+          <button type="button" class="pink-btn share-remove-member-btn" data-member-id="${m.member_user_id}">Intrekken</button>
+        </div>`).join('')
+    : '<p class="share-empty">Nog geen gedeelde leden.</p>';
+
+  shareInvitesList.innerHTML = invites.length
+    ? invites.map(inv => `
+        <div class="share-item">
+          <span>${inv.invite_email}</span>
+          <button type="button" class="pink-btn share-cancel-invite-btn" data-invite-id="${inv.id}">Intrekken</button>
+        </div>`).join('')
+    : '<p class="share-empty">Geen openstaande uitnodigingen.</p>';
+}
+
+async function loadAccessibleDatabases() {
+  if (!getValidToken()) {
+    accessibleDatabases = [];
+    if (databaseBar) databaseBar.classList.add('hidden');
+    if (sharePanel) sharePanel.classList.add('hidden');
+    return;
+  }
+
+  const res = await fetch(`${API_BASE}/api/databases`, { headers: authHeaders() });
+  const list = await res.json().catch(() => []);
+  accessibleDatabases = Array.isArray(list) ? list : [];
+  const ownId = getCurrentUserId();
+  if (ownId && !localStorage.getItem('activeDatabaseOwnerId')) {
+    localStorage.setItem('activeDatabaseOwnerId', String(ownId));
+  }
+  if (databaseBar) databaseBar.classList.remove('hidden');
+  renderDatabaseSelect();
+  await loadSharePanelData();
+}
+
+activeDatabaseSelect?.addEventListener('change', async () => {
+  localStorage.setItem('activeDatabaseOwnerId', activeDatabaseSelect.value);
+  setSharePanelMessage('');
+  await loadSharePanelData();
+  fetchAllRecipes();
+  renderPlannerSearchResults();
+  initWeekPlanner();
+});
+
+toggleSharePanelBtn?.addEventListener('click', async () => {
+  sharePanel?.classList.toggle('hidden');
+  if (!sharePanel?.classList.contains('hidden')) {
+    await loadSharePanelData();
+  }
+});
+
+shareInviteBtn?.addEventListener('click', async () => {
+  const email = String(shareInviteEmail?.value || '').trim().toLowerCase();
+  if (!email) {
+    setSharePanelMessage('Vul een e-mailadres in.', true);
+    return;
+  }
+
+  const res = await fetch(`${API_BASE}/api/databases/invite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ email })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    setSharePanelMessage(data.error || 'Uitnodigen mislukt.', true);
+    return;
+  }
+  setSharePanelMessage(data.message || 'Uitnodiging verstuurd.');
+  if (shareInviteEmail) shareInviteEmail.value = '';
+  await loadAccessibleDatabases();
+});
+
+sharePanel?.addEventListener('click', async e => {
+  const removeMemberBtn = e.target.closest('.share-remove-member-btn');
+  if (removeMemberBtn) {
+    const memberId = removeMemberBtn.dataset.memberId;
+    await fetch(`${API_BASE}/api/databases/members/${memberId}`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    });
+    await loadAccessibleDatabases();
+    return;
+  }
+
+  const cancelInviteBtn = e.target.closest('.share-cancel-invite-btn');
+  if (cancelInviteBtn) {
+    const inviteId = cancelInviteBtn.dataset.inviteId;
+    await fetch(`${API_BASE}/api/databases/invites/${inviteId}`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    });
+    await loadSharePanelData();
+  }
+});
 
 /* ========= FILTERS & ZOEKEN (TAB 1) ========= */
 const dishTypeSelect      = document.getElementById('dishType');
@@ -438,6 +622,7 @@ document.getElementById('searchBtn').addEventListener('click', () => {
 
   const searchTerm = document.getElementById('searchTerm').value.trim();
   if (searchTerm) params.append('search', searchTerm);
+  appendActiveDatabaseParam(params);
 
   const qs = params.toString();
   fetch(`${API_BASE}/api/recipes?` + qs, {
@@ -457,6 +642,7 @@ document.getElementById('randomBtn').addEventListener('click', () => {
   getSelectedValues(mealTypeSelect).forEach(v => params.append('meal_type', v));
   getSelectedValues(timeRequiredSelect).forEach(v => params.append('time_required', v));
   getSelectedValues(calorieRangeSelect).forEach(v => params.append('calorieRange', v));
+  appendActiveDatabaseParam(params);
 
   const qs = params.toString();
   fetch(`${API_BASE}/api/recipes/random?` + qs, {
@@ -482,6 +668,7 @@ function showRecipes(arr) {
     return;
   }
   const singleClass = arr.length === 1 ? ' single-result' : '';
+  const showImportButton = isSharedDatabaseActive();
   let html = `<div class="recipe-cards-container search-results${singleClass}">`;
   arr.forEach(r => {
     const safeUrl = encodeURIComponent(r.url || '');
@@ -497,6 +684,7 @@ function showRecipes(arr) {
             <p class="recipe-link"><a href="${r.url}" target="_blank" class="ext-link">
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
             <button type="button" class="plan-weekmenu-btn plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${(r.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
+            ${showImportButton ? `<button type="button" class="pink-btn import-recipe-btn" data-recipe-id="${r.id}">Importeer naar mijn database</button>` : ''}
           </div>
           <div class="recipe-meta-row">
             <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
@@ -514,6 +702,17 @@ function showRecipes(arr) {
   resultDiv.innerHTML = html;
   hydrateResultImages();
 }
+
+resultDiv?.addEventListener('click', e => {
+  const importBtn = e.target.closest('.import-recipe-btn');
+  if (importBtn) {
+    importRecipeToPersonalDatabase(importBtn.dataset.recipeId);
+    return;
+  }
+  const btn = e.target.closest('.plan-recipe-btn');
+  if (!btn) return;
+  openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
+});
 
 /* ========= WEEKMENU PLANNER ========= */
 const weekmenuGrid = document.getElementById('weekmenuGrid');
@@ -700,14 +899,18 @@ async function loadPlannerRecipes() {
     plannerRecipes = [];
     return;
   }
-  const res = await fetch(`${API_BASE}/api/recipes`, { headers: authHeaders() });
+  const params = new URLSearchParams();
+  appendActiveDatabaseParam(params);
+  const res = await fetch(`${API_BASE}/api/recipes?${params.toString()}`, { headers: authHeaders() });
   const data = await res.json();
   plannerRecipes = Array.isArray(data) ? data : [];
 }
 
 async function loadWeekMenu() {
   if (!ensureLoggedInOrNotify(weekmenuGrid)) return;
-  const res = await fetch(`${API_BASE}/api/meal-plan?weekStart=${encodeURIComponent(plannerWeekStart)}`, {
+  const params = new URLSearchParams({ weekStart: plannerWeekStart });
+  appendActiveDatabaseParam(params);
+  const res = await fetch(`${API_BASE}/api/meal-plan?${params.toString()}`, {
     headers: authHeaders()
   });
   const rows = await res.json();
@@ -820,12 +1023,12 @@ async function assignRecipeToPlanner(recipeId, dayOfWeek, slot) {
   const res = await fetch(`${API_BASE}/api/meal-plan`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({
+    body: JSON.stringify(withActiveDatabaseBody({
       week_start: plannerWeekStart,
       day_of_week: dayOfWeek,
       meal_slot: slot,
       recipe_id: recipeId
-    })
+    }))
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error) {
@@ -835,16 +1038,34 @@ async function assignRecipeToPlanner(recipeId, dayOfWeek, slot) {
   await loadWeekMenu();
 }
 
+async function importRecipeToPersonalDatabase(recipeId) {
+  if (!ensureLoggedInOrNotify(resultDiv)) return;
+  const ownerId = getActiveDatabaseOwnerId();
+  if (!ownerId || !isSharedDatabaseActive()) return;
+
+  const res = await fetch(`${API_BASE}/api/recipes/${recipeId}/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ dbOwnerId: ownerId })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(data.error || 'Importeren mislukt.');
+    return;
+  }
+  alert('Recept geïmporteerd naar je eigen database.');
+}
+
 async function clearPlannerSlot(dayOfWeek, slot) {
   if (!ensureLoggedInOrNotify(weekmenuGrid)) return;
   const res = await fetch(`${API_BASE}/api/meal-plan`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({
+    body: JSON.stringify(withActiveDatabaseBody({
       week_start: plannerWeekStart,
       day_of_week: dayOfWeek,
       meal_slot: slot
-    })
+    }))
   });
   if (!res.ok) {
     alert('Verwijderen uit weekmenu mislukt.');
@@ -884,12 +1105,6 @@ async function initWeekPlanner() {
     plannerWeekStart = isoPlusDays(plannerWeekStart, 7);
     if (weekLabel) weekLabel.textContent = formatWeekLabel(plannerWeekStart);
     await loadWeekMenu();
-  });
-
-  resultDiv?.addEventListener('click', e => {
-    const btn = e.target.closest('.plan-recipe-btn');
-    if (!btn) return;
-    openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
   });
 
   closeAssignModal?.addEventListener('click', closeAssignModalPanel);
@@ -1117,7 +1332,7 @@ addRecipeForm.addEventListener('submit', e => {
   fetch(`${API_BASE}/api/recipes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify(bodyData)
+    body: JSON.stringify(withActiveDatabaseBody(bodyData))
   })
     .then(r => r.json())
     .then(d => {
@@ -1279,7 +1494,9 @@ function fetchAllRecipes() {
     applyOverviewViewMode();
     return;
   }
-  fetch(`${API_BASE}/api/recipes`, {
+  const params = new URLSearchParams();
+  appendActiveDatabaseParam(params);
+  fetch(`${API_BASE}/api/recipes?${params.toString()}`, {
     headers: authHeaders() // ✅ JWT meesturen
   })
     .then(r => r.json())
@@ -1319,7 +1536,7 @@ function onUpdateRecipe(e){
   fetch(`${API_BASE}/api/recipes/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify(data)
+    body: JSON.stringify(withActiveDatabaseBody(data))
   })
     .then(()=>alert('Recept bijgewerkt!'))
     .catch(console.error);
@@ -1329,7 +1546,9 @@ function onDeleteRecipe(e){
   if (!confirm('Weet je zeker dat je dit recept wilt verwijderen?')) return;
   if (!ensureLoggedInOrNotify()) return;
   const id = e.target.closest('tr').dataset.id;
-  fetch(`${API_BASE}/api/recipes/${id}`, {
+  const params = new URLSearchParams();
+  appendActiveDatabaseParam(params);
+  fetch(`${API_BASE}/api/recipes/${id}?${params.toString()}`, {
     method:'DELETE',
     headers: authHeaders()
   })
@@ -1401,8 +1620,16 @@ function updateAuthUI(){
   }
 
   if (loggedIn){
+    const ownId = getCurrentUserId();
+    if (ownId && !localStorage.getItem('activeDatabaseOwnerId')) {
+      localStorage.setItem('activeDatabaseOwnerId', String(ownId));
+    }
+    loadAccessibleDatabases().catch(() => {});
     setAuthPane(loggedInPane);
   } else {
+    localStorage.removeItem('activeDatabaseOwnerId');
+    if (databaseBar) databaseBar.classList.add('hidden');
+    if (sharePanel) sharePanel.classList.add('hidden');
     setAuthPane(pendingResetToken ? resetPane : loginPane);
   }
 }
@@ -1410,6 +1637,7 @@ function updateAuthUI(){
 /* — Uitloggen — */
 logoutBtn.addEventListener('click', () => {
   localStorage.removeItem('token');
+  localStorage.removeItem('activeDatabaseOwnerId');
   resetForms();
   updateAuthUI();
   authModal.classList.add('hidden');

@@ -342,7 +342,17 @@ const {
   updateUserPasswordById,
   getMealPlanForWeek,
   upsertMealPlanEntry,
-  deleteMealPlanEntry
+  deleteMealPlanEntry,
+  getRecipeByIdForOwner,
+  importRecipeToUserDatabase,
+  listAccessibleDatabases,
+  userHasDatabaseAccess,
+  inviteUserToDatabase,
+  listDatabaseMembers,
+  listDatabaseInvites,
+  revokeDatabaseMember,
+  revokeDatabaseInvite,
+  acceptPendingInvitesForUser
 } = require('./database');
 
 app.use(bodyParser.json());
@@ -785,6 +795,7 @@ app.get('/api/verify', async (req, res) => {
     }
 
     await verifyUserById(user.id);
+    await dbCall(acceptPendingInvitesForUser, user.id, user.email);
 
     // JWT aanmaken en redirect naar frontend voor auto-login
     const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '12h' });
@@ -814,6 +825,7 @@ app.post('/api/login', (req, res) => {
       if (err || !same) {
         return res.status(401).json({ error: 'Combinatie klopt niet.' });
       }
+      acceptPendingInvitesForUser(user.id, user.email, () => {});
       const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '12h' });
       res.json({ message: 'Inloggen gelukt!', token });
     });
@@ -925,60 +937,105 @@ function normalizeRecipeField(raw) {
   return values.join('||');
 }
 
+function dbCall(fn, ...args) {
+  return new Promise((resolve, reject) => {
+    fn(...args, (err, result) => {
+      if (err) return reject(err);
+      resolve(result);
+    });
+  });
+}
+
 function isValidWeekStart(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
   const dt = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(dt.getTime());
 }
 
-// 1. Haal (gefilterde) recepten op
-app.get('/api/recipes', (req, res) => {
-  const { dish_type, meal_category, meal_type, time_required, search, calorieRange } = req.query;
+function parseRequestedOwnerId(req) {
+  const raw = req.method === 'GET'
+    ? req.query?.dbOwnerId
+    : (req.body?.dbOwnerId ?? req.query?.dbOwnerId);
+  if (raw === undefined || raw === null || raw === '') return null;
+  const id = Number(raw);
+  if (!Number.isInteger(id) || id <= 0) return NaN;
+  return id;
+}
 
-  // Alleen recepten van ingelogde gebruiker
+async function resolveDatabaseOwnerId(req) {
   if (!req.user) {
-    return res.json([]); // Geen recepten als niet ingelogd
+    const err = new Error('Je moet ingelogd zijn.');
+    err.statusCode = 401;
+    throw err;
   }
+  const requested = parseRequestedOwnerId(req);
+  if (Number.isNaN(requested)) {
+    const err = new Error('Ongeldige dbOwnerId.');
+    err.statusCode = 400;
+    throw err;
+  }
+  const ownerUserId = requested || req.user.id;
+  const hasAccess = await dbCall(userHasDatabaseAccess, req.user.id, ownerUserId);
+  if (!hasAccess) {
+    const err = new Error('Je hebt geen toegang tot deze database.');
+    err.statusCode = 403;
+    throw err;
+  }
+  return ownerUserId;
+}
 
-  getRecipes({
-    dish_type,
-    meal_category,
-    meal_type,
-    time_required,
-    search,
-    calorieRange,
-    user_id: req.user.id
-  }, (err, rows) => {
-    if (err)   return res.status(500).json({ error: 'Er is iets misgegaan met het ophalen.' });
+// 1. Haal (gefilterde) recepten op
+app.get('/api/recipes', async (req, res) => {
+  const { dish_type, meal_category, meal_type, time_required, search, calorieRange } = req.query;
+  if (!req.user) return res.json([]);
+
+  try {
+    const ownerUserId = await resolveDatabaseOwnerId(req);
+    const rows = await dbCall(getRecipes, {
+      dish_type,
+      meal_category,
+      meal_type,
+      time_required,
+      search,
+      calorieRange,
+      user_id: ownerUserId
+    });
     res.json(rows);
-  });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Er is iets misgegaan met het ophalen.' });
+  }
 });
 
 // 2. Random recept
-app.get('/api/recipes/random', (req, res) => {
+app.get('/api/recipes/random', async (req, res) => {
   const { dish_type, meal_category, meal_type, time_required, search, calorieRange } = req.query;
 
   if (!req.user) {
     return res.json({ message: 'Geen resultaten gevonden.' });
   }
 
-  getRandomRecipe({
-    dish_type,
-    meal_category,
-    meal_type,
-    time_required,
-    search,
-    calorieRange,
-    user_id: req.user.id
-  }, (err, recipe) => {
-    if (err)      return res.status(500).json({ error: 'Er ging iets mis bij random ophalen.' });
-    if (!recipe)  return res.json({ message: 'Geen resultaten gevonden.' });
-    res.json(recipe);
-  });
+  try {
+    const ownerUserId = await resolveDatabaseOwnerId(req);
+    const recipe = await dbCall(getRandomRecipe, {
+      dish_type,
+      meal_category,
+      meal_type,
+      time_required,
+      search,
+      calorieRange,
+      user_id: ownerUserId
+    });
+    if (!recipe) return res.json({ message: 'Geen resultaten gevonden.' });
+    return res.json(recipe);
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Er ging iets mis bij random ophalen.' });
+  }
 });
 
 // 3. Nieuw recept
-app.post('/api/recipes', (req, res) => {
+app.post('/api/recipes', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Je moet ingelogd zijn om recepten toe te voegen.' });
   }
@@ -993,23 +1050,27 @@ app.post('/api/recipes', (req, res) => {
   const cleanMealType     = normalizeRecipeField(meal_type);
   const cleanTimeRequired = normalizeRecipeField(time_required);
 
-  addRecipe({
-    title,
-    url,
-    dish_type:     cleanDishType,
-    meal_category: cleanMealCategory,
-    meal_type:     cleanMealType,
-    time_required: cleanTimeRequired,
-    calories,
-    user_id: req.user.id
-  }, (err, result) => {
-    if (err) return res.status(500).json({ error: 'Er ging iets mis bij het opslaan van het recept.' });
+  try {
+    const ownerUserId = await resolveDatabaseOwnerId(req);
+    const result = await dbCall(addRecipe, {
+      title,
+      url,
+      dish_type: cleanDishType,
+      meal_category: cleanMealCategory,
+      meal_type: cleanMealType,
+      time_required: cleanTimeRequired,
+      calories,
+      user_id: ownerUserId
+    });
     res.json({ message: 'Recept toegevoegd!', id: result.id });
-  });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Er ging iets mis bij het opslaan van het recept.' });
+  }
 });
 
 // 4. Recept bijwerken
-app.put('/api/recipes/:id', (req, res) => {
+app.put('/api/recipes/:id', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Je moet ingelogd zijn om recepten bij te werken.' });
   }
@@ -1021,36 +1082,70 @@ app.put('/api/recipes/:id', (req, res) => {
     return res.status(400).json({ error: 'Titel en URL zijn verplicht voor update.' });
   }
 
-  updateRecipe(recipeId, {
-    title,
-    url,
-    dish_type: normalizeRecipeField(dish_type),
-    meal_type: normalizeRecipeField(meal_type),
-    time_required: normalizeRecipeField(time_required),
-    meal_category: normalizeRecipeField(meal_category),
-    calories
-  }, (err) => {
-    if (err) return res.status(500).json({ error: 'Er ging iets mis bij het bijwerken.' });
+  try {
+    const ownerUserId = await resolveDatabaseOwnerId(req);
+    await dbCall(updateRecipe, recipeId, {
+      title,
+      url,
+      dish_type: normalizeRecipeField(dish_type),
+      meal_type: normalizeRecipeField(meal_type),
+      time_required: normalizeRecipeField(time_required),
+      meal_category: normalizeRecipeField(meal_category),
+      calories,
+      user_id: ownerUserId
+    });
     res.json({ message: 'Recept bijgewerkt!' });
-  });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Er ging iets mis bij het bijwerken.' });
+  }
 });
 
 // 5. Recept verwijderen
-app.delete('/api/recipes/:id', (req, res) => {
+app.delete('/api/recipes/:id', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Je moet ingelogd zijn om recepten te verwijderen.' });
   }
 
   const recipeId = req.params.id;
 
-  deleteRecipe(recipeId, (err) => {
-    if (err) return res.status(500).json({ error: 'Er ging iets mis bij het verwijderen.' });
+  try {
+    const ownerUserId = await resolveDatabaseOwnerId(req);
+    await dbCall(deleteRecipe, recipeId, ownerUserId);
     res.json({ message: 'Recept verwijderd!' });
-  });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Er ging iets mis bij het verwijderen.' });
+  }
 });
 
-// 6. Weekmenu ophalen
-app.get('/api/meal-plan', (req, res) => {
+// 6. Recept importeren naar eigen database
+app.post('/api/recipes/:id/import', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om te importeren.' });
+  }
+  const recipeId = Number(req.params.id);
+  if (!Number.isInteger(recipeId) || recipeId <= 0) {
+    return res.status(400).json({ error: 'Ongeldige recipe id.' });
+  }
+
+  try {
+    const sourceOwnerId = await resolveDatabaseOwnerId(req);
+    if (Number(sourceOwnerId) === Number(req.user.id)) {
+      return res.status(400).json({ error: 'Dit recept staat al in je eigen database.' });
+    }
+
+    const imported = await dbCall(importRecipeToUserDatabase, recipeId, sourceOwnerId, req.user.id);
+    if (!imported) return res.status(404).json({ error: 'Recept niet gevonden in deze database.' });
+    return res.json({ message: 'Recept geïmporteerd.', id: imported.id });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Importeren mislukt.' });
+  }
+});
+
+// 7. Weekmenu ophalen
+app.get('/api/meal-plan', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Je moet ingelogd zijn om je weekmenu te zien.' });
   }
@@ -1060,17 +1155,21 @@ app.get('/api/meal-plan', (req, res) => {
     return res.status(400).json({ error: 'Ongeldige weekStart. Gebruik YYYY-MM-DD.' });
   }
 
-  getMealPlanForWeek({
-    user_id: req.user.id,
-    week_start: weekStart
-  }, (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Kon weekmenu niet ophalen.' });
+  try {
+    const ownerUserId = await resolveDatabaseOwnerId(req);
+    const rows = await dbCall(getMealPlanForWeek, {
+      user_id: ownerUserId,
+      week_start: weekStart
+    });
     return res.json(rows);
-  });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Kon weekmenu niet ophalen.' });
+  }
 });
 
-// 7. Weekmenu-slot opslaan/updaten
-app.put('/api/meal-plan', (req, res) => {
+// 8. Weekmenu-slot opslaan/updaten
+app.put('/api/meal-plan', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Je moet ingelogd zijn om je weekmenu te bewerken.' });
   }
@@ -1091,20 +1190,24 @@ app.put('/api/meal-plan', (req, res) => {
     return res.status(400).json({ error: 'recipe_id ontbreekt of is ongeldig.' });
   }
 
-  upsertMealPlanEntry({
-    user_id: req.user.id,
-    week_start,
-    day_of_week: dayNum,
-    meal_slot,
-    recipe_id: recipeIdNum
-  }, (err) => {
-    if (err) return res.status(400).json({ error: err.message || 'Opslaan van weekmenu mislukt.' });
+  try {
+    const ownerUserId = await resolveDatabaseOwnerId(req);
+    await dbCall(upsertMealPlanEntry, {
+      user_id: ownerUserId,
+      week_start,
+      day_of_week: dayNum,
+      meal_slot,
+      recipe_id: recipeIdNum
+    });
     return res.json({ message: 'Weekmenu bijgewerkt.' });
-  });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(400).json({ error: err.message || 'Opslaan van weekmenu mislukt.' });
+  }
 });
 
-// 8. Weekmenu-slot verwijderen
-app.delete('/api/meal-plan', (req, res) => {
+// 9. Weekmenu-slot verwijderen
+app.delete('/api/meal-plan', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Je moet ingelogd zijn om je weekmenu te bewerken.' });
   }
@@ -1121,15 +1224,94 @@ app.delete('/api/meal-plan', (req, res) => {
     return res.status(400).json({ error: 'meal_slot moet breakfast, lunch, snack of dinner zijn.' });
   }
 
-  deleteMealPlanEntry({
-    user_id: req.user.id,
-    week_start,
-    day_of_week: dayNum,
-    meal_slot
-  }, (err) => {
-    if (err) return res.status(500).json({ error: 'Verwijderen van weekmenu-slot mislukt.' });
+  try {
+    const ownerUserId = await resolveDatabaseOwnerId(req);
+    await dbCall(deleteMealPlanEntry, {
+      user_id: ownerUserId,
+      week_start,
+      day_of_week: dayNum,
+      meal_slot
+    });
     return res.json({ message: 'Weekmenu-slot verwijderd.' });
-  });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Verwijderen van weekmenu-slot mislukt.' });
+  }
+});
+
+// 10. Beschikbare databases (eigen + gedeeld)
+app.get('/api/databases', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
+  try {
+    const databases = await dbCall(listAccessibleDatabases, req.user.id);
+    return res.json(databases);
+  } catch (err) {
+    return res.status(500).json({ error: 'Kon databases niet ophalen.' });
+  }
+});
+
+// 11. Deelinstellingen van eigen database
+app.get('/api/databases/shares', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
+  try {
+    const [members, invites] = await Promise.all([
+      dbCall(listDatabaseMembers, req.user.id),
+      dbCall(listDatabaseInvites, req.user.id)
+    ]);
+    return res.json({ members, invites });
+  } catch (err) {
+    return res.status(500).json({ error: 'Kon deelinstellingen niet ophalen.' });
+  }
+});
+
+// 12. Nodig gebruiker uit via e-mail
+app.post('/api/databases/invite', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: 'E-mailadres ontbreekt.' });
+
+  try {
+    const result = await dbCall(inviteUserToDatabase, req.user.id, email);
+    return res.json({
+      message: result.type === 'member'
+        ? (result.already_had_access ? 'Gebruiker had al toegang.' : 'Gebruiker toegevoegd aan je database.')
+        : 'Uitnodiging opgeslagen. Zodra deze gebruiker registreert met dit e-mailadres, krijgt hij toegang.',
+      result
+    });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'Uitnodigen mislukt.' });
+  }
+});
+
+// 13. Toegang lid intrekken
+app.delete('/api/databases/members/:memberUserId', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
+  const memberUserId = Number(req.params.memberUserId);
+  if (!Number.isInteger(memberUserId) || memberUserId <= 0) {
+    return res.status(400).json({ error: 'Ongeldige gebruiker.' });
+  }
+  try {
+    await dbCall(revokeDatabaseMember, req.user.id, memberUserId);
+    return res.json({ message: 'Toegang ingetrokken.' });
+  } catch (_err) {
+    return res.status(500).json({ error: 'Intrekken mislukt.' });
+  }
+});
+
+// 14. Openstaande uitnodiging intrekken
+app.delete('/api/databases/invites/:inviteId', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
+  const inviteId = Number(req.params.inviteId);
+  if (!Number.isInteger(inviteId) || inviteId <= 0) {
+    return res.status(400).json({ error: 'Ongeldige uitnodiging.' });
+  }
+  try {
+    const changed = await dbCall(revokeDatabaseInvite, req.user.id, inviteId);
+    if (!changed) return res.status(404).json({ error: 'Uitnodiging niet gevonden.' });
+    return res.json({ message: 'Uitnodiging ingetrokken.' });
+  } catch (_err) {
+    return res.status(500).json({ error: 'Intrekken mislukt.' });
+  }
 });
 // ===========================================================================
 
