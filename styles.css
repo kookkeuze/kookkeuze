@@ -220,10 +220,10 @@ html {
 
 .database-bar {
   margin: 0 0 14px;
-  padding: 10px 12px;
-  border: 1px solid #dce8df;
+  padding: 8px 10px;
+  border: 1px solid #e6ece8;
   border-radius: 12px;
-  background: #f7fbf8;
+  background: #fbfdfc;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -1481,25 +1481,6 @@ select:focus {
   box-shadow: 0 0 0 4px rgba(99, 214, 113, 0.16), 0 6px 14px rgba(67, 115, 75, 0.08);
 }
 
-.weekmenu-search-controls {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.weekmenu-search-controls select {
-  min-width: 180px;
-  border-color: #c2d4c7;
-  background-color: #ffffff;
-  box-shadow: 0 3px 9px rgba(67, 115, 75, 0.06);
-}
-
-.weekmenu-search-controls select:focus {
-  border-color: #63D671;
-  box-shadow: 0 0 0 4px rgba(99, 214, 113, 0.12), 0 3px 9px rgba(67, 115, 75, 0.06);
-}
-
 .weekmenu-search-results {
   display: grid;
   gap: 8px;
@@ -1558,10 +1539,21 @@ select:focus {
 .weekmenu-cell-title {
   color: #2e3934;
   font-weight: 700;
-  text-decoration: none;
+  margin: 0;
 }
 
-.weekmenu-cell-title:hover {
+.weekmenu-open-link {
+  color: #235b2a;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weekmenu-open-link:hover {
   text-decoration: underline;
 }
 
@@ -2071,6 +2063,7 @@ select:focus {
 .topbar-action-btn {
   border: none;
   background: transparent;
+  text-decoration: none;
   padding: 0 4px;
   min-width: unset;
   display: inline-flex;
@@ -2107,12 +2100,17 @@ select:focus {
   color: #2f3740;
 }
 
+.database-menu-btn {
+  color: #2f3740;
+}
+
 .install-app-btn .action-icon-shell {
   color: inherit;
   top: 0;
 }
 
 .install-text,
+.database-text,
 .login-text {
   font-size: 14px;
   line-height: 1.1;
@@ -2224,7 +2222,8 @@ select:focus {
   }
 
   .login-text,
-  .install-text {
+  .install-text,
+  .database-text {
     font-size: 12px;
     display: none;
   }

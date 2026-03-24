@@ -4,14 +4,34 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacyverklaring - Kookkeuze</title>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+  />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <a href="/" class="logo-link" aria-label="Ga naar Kookkeuze">
-        <img src="Logo/Kookkeuze-logo.png" alt="Kookkeuze" class="logo-img" />
+      <a href="/" aria-label="Ga naar home">
+        <img src="Logo/Kookkeuze-logo.svg" alt="Kookkeuze-logo" class="logo-img" id="homeLogo" />
       </a>
+
+      <div class="topbar-actions">
+        <a href="/" class="topbar-action-btn install-app-btn" aria-label="Terug naar home">
+          <span class="action-icon-shell"><i class="fas fa-mobile-alt"></i></span>
+          <span class="install-text">Installeer app</span>
+        </a>
+
+        <a href="/" class="topbar-action-btn auth-action-btn" aria-label="Terug naar inloggen op home">
+          <span class="action-icon-shell auth-icon-shell">
+            <i class="far fa-user auth-main-icon"></i>
+            <span class="auth-status-badge"><i class="fas fa-times"></i></span>
+          </span>
+          <span class="login-text">Inloggen</span>
+          <i class="fas fa-chevron-down topbar-chevron"></i>
+        </a>
+      </div>
     </div>
   </header>
 

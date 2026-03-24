@@ -260,6 +260,7 @@ const tabContents  = document.querySelectorAll('.tab-content');
 const navDropdown  = document.getElementById('navDropdown');
 const installAppBtn = document.getElementById('installAppBtn');
 const installAppText = document.getElementById('installAppText');
+const databaseMenuBtn = document.getElementById('databaseMenuBtn');
 const databaseBar = document.getElementById('databaseBar');
 const activeDatabaseSelect = document.getElementById('activeDatabaseSelect');
 const toggleSharePanelBtn = document.getElementById('toggleSharePanelBtn');
@@ -272,6 +273,7 @@ const shareInvitesList = document.getElementById('shareInvitesList');
 let deferredInstallPrompt = null;
 let accessibleDatabases = [];
 let activeDatabaseOwnerId = null;
+let databasePanelVisible = false;
 
 tabLinks.forEach(link => {
   link.addEventListener('click', e => {
@@ -362,6 +364,8 @@ async function loadSharePanelData() {
 async function loadAccessibleDatabases() {
   if (!getValidToken()) {
     accessibleDatabases = [];
+    databasePanelVisible = false;
+    if (databaseMenuBtn) databaseMenuBtn.classList.add('hidden');
     if (databaseBar) databaseBar.classList.add('hidden');
     if (sharePanel) sharePanel.classList.add('hidden');
     return;
@@ -374,7 +378,8 @@ async function loadAccessibleDatabases() {
   if (ownId && !localStorage.getItem('activeDatabaseOwnerId')) {
     localStorage.setItem('activeDatabaseOwnerId', String(ownId));
   }
-  if (databaseBar) databaseBar.classList.remove('hidden');
+  if (databaseMenuBtn) databaseMenuBtn.classList.toggle('hidden', accessibleDatabases.length === 0);
+  if (databaseBar) databaseBar.classList.toggle('hidden', !databasePanelVisible);
   renderDatabaseSelect();
   await loadSharePanelData();
 }
@@ -393,6 +398,18 @@ toggleSharePanelBtn?.addEventListener('click', async () => {
   if (!sharePanel?.classList.contains('hidden')) {
     await loadSharePanelData();
   }
+});
+
+databaseMenuBtn?.addEventListener('click', async () => {
+  if (!getValidToken()) return;
+  databasePanelVisible = !databasePanelVisible;
+  databaseBar?.classList.toggle('hidden', !databasePanelVisible);
+  if (!databasePanelVisible) {
+    sharePanel?.classList.add('hidden');
+    return;
+  }
+  await loadAccessibleDatabases();
+  databaseBar?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 shareInviteBtn?.addEventListener('click', async () => {
@@ -721,8 +738,7 @@ const weekPrevBtn = document.getElementById('weekPrevBtn');
 const weekNextBtn = document.getElementById('weekNextBtn');
 const weekmenuSearchInput = document.getElementById('weekmenuSearchInput');
 const weekmenuSearchResults = document.getElementById('weekmenuSearchResults');
-const weekmenuDaySelect = document.getElementById('weekmenuDaySelect');
-const weekmenuSlotSelect = document.getElementById('weekmenuSlotSelect');
+const weekmenuSearchSection = document.querySelector('.weekmenu-search');
 const assignModal = document.getElementById('assignModal');
 const closeAssignModal = document.getElementById('closeAssignModal');
 const assignModalRecipeTitle = document.getElementById('assignModalRecipeTitle');
@@ -883,8 +899,8 @@ function openAssignModalForRecipe(recipeId, recipeTitle) {
   if (!plannerWeekStart) plannerWeekStart = toIsoDate(getMonday(new Date()));
   pendingAssignRecipeId = Number(recipeId);
   if (assignModalRecipeTitle) assignModalRecipeTitle.textContent = recipeTitle || 'Recept';
-  assignSelectedDay = Number(weekmenuDaySelect?.value || '1');
-  assignSelectedSlot = weekmenuSlotSelect?.value || 'dinner';
+  assignSelectedDay = 1;
+  assignSelectedSlot = 'dinner';
   renderAssignCalendarPicker();
   assignModal?.classList.remove('hidden');
 }
@@ -943,7 +959,10 @@ function renderWeekMenuGrid() {
             <div class="weekmenu-slot-thumb-wrap" data-url="${safeUrl}">
               <div class="weekmenu-slot-thumb-skeleton"></div>
             </div>
-            <a href="${entry.url}" target="_blank" class="weekmenu-cell-title">${entry.title}</a>
+            <p class="weekmenu-cell-title">${entry.title}</p>
+            <a href="${entry.url}" target="_blank" rel="noopener noreferrer" class="weekmenu-open-link">
+              Bekijk recept <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+            </a>
             <div class="weekmenu-cell-actions">
               <button type="button" class="green-btn weekmenu-replace-btn" data-day="${day}" data-slot="${slotKey}">Wijzig</button>
               <button type="button" class="pink-btn weekmenu-clear-btn" data-day="${day}" data-slot="${slotKey}">Wis</button>
@@ -982,14 +1001,12 @@ function renderWeekMenuGrid() {
 
   weekmenuGrid.querySelectorAll('.weekmenu-replace-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (weekmenuDaySelect) weekmenuDaySelect.value = String(btn.dataset.day);
-      if (weekmenuSlotSelect) weekmenuSlotSelect.value = btn.dataset.slot;
       if (weekmenuSearchInput) {
         weekmenuSearchInput.value = '';
         renderPlannerSearchResults();
       }
-      weekmenuSearchInput?.focus();
-      weekmenuSearchInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      weekmenuSearchSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      requestAnimationFrame(() => weekmenuSearchInput?.focus({ preventScroll: true }));
     });
   });
 }
@@ -1628,6 +1645,8 @@ function updateAuthUI(){
     setAuthPane(loggedInPane);
   } else {
     localStorage.removeItem('activeDatabaseOwnerId');
+    databasePanelVisible = false;
+    if (databaseMenuBtn) databaseMenuBtn.classList.add('hidden');
     if (databaseBar) databaseBar.classList.add('hidden');
     if (sharePanel) sharePanel.classList.add('hidden');
     setAuthPane(pendingResetToken ? resetPane : loginPane);

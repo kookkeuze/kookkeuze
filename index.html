@@ -25,6 +25,11 @@
     <img src="Logo/Kookkeuze-logo.svg" alt="Kookkeuze-logo" class="logo-img" id="homeLogo" />
 
     <div class="topbar-actions">
+      <button id="databaseMenuBtn" class="topbar-action-btn database-menu-btn hidden" aria-label="Database instellingen">
+        <span class="action-icon-shell"><i class="fas fa-database"></i></span>
+        <span class="database-text">Database</span>
+      </button>
+
       <button id="installAppBtn" class="topbar-action-btn install-app-btn" aria-label="Installeer app">
         <span class="action-icon-shell"><i class="fas fa-mobile-alt"></i></span>
         <span id="installAppText" class="install-text">Installeer app</span>
@@ -462,23 +467,6 @@
 
       <div class="weekmenu-search">
         <input id="weekmenuSearchInput" type="text" placeholder="Zoek in je recepten om te plannen..." />
-        <div class="weekmenu-search-controls">
-          <select id="weekmenuDaySelect">
-            <option value="1">Maandag</option>
-            <option value="2">Dinsdag</option>
-            <option value="3">Woensdag</option>
-            <option value="4">Donderdag</option>
-            <option value="5">Vrijdag</option>
-            <option value="6">Zaterdag</option>
-            <option value="7">Zondag</option>
-          </select>
-          <select id="weekmenuSlotSelect">
-            <option value="breakfast">Ontbijt</option>
-            <option value="lunch">Lunch</option>
-            <option value="snack">Tussendoor</option>
-            <option value="dinner">Avondeten</option>
-          </select>
-        </div>
         <div id="weekmenuSearchResults" class="weekmenu-search-results"></div>
       </div>
     </div>
