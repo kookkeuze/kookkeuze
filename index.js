@@ -766,17 +766,23 @@ const weekPrevBtn = document.getElementById('weekPrevBtn');
 const weekNextBtn = document.getElementById('weekNextBtn');
 const weekmenuSearchInput = document.getElementById('weekmenuSearchInput');
 const weekmenuSearchResults = document.getElementById('weekmenuSearchResults');
+const weekmenuSearchPagination = document.getElementById('weekmenuSearchPagination');
 const weekmenuSearchSection = document.querySelector('.weekmenu-search');
 const assignModal = document.getElementById('assignModal');
 const closeAssignModal = document.getElementById('closeAssignModal');
 const assignModalRecipeTitle = document.getElementById('assignModalRecipeTitle');
 const assignCalendarPicker = document.getElementById('assignCalendarPicker');
 const assignModalSaveBtn = document.getElementById('assignModalSaveBtn');
+const weekmenuPreviewModal = document.getElementById('weekmenuPreviewModal');
+const closeWeekmenuPreviewModal = document.getElementById('closeWeekmenuPreviewModal');
+const weekmenuPreviewBody = document.getElementById('weekmenuPreviewBody');
 
 const plannerDays = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
+const WEEKMENU_SEARCH_PAGE_SIZE = 10;
 let plannerWeekStart = null;
 let plannerInitialized = false;
 let plannerRecipes = [];
+let plannerSearchCurrentPage = 1;
 let plannerEntries = new Map();
 let pendingAssignRecipeId = null;
 let assignSelectedDay = 1;
@@ -1042,16 +1048,22 @@ function renderPlannerSearchResults() {
   if (!weekmenuSearchResults) return;
   const term = (weekmenuSearchInput?.value || '').trim().toLowerCase();
   const filtered = plannerRecipes
-    .filter(r => (r.title || '').toLowerCase().includes(term))
-    .slice(0, 25);
+    .filter(r => (r.title || '').toLowerCase().includes(term));
 
   if (filtered.length === 0) {
     weekmenuSearchResults.innerHTML = '<p class="weekmenu-search-empty">Geen recepten gevonden.</p>';
+    if (weekmenuSearchPagination) weekmenuSearchPagination.innerHTML = '';
     return;
   }
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / WEEKMENU_SEARCH_PAGE_SIZE));
+  if (plannerSearchCurrentPage > totalPages) plannerSearchCurrentPage = totalPages;
+  if (plannerSearchCurrentPage < 1) plannerSearchCurrentPage = 1;
+  const startIdx = (plannerSearchCurrentPage - 1) * WEEKMENU_SEARCH_PAGE_SIZE;
+  const pageRecipes = filtered.slice(startIdx, startIdx + WEEKMENU_SEARCH_PAGE_SIZE);
+
   let html = '';
-  filtered.forEach(recipe => {
+  pageRecipes.forEach(recipe => {
     const safeUrl = encodeURIComponent(recipe.url || '');
     html += `
       <div class="weekmenu-search-item">
@@ -1059,7 +1071,7 @@ function renderPlannerSearchResults() {
           <div class="weekmenu-search-thumb-wrap" data-url="${safeUrl}">
             <div class="weekmenu-search-thumb-skeleton"></div>
           </div>
-          <a href="${recipe.url}" target="_blank" rel="noopener noreferrer" class="weekmenu-search-title">${recipe.title}</a>
+          <button type="button" class="weekmenu-search-title weekmenu-preview-title" data-recipe-id="${recipe.id}">${recipe.title}</button>
         </div>
         <button type="button" class="plan-weekmenu-btn weekmenu-assign-btn" data-recipe-id="${recipe.id}" data-recipe-title="${(recipe.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
       </div>`;
@@ -1067,6 +1079,51 @@ function renderPlannerSearchResults() {
   weekmenuSearchResults.innerHTML = html;
   hydrateWeekmenuSearchImages();
 
+  if (weekmenuSearchPagination) {
+    if (totalPages <= 1) {
+      weekmenuSearchPagination.innerHTML = '';
+    } else {
+      let paginationHtml = '';
+      for (let i = 1; i <= totalPages; i++) {
+        const activeClass = i === plannerSearchCurrentPage ? ' active' : '';
+        paginationHtml += `<button type="button" class="overview-page-btn${activeClass}" data-page="${i}">${i}</button>`;
+      }
+      weekmenuSearchPagination.innerHTML = paginationHtml;
+    }
+  }
+}
+
+function openWeekmenuPreviewModal(recipeId) {
+  const recipe = plannerRecipes.find(r => Number(r.id) === Number(recipeId));
+  if (!recipe || !weekmenuPreviewBody) return;
+  const safeUrl = encodeURIComponent(recipe.url || '');
+  const safeTitle = (recipe.title || 'Recept').replace(/"/g, '&quot;');
+  weekmenuPreviewBody.innerHTML = `
+    <div class="recipe-cards-container search-results single-result weekmenu-preview-cards">
+      <div class="recipe-card">
+        <div class="result-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
+          <div class="recipe-card-image-skeleton"></div>
+        </div>
+        <div class="recipe-card-content">
+          <h3>${recipe.title || 'Recept'}</h3>
+          <p class="recipe-link"><a href="${recipe.url}" target="_blank" rel="noopener noreferrer" class="ext-link">
+            Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
+          <div class="recipe-meta-row">
+            <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${recipe.time_required || '-'}</span>
+            <span class="recipe-meta-pill"><i class="fas fa-fire"></i> ${recipe.calories ?? '-'} kcal</span>
+          </div>
+          <ul>
+            <li><i class="fas fa-utensils"></i> <strong>Soort:</strong> ${recipe.dish_type || '-'}</li>
+            <li><i class="fas fa-layer-group"></i> <strong>Menugang:</strong> ${recipe.meal_category || '-'}</li>
+            <li><i class="fas fa-bullseye"></i> <strong>Doel gerecht:</strong> ${recipe.meal_type || '-'}</li>
+          </ul>
+        </div>
+      </div>
+    </div>`;
+
+  const imageCell = weekmenuPreviewBody.querySelector('.result-image-cell');
+  fetchRecipeImage(recipe.url || '').then(imageUrl => setResultCardImage(imageCell, imageUrl, recipe.title || 'Recept'));
+  weekmenuPreviewModal?.classList.remove('hidden');
 }
 
 async function assignRecipeToPlanner(recipeId, dayOfWeek, slot) {
@@ -1141,11 +1198,25 @@ async function initWeekPlanner() {
   if (plannerInitialized) return;
   plannerInitialized = true;
 
-  weekmenuSearchInput?.addEventListener('input', renderPlannerSearchResults);
+  weekmenuSearchInput?.addEventListener('input', () => {
+    plannerSearchCurrentPage = 1;
+    renderPlannerSearchResults();
+  });
   weekmenuSearchResults?.addEventListener('click', e => {
     const btn = e.target.closest('.weekmenu-assign-btn');
+    if (btn) {
+      openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
+      return;
+    }
+    const previewBtn = e.target.closest('.weekmenu-preview-title');
+    if (previewBtn) openWeekmenuPreviewModal(previewBtn.dataset.recipeId);
+  });
+  weekmenuSearchPagination?.addEventListener('click', e => {
+    const btn = e.target.closest('.overview-page-btn');
     if (!btn) return;
-    openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
+    plannerSearchCurrentPage = Number(btn.dataset.page || '1');
+    renderPlannerSearchResults();
+    weekmenuSearchSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   weekPrevBtn?.addEventListener('click', async () => {
     plannerWeekStart = isoPlusDays(plannerWeekStart, -7);
@@ -1161,6 +1232,12 @@ async function initWeekPlanner() {
   closeAssignModal?.addEventListener('click', closeAssignModalPanel);
   assignModal?.addEventListener('click', e => {
     if (e.target === assignModal) closeAssignModalPanel();
+  });
+  closeWeekmenuPreviewModal?.addEventListener('click', () => {
+    weekmenuPreviewModal?.classList.add('hidden');
+  });
+  weekmenuPreviewModal?.addEventListener('click', e => {
+    if (e.target === weekmenuPreviewModal) weekmenuPreviewModal.classList.add('hidden');
   });
   assignModalSaveBtn?.addEventListener('click', async () => {
     if (!pendingAssignRecipeId) return;

@@ -441,6 +441,7 @@
       <div class="weekmenu-search">
         <input id="weekmenuSearchInput" type="text" placeholder="Zoek in je recepten om te plannen..." />
         <div id="weekmenuSearchResults" class="weekmenu-search-results"></div>
+        <div id="weekmenuSearchPagination" class="overview-pagination"></div>
       </div>
     </div>
 
@@ -455,6 +456,15 @@
         <div class="assign-modal-controls">
           <button id="assignModalSaveBtn" type="button" class="pink-btn">Inplannen</button>
         </div>
+      </div>
+    </div>
+
+    <div id="weekmenuPreviewModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content weekmenu-preview-modal-content">
+        <button id="closeWeekmenuPreviewModal" class="modal-close" aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+        <div id="weekmenuPreviewBody"></div>
       </div>
     </div>
 

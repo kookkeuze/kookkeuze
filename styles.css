@@ -1529,6 +1529,12 @@ select:focus {
   text-decoration: none;
   font-weight: 600;
   line-height: 1.25;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
 }
 
 .weekmenu-search-title:hover {
@@ -2333,6 +2339,16 @@ select:focus {
 .modal-content.database-modal-content {
   width: min(920px, 96vw);
   max-width: min(920px, 96vw);
+}
+
+.modal-content.weekmenu-preview-modal-content {
+  width: min(820px, 96vw);
+  max-width: min(820px, 96vw);
+  padding: 20px;
+}
+
+.weekmenu-preview-cards {
+  margin-top: 0;
 }
 
 .database-modal-content .database-bar {
