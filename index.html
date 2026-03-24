@@ -218,33 +218,6 @@
   <li><a href="#weekmenuPlanner" class="tab-link">Weekmenu planner</a></li>
 </ul>
 
-<div id="databaseBar" class="database-bar hidden">
-  <div class="database-bar-main">
-    <label for="activeDatabaseSelect">Actieve database</label>
-    <select id="activeDatabaseSelect"></select>
-  </div>
-  <button id="toggleSharePanelBtn" type="button" class="overview-view-btn">Delen beheren</button>
-</div>
-
-<div id="sharePanel" class="share-panel hidden">
-  <h3>Database delen</h3>
-  <div class="share-invite-row">
-    <input id="shareInviteEmail" type="email" placeholder="Nodig uit via e-mailadres" />
-    <button id="shareInviteBtn" type="button" class="green-btn">Uitnodigen</button>
-  </div>
-  <p id="sharePanelMsg" class="share-panel-msg"></p>
-  <div class="share-columns">
-    <div>
-      <h4>Leden met toegang</h4>
-      <div id="shareMembersList" class="share-list"></div>
-    </div>
-    <div>
-      <h4>Openstaande uitnodigingen</h4>
-      <div id="shareInvitesList" class="share-list"></div>
-    </div>
-  </div>
-</div>
-
     <!-- TAB 1: KIES EEN RECEPT -->
     <div id="kiesRecept" class="tab-content active">
       <div class="hero-header">
@@ -481,6 +454,41 @@
         <div id="assignCalendarPicker" class="assign-calendar-picker"></div>
         <div class="assign-modal-controls">
           <button id="assignModalSaveBtn" type="button" class="pink-btn">Inplannen</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="databaseModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content database-modal-content">
+        <button id="closeDatabaseModal" class="modal-close" aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+        <h3 class="assign-modal-title">Database instellingen</h3>
+        <div id="databaseBar" class="database-bar">
+          <div class="database-bar-main">
+            <label for="activeDatabaseSelect">Actieve database</label>
+            <select id="activeDatabaseSelect"></select>
+          </div>
+          <button id="toggleSharePanelBtn" type="button" class="overview-view-btn">Delen beheren</button>
+        </div>
+
+        <div id="sharePanel" class="share-panel hidden">
+          <h3>Database delen</h3>
+          <div class="share-invite-row">
+            <input id="shareInviteEmail" type="email" placeholder="Nodig uit via e-mailadres" />
+            <button id="shareInviteBtn" type="button" class="green-btn">Uitnodigen</button>
+          </div>
+          <p id="sharePanelMsg" class="share-panel-msg"></p>
+          <div class="share-columns">
+            <div>
+              <h4>Leden met toegang</h4>
+              <div id="shareMembersList" class="share-list"></div>
+            </div>
+            <div>
+              <h4>Openstaande uitnodigingen</h4>
+              <div id="shareInvitesList" class="share-list"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

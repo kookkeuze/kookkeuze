@@ -184,6 +184,33 @@ function hydrateWeekmenuImages() {
   });
 }
 
+function setWeekmenuSearchImage(container, imageUrl) {
+  if (!container) return;
+  container.innerHTML = '';
+  if (imageUrl) {
+    const img = document.createElement('img');
+    img.className = 'weekmenu-search-thumb';
+    img.alt = 'Receptfoto';
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    img.src = imageUrl;
+    img.addEventListener('error', () => {
+      container.innerHTML = '<div class="weekmenu-search-thumb-fallback">Geen foto</div>';
+    });
+    container.appendChild(img);
+    return;
+  }
+  container.innerHTML = '<div class="weekmenu-search-thumb-fallback">Geen foto</div>';
+}
+
+function hydrateWeekmenuSearchImages() {
+  const cells = document.querySelectorAll('.weekmenu-search-thumb-wrap[data-url]');
+  cells.forEach(cell => {
+    const url = decodeURIComponent(cell.dataset.url || '');
+    fetchRecipeImage(url).then(imageUrl => setWeekmenuSearchImage(cell, imageUrl));
+  });
+}
+
 function renderImageFallback(cell, title) {
   cell.innerHTML = '';
   const fallback = document.createElement('div');
@@ -261,6 +288,8 @@ const navDropdown  = document.getElementById('navDropdown');
 const installAppBtn = document.getElementById('installAppBtn');
 const installAppText = document.getElementById('installAppText');
 const databaseMenuBtn = document.getElementById('databaseMenuBtn');
+const databaseModal = document.getElementById('databaseModal');
+const closeDatabaseModal = document.getElementById('closeDatabaseModal');
 const databaseBar = document.getElementById('databaseBar');
 const activeDatabaseSelect = document.getElementById('activeDatabaseSelect');
 const toggleSharePanelBtn = document.getElementById('toggleSharePanelBtn');
@@ -273,7 +302,6 @@ const shareInvitesList = document.getElementById('shareInvitesList');
 let deferredInstallPrompt = null;
 let accessibleDatabases = [];
 let activeDatabaseOwnerId = null;
-let databasePanelVisible = false;
 
 tabLinks.forEach(link => {
   link.addEventListener('click', e => {
@@ -364,10 +392,9 @@ async function loadSharePanelData() {
 async function loadAccessibleDatabases() {
   if (!getValidToken()) {
     accessibleDatabases = [];
-    databasePanelVisible = false;
     if (databaseMenuBtn) databaseMenuBtn.classList.add('hidden');
-    if (databaseBar) databaseBar.classList.add('hidden');
     if (sharePanel) sharePanel.classList.add('hidden');
+    if (databaseModal) databaseModal.classList.add('hidden');
     return;
   }
 
@@ -379,7 +406,6 @@ async function loadAccessibleDatabases() {
     localStorage.setItem('activeDatabaseOwnerId', String(ownId));
   }
   if (databaseMenuBtn) databaseMenuBtn.classList.toggle('hidden', accessibleDatabases.length === 0);
-  if (databaseBar) databaseBar.classList.toggle('hidden', !databasePanelVisible);
   renderDatabaseSelect();
   await loadSharePanelData();
 }
@@ -402,14 +428,16 @@ toggleSharePanelBtn?.addEventListener('click', async () => {
 
 databaseMenuBtn?.addEventListener('click', async () => {
   if (!getValidToken()) return;
-  databasePanelVisible = !databasePanelVisible;
-  databaseBar?.classList.toggle('hidden', !databasePanelVisible);
-  if (!databasePanelVisible) {
-    sharePanel?.classList.add('hidden');
-    return;
-  }
   await loadAccessibleDatabases();
-  databaseBar?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  databaseModal?.classList.remove('hidden');
+});
+
+closeDatabaseModal?.addEventListener('click', () => {
+  databaseModal?.classList.add('hidden');
+});
+
+databaseModal?.addEventListener('click', e => {
+  if (e.target === databaseModal) databaseModal.classList.add('hidden');
 });
 
 shareInviteBtn?.addEventListener('click', async () => {
@@ -959,9 +987,8 @@ function renderWeekMenuGrid() {
             <div class="weekmenu-slot-thumb-wrap" data-url="${safeUrl}">
               <div class="weekmenu-slot-thumb-skeleton"></div>
             </div>
-            <p class="weekmenu-cell-title">${entry.title}</p>
             <a href="${entry.url}" target="_blank" rel="noopener noreferrer" class="weekmenu-open-link">
-              Bekijk recept <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+              ${entry.title} <i class="fas fa-external-link-alt" aria-hidden="true"></i>
             </a>
             <div class="weekmenu-cell-actions">
               <button type="button" class="green-btn weekmenu-replace-btn" data-day="${day}" data-slot="${slotKey}">Wijzig</button>
@@ -1025,13 +1052,20 @@ function renderPlannerSearchResults() {
 
   let html = '';
   filtered.forEach(recipe => {
+    const safeUrl = encodeURIComponent(recipe.url || '');
     html += `
       <div class="weekmenu-search-item">
-        <a href="${recipe.url}" target="_blank" class="weekmenu-search-title">${recipe.title}</a>
+        <div class="weekmenu-search-main">
+          <div class="weekmenu-search-thumb-wrap" data-url="${safeUrl}">
+            <div class="weekmenu-search-thumb-skeleton"></div>
+          </div>
+          <a href="${recipe.url}" target="_blank" rel="noopener noreferrer" class="weekmenu-search-title">${recipe.title}</a>
+        </div>
         <button type="button" class="plan-weekmenu-btn weekmenu-assign-btn" data-recipe-id="${recipe.id}" data-recipe-title="${(recipe.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
       </div>`;
   });
   weekmenuSearchResults.innerHTML = html;
+  hydrateWeekmenuSearchImages();
 
 }
 
@@ -1645,9 +1679,8 @@ function updateAuthUI(){
     setAuthPane(loggedInPane);
   } else {
     localStorage.removeItem('activeDatabaseOwnerId');
-    databasePanelVisible = false;
     if (databaseMenuBtn) databaseMenuBtn.classList.add('hidden');
-    if (databaseBar) databaseBar.classList.add('hidden');
+    if (databaseModal) databaseModal.classList.add('hidden');
     if (sharePanel) sharePanel.classList.add('hidden');
     setAuthPane(pendingResetToken ? resetPane : loginPane);
   }

@@ -1497,6 +1497,13 @@ select:focus {
   padding: 10px 12px;
 }
 
+.weekmenu-search-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .weekmenu-search-item:hover {
   border-color: #e0e9e2;
   background: #fff;
@@ -1521,6 +1528,7 @@ select:focus {
   color: #2e3934;
   text-decoration: none;
   font-weight: 600;
+  line-height: 1.25;
 }
 
 .weekmenu-search-title:hover {
@@ -1822,15 +1830,14 @@ select:focus {
 
 .weekmenu-slot-thumb-wrap {
   width: 100%;
-  display: flex;
-  justify-content: flex-start;
+  display: block;
 }
 
 .weekmenu-slot-thumb,
 .weekmenu-slot-thumb-fallback,
 .weekmenu-slot-thumb-skeleton {
-  width: 54px;
-  height: 54px;
+  width: 100%;
+  height: 84px;
   border-radius: 10px;
   flex-shrink: 0;
   display: inline-flex;
@@ -1852,6 +1859,45 @@ select:focus {
 }
 
 .weekmenu-slot-thumb-skeleton {
+  background: linear-gradient(90deg, #eef7f0 0%, #f9fffb 50%, #eef7f0 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border: 1px solid #e5f3e7;
+}
+
+.weekmenu-search-thumb-wrap {
+  width: 62px;
+  height: 62px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.weekmenu-search-thumb,
+.weekmenu-search-thumb-fallback,
+.weekmenu-search-thumb-skeleton {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.weekmenu-search-thumb {
+  object-fit: cover;
+  border: 1px solid rgba(99, 214, 113, 0.35);
+}
+
+.weekmenu-search-thumb-fallback {
+  font-size: 10px;
+  font-weight: 700;
+  color: #708079;
+  background: #f3f8f4;
+  border: 1px solid #e2ece5;
+}
+
+.weekmenu-search-thumb-skeleton {
   background: linear-gradient(90deg, #eef7f0 0%, #f9fffb 50%, #eef7f0 100%);
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
@@ -1917,6 +1963,10 @@ select:focus {
   .weekmenu-search-item {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .weekmenu-search-main {
+    width: 100%;
   }
 
   .assign-modal-content {
@@ -2278,6 +2328,19 @@ select:focus {
   width: min(980px, 96vw);
   max-width: min(980px, 96vw);
   overflow-x: visible;
+}
+
+.modal-content.database-modal-content {
+  width: min(920px, 96vw);
+  max-width: min(920px, 96vw);
+}
+
+.database-modal-content .database-bar {
+  margin: 10px 0 12px;
+}
+
+.database-modal-content .share-panel {
+  margin: 0;
 }
 
 .modal-close {
