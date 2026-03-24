@@ -1131,11 +1131,17 @@ app.post('/api/recipes/:id/import', async (req, res) => {
 
   try {
     const sourceOwnerId = await resolveDatabaseOwnerId(req);
-    if (Number(sourceOwnerId) === Number(req.user.id)) {
-      return res.status(400).json({ error: 'Dit recept staat al in je eigen database.' });
+    const rawTargetId = Number(req.body?.targetDbOwnerId);
+    const targetOwnerId = Number.isInteger(rawTargetId) && rawTargetId > 0 ? rawTargetId : req.user.id;
+    const canWriteTarget = await dbCall(userHasDatabaseAccess, req.user.id, targetOwnerId);
+    if (!canWriteTarget) {
+      return res.status(403).json({ error: 'Je hebt geen toegang tot de doel-database.' });
+    }
+    if (Number(sourceOwnerId) === Number(targetOwnerId)) {
+      return res.status(400).json({ error: 'Bron- en doel-database zijn hetzelfde.' });
     }
 
-    const imported = await dbCall(importRecipeToUserDatabase, recipeId, sourceOwnerId, req.user.id);
+    const imported = await dbCall(importRecipeToUserDatabase, recipeId, sourceOwnerId, targetOwnerId);
     if (!imported) return res.status(404).json({ error: 'Recept niet gevonden in deze database.' });
     return res.json({ message: 'Recept geïmporteerd.', id: imported.id });
   } catch (err) {

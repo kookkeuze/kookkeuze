@@ -71,6 +71,12 @@ function isSharedDatabaseActive() {
   return !!ownId && !!activeId && ownId !== activeId;
 }
 
+function getSharedDatabaseTargets() {
+  const ownId = getCurrentUserId();
+  if (!ownId) return [];
+  return accessibleDatabases.filter(db => Number(db.owner_user_id) !== Number(ownId));
+}
+
 function appendActiveDatabaseParam(params) {
   const ownerId = getActiveDatabaseOwnerId();
   if (ownerId) params.set('dbOwnerId', String(ownerId));
@@ -713,7 +719,13 @@ function showRecipes(arr) {
     return;
   }
   const singleClass = arr.length === 1 ? ' single-result' : '';
-  const showImportButton = isSharedDatabaseActive();
+  const sharedTargets = getSharedDatabaseTargets();
+  const importMode = isSharedDatabaseActive()
+    ? 'to-own'
+    : (sharedTargets.length ? 'to-shared' : null);
+  const importLabel = importMode === 'to-own'
+    ? 'Importeer naar mijn database'
+    : 'Importeer naar gedeelde database';
   let html = `<div class="recipe-cards-container search-results${singleClass}">`;
   arr.forEach(r => {
     const safeUrl = encodeURIComponent(r.url || '');
@@ -729,7 +741,7 @@ function showRecipes(arr) {
             <p class="recipe-link"><a href="${r.url}" target="_blank" class="ext-link">
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
             <button type="button" class="plan-weekmenu-btn plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${(r.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
-            ${showImportButton ? `<button type="button" class="pink-btn import-recipe-btn" data-recipe-id="${r.id}">Importeer naar mijn database</button>` : ''}
+            ${importMode ? `<button type="button" class="plan-weekmenu-btn import-transfer-btn import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">${importLabel}</button>` : ''}
           </div>
           <div class="recipe-meta-row">
             <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
@@ -751,11 +763,13 @@ function showRecipes(arr) {
 resultDiv?.addEventListener('click', e => {
   const importBtn = e.target.closest('.import-recipe-btn');
   if (importBtn) {
-    importRecipeToPersonalDatabase(importBtn.dataset.recipeId);
+    handleImportRecipe(importBtn.dataset.recipeId, importBtn.dataset.importMode || '');
     return;
   }
   const btn = e.target.closest('.plan-recipe-btn');
   if (!btn) return;
+  plannerSuggestedDay = null;
+  plannerSuggestedSlot = null;
   openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
 });
 
@@ -784,6 +798,8 @@ let plannerInitialized = false;
 let plannerRecipes = [];
 let plannerSearchCurrentPage = 1;
 let plannerEntries = new Map();
+let plannerSuggestedDay = null;
+let plannerSuggestedSlot = null;
 let pendingAssignRecipeId = null;
 let assignSelectedDay = 1;
 let assignSelectedSlot = 'dinner';
@@ -933,8 +949,8 @@ function openAssignModalForRecipe(recipeId, recipeTitle) {
   if (!plannerWeekStart) plannerWeekStart = toIsoDate(getMonday(new Date()));
   pendingAssignRecipeId = Number(recipeId);
   if (assignModalRecipeTitle) assignModalRecipeTitle.textContent = recipeTitle || 'Recept';
-  assignSelectedDay = 1;
-  assignSelectedSlot = 'dinner';
+  assignSelectedDay = Number(plannerSuggestedDay || 1);
+  assignSelectedSlot = plannerSuggestedSlot || 'dinner';
   renderAssignCalendarPicker();
   assignModal?.classList.remove('hidden');
 }
@@ -1034,6 +1050,8 @@ function renderWeekMenuGrid() {
 
   weekmenuGrid.querySelectorAll('.weekmenu-replace-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      plannerSuggestedDay = Number(btn.dataset.day || '1');
+      plannerSuggestedSlot = btn.dataset.slot || 'dinner';
       if (weekmenuSearchInput) {
         weekmenuSearchInput.value = '';
         renderPlannerSearchResults();
@@ -1146,22 +1164,68 @@ async function assignRecipeToPlanner(recipeId, dayOfWeek, slot) {
   await loadWeekMenu();
 }
 
-async function importRecipeToPersonalDatabase(recipeId) {
+async function importRecipeBetweenDatabases(recipeId, targetDbOwnerId, successMessage) {
   if (!ensureLoggedInOrNotify(resultDiv)) return;
-  const ownerId = getActiveDatabaseOwnerId();
-  if (!ownerId || !isSharedDatabaseActive()) return;
+  const sourceOwnerId = getActiveDatabaseOwnerId();
+  if (!sourceOwnerId || !targetDbOwnerId) return;
 
   const res = await fetch(`${API_BASE}/api/recipes/${recipeId}/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ dbOwnerId: ownerId })
+    body: JSON.stringify({
+      dbOwnerId: sourceOwnerId,
+      targetDbOwnerId
+    })
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     alert(data.error || 'Importeren mislukt.');
     return;
   }
-  alert('Recept geïmporteerd naar je eigen database.');
+  alert(successMessage);
+}
+
+async function handleImportRecipe(recipeId, importMode) {
+  const ownId = getCurrentUserId();
+  const activeOwnerId = getActiveDatabaseOwnerId();
+  if (!ownId || !activeOwnerId) return;
+
+  if (importMode === 'to-own') {
+    if (!isSharedDatabaseActive()) return;
+    await importRecipeBetweenDatabases(recipeId, ownId, 'Recept geïmporteerd naar je eigen database.');
+    return;
+  }
+
+  if (importMode === 'to-shared') {
+    const sharedTargets = getSharedDatabaseTargets();
+    if (!sharedTargets.length) {
+      alert('Je hebt nog geen gedeelde databases om naartoe te importeren.');
+      return;
+    }
+
+    let targetOwnerId = null;
+    if (sharedTargets.length === 1) {
+      targetOwnerId = Number(sharedTargets[0].owner_user_id);
+    } else {
+      const options = sharedTargets
+        .map((db, idx) => `${idx + 1}. ${db.owner_email}`)
+        .join('\n');
+      const answer = window.prompt(
+        `Kies de gedeelde database waar je naartoe wilt importeren:\n${options}\n\nVul het nummer in:`,
+        '1'
+      );
+      if (!answer) return;
+      const choice = Number(answer);
+      if (!Number.isInteger(choice) || choice < 1 || choice > sharedTargets.length) {
+        alert('Ongeldige keuze.');
+        return;
+      }
+      targetOwnerId = Number(sharedTargets[choice - 1].owner_user_id);
+    }
+
+    if (!targetOwnerId) return;
+    await importRecipeBetweenDatabases(recipeId, targetOwnerId, 'Recept geïmporteerd naar de gedeelde database.');
+  }
 }
 
 async function clearPlannerSlot(dayOfWeek, slot) {
