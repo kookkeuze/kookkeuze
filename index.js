@@ -1067,6 +1067,13 @@ function renderPlannerSearchResults() {
   const term = (weekmenuSearchInput?.value || '').trim().toLowerCase();
   const filtered = plannerRecipes
     .filter(r => (r.title || '').toLowerCase().includes(term));
+  const sharedTargets = getSharedDatabaseTargets();
+  const importMode = isSharedDatabaseActive()
+    ? 'to-own'
+    : (sharedTargets.length ? 'to-shared' : null);
+  const importLabel = importMode === 'to-own'
+    ? 'Importeer naar mijn database'
+    : 'Importeer naar gedeelde database';
 
   if (filtered.length === 0) {
     weekmenuSearchResults.innerHTML = '<p class="weekmenu-search-empty">Geen recepten gevonden.</p>';
@@ -1091,7 +1098,10 @@ function renderPlannerSearchResults() {
           </div>
           <button type="button" class="weekmenu-search-title weekmenu-preview-title" data-recipe-id="${recipe.id}">${recipe.title}</button>
         </div>
-        <button type="button" class="plan-weekmenu-btn weekmenu-assign-btn" data-recipe-id="${recipe.id}" data-recipe-title="${(recipe.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
+        <div class="weekmenu-search-actions">
+          <button type="button" class="plan-weekmenu-btn weekmenu-assign-btn" data-recipe-id="${recipe.id}" data-recipe-title="${(recipe.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
+          ${importMode ? `<button type="button" class="plan-weekmenu-btn import-transfer-btn weekmenu-import-btn" data-recipe-id="${recipe.id}" data-import-mode="${importMode}">${importLabel}</button>` : ''}
+        </div>
       </div>`;
   });
   weekmenuSearchResults.innerHTML = html;
@@ -1267,6 +1277,11 @@ async function initWeekPlanner() {
     renderPlannerSearchResults();
   });
   weekmenuSearchResults?.addEventListener('click', e => {
+    const importBtn = e.target.closest('.weekmenu-import-btn');
+    if (importBtn) {
+      handleImportRecipe(importBtn.dataset.recipeId, importBtn.dataset.importMode || '');
+      return;
+    }
     const btn = e.target.closest('.weekmenu-assign-btn');
     if (btn) {
       openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);

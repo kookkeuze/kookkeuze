@@ -1504,6 +1504,14 @@ select:focus {
   gap: 10px;
 }
 
+.weekmenu-search-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .weekmenu-search-item:hover {
   border-color: #e0e9e2;
   background: #fff;
@@ -1834,27 +1842,35 @@ select:focus {
 }
 
 .recipe-card-actions .plan-recipe-btn {
-  width: 230px;
+  width: 206px;
   max-width: 100%;
-  min-height: 40px;
-  padding: 8px 14px;
-  font-size: 12px;
+  min-height: 36px;
+  padding: 7px 12px;
+  font-size: 11px;
   justify-content: center;
 }
 
 .recipe-card-actions .import-transfer-btn {
-  width: 230px;
+  width: 206px;
   max-width: 100%;
-  min-height: 40px;
-  padding: 8px 14px;
-  font-size: 12px;
+  min-height: 36px;
+  padding: 7px 12px;
+  font-size: 11px;
   justify-content: center;
 }
 
 .weekmenu-search-item .weekmenu-assign-btn {
-  min-width: 0;
+  min-width: 188px;
+  min-height: 36px;
   padding: 7px 12px;
-  font-size: 12px;
+  font-size: 11px;
+}
+
+.weekmenu-search-item .weekmenu-import-btn {
+  min-width: 188px;
+  min-height: 36px;
+  padding: 7px 12px;
+  font-size: 11px;
 }
 
 .weekmenu-slot-thumb-wrap {
@@ -1996,6 +2012,16 @@ select:focus {
 
   .weekmenu-search-main {
     width: 100%;
+  }
+
+  .weekmenu-search-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .weekmenu-search-item .weekmenu-assign-btn,
+  .weekmenu-search-item .weekmenu-import-btn {
+    min-width: 0;
   }
 
   .assign-modal-content {
