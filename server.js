@@ -347,6 +347,8 @@ const {
   importRecipeToUserDatabase,
   listAccessibleDatabases,
   userHasDatabaseAccess,
+  userCanManageDatabase,
+  getPersonalDatabaseId,
   inviteUserToDatabase,
   listDatabaseMembers,
   listDatabaseInvites,
@@ -974,7 +976,12 @@ async function resolveDatabaseOwnerId(req) {
     err.statusCode = 400;
     throw err;
   }
-  const ownerUserId = requested || req.user.id;
+  const ownerUserId = requested || await getPersonalDatabaseId(req.user.id);
+  if (!ownerUserId) {
+    const err = new Error('Persoonlijke database niet gevonden.');
+    err.statusCode = 404;
+    throw err;
+  }
   const hasAccess = await dbCall(userHasDatabaseAccess, req.user.id, ownerUserId);
   if (!hasAccess) {
     const err = new Error('Je hebt geen toegang tot deze database.');
@@ -1060,7 +1067,8 @@ app.post('/api/recipes', async (req, res) => {
       meal_type: cleanMealType,
       time_required: cleanTimeRequired,
       calories,
-      user_id: ownerUserId
+      user_id: req.user.id,
+      database_id: ownerUserId
     });
     res.json({ message: 'Recept toegevoegd!', id: result.id });
   } catch (err) {
@@ -1092,7 +1100,7 @@ app.put('/api/recipes/:id', async (req, res) => {
       time_required: normalizeRecipeField(time_required),
       meal_category: normalizeRecipeField(meal_category),
       calories,
-      user_id: ownerUserId
+      database_id: ownerUserId
     });
     res.json({ message: 'Recept bijgewerkt!' });
   } catch (err) {
@@ -1132,7 +1140,9 @@ app.post('/api/recipes/:id/import', async (req, res) => {
   try {
     const sourceOwnerId = await resolveDatabaseOwnerId(req);
     const rawTargetId = Number(req.body?.targetDbOwnerId);
-    const targetOwnerId = Number.isInteger(rawTargetId) && rawTargetId > 0 ? rawTargetId : req.user.id;
+    const fallbackPersonalDbId = await getPersonalDatabaseId(req.user.id);
+    const targetOwnerId = Number.isInteger(rawTargetId) && rawTargetId > 0 ? rawTargetId : fallbackPersonalDbId;
+    if (!targetOwnerId) return res.status(404).json({ error: 'Persoonlijke database niet gevonden.' });
     const canWriteTarget = await dbCall(userHasDatabaseAccess, req.user.id, targetOwnerId);
     if (!canWriteTarget) {
       return res.status(403).json({ error: 'Je hebt geen toegang tot de doel-database.' });
@@ -1260,9 +1270,12 @@ app.get('/api/databases', async (req, res) => {
 app.get('/api/databases/shares', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
   try {
+    const databaseId = await resolveDatabaseOwnerId(req);
+    const canManage = await dbCall(userCanManageDatabase, req.user.id, databaseId);
+    if (!canManage) return res.status(403).json({ error: 'Je hebt geen beheerrechten voor deze database.' });
     const [members, invites] = await Promise.all([
-      dbCall(listDatabaseMembers, req.user.id),
-      dbCall(listDatabaseInvites, req.user.id)
+      dbCall(listDatabaseMembers, databaseId),
+      dbCall(listDatabaseInvites, databaseId)
     ]);
     return res.json({ members, invites });
   } catch (err) {
@@ -1277,10 +1290,14 @@ app.post('/api/databases/invite', async (req, res) => {
   if (!email) return res.status(400).json({ error: 'E-mailadres ontbreekt.' });
 
   try {
-    const result = await dbCall(inviteUserToDatabase, req.user.id, email);
+    const databaseId = await resolveDatabaseOwnerId(req);
+    const canManage = await dbCall(userCanManageDatabase, req.user.id, databaseId);
+    if (!canManage) return res.status(403).json({ error: 'Je hebt geen beheerrechten voor deze database.' });
+
+    const result = await dbCall(inviteUserToDatabase, databaseId, req.user.id, email);
     return res.json({
       message: result.type === 'member'
-        ? (result.already_had_access ? 'Gebruiker had al toegang.' : 'Gebruiker toegevoegd aan je database.')
+        ? (result.already_had_access ? 'Gebruiker had al toegang.' : 'Gebruiker toegevoegd aan de gedeelde database.')
         : 'Uitnodiging opgeslagen. Zodra deze gebruiker registreert met dit e-mailadres, krijgt hij toegang.',
       result
     });
@@ -1297,7 +1314,10 @@ app.delete('/api/databases/members/:memberUserId', async (req, res) => {
     return res.status(400).json({ error: 'Ongeldige gebruiker.' });
   }
   try {
-    await dbCall(revokeDatabaseMember, req.user.id, memberUserId);
+    const databaseId = await resolveDatabaseOwnerId(req);
+    const canManage = await dbCall(userCanManageDatabase, req.user.id, databaseId);
+    if (!canManage) return res.status(403).json({ error: 'Je hebt geen beheerrechten voor deze database.' });
+    await dbCall(revokeDatabaseMember, databaseId, memberUserId);
     return res.json({ message: 'Toegang ingetrokken.' });
   } catch (_err) {
     return res.status(500).json({ error: 'Intrekken mislukt.' });
@@ -1312,7 +1332,10 @@ app.delete('/api/databases/invites/:inviteId', async (req, res) => {
     return res.status(400).json({ error: 'Ongeldige uitnodiging.' });
   }
   try {
-    const changed = await dbCall(revokeDatabaseInvite, req.user.id, inviteId);
+    const databaseId = await resolveDatabaseOwnerId(req);
+    const canManage = await dbCall(userCanManageDatabase, req.user.id, databaseId);
+    if (!canManage) return res.status(403).json({ error: 'Je hebt geen beheerrechten voor deze database.' });
+    const changed = await dbCall(revokeDatabaseInvite, databaseId, inviteId);
     if (!changed) return res.status(404).json({ error: 'Uitnodiging niet gevonden.' });
     return res.json({ message: 'Uitnodiging ingetrokken.' });
   } catch (_err) {

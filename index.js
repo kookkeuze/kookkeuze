@@ -58,23 +58,29 @@ function getCurrentUserId() {
   return Number(getCurrentUserPayload()?.id || 0) || null;
 }
 
+function getActiveDatabaseMeta() {
+  const activeId = Number(localStorage.getItem('activeDatabaseOwnerId') || 0);
+  if (!activeId) return null;
+  return accessibleDatabases.find(db => Number(db.owner_user_id) === activeId) || null;
+}
+
 function getActiveDatabaseOwnerId() {
-  const ownId = getCurrentUserId();
-  if (!ownId) return null;
-  const stored = Number(localStorage.getItem('activeDatabaseOwnerId') || ownId);
-  return Number.isInteger(stored) && stored > 0 ? stored : ownId;
+  const stored = Number(localStorage.getItem('activeDatabaseOwnerId') || 0);
+  if (Number.isInteger(stored) && stored > 0) return stored;
+  const personal = accessibleDatabases.find(db => !!db.is_personal);
+  return personal ? Number(personal.owner_user_id) : null;
 }
 
 function isSharedDatabaseActive() {
-  const ownId = getCurrentUserId();
-  const activeId = getActiveDatabaseOwnerId();
-  return !!ownId && !!activeId && ownId !== activeId;
+  const activeDb = getActiveDatabaseMeta();
+  return !!activeDb && !activeDb.is_personal;
 }
 
 function getSharedDatabaseTargets() {
-  const ownId = getCurrentUserId();
-  if (!ownId) return [];
-  return accessibleDatabases.filter(db => Number(db.owner_user_id) !== Number(ownId));
+  const activeId = getActiveDatabaseOwnerId();
+  return accessibleDatabases.filter(db =>
+    !db.is_personal && Number(db.owner_user_id) !== Number(activeId)
+  );
 }
 
 function appendActiveDatabaseParam(params) {
@@ -345,29 +351,33 @@ function setSharePanelMessage(text, isError = false) {
 
 function renderDatabaseSelect() {
   if (!activeDatabaseSelect) return;
-  const ownId = getCurrentUserId();
   const selectedId = getActiveDatabaseOwnerId();
   activeDatabaseSelect.innerHTML = accessibleDatabases.map(db => {
-    const label = db.is_owner ? `Mijn database (${db.owner_email})` : `Gedeeld door ${db.owner_email}`;
+    let label = db.database_name || 'Database';
+    if (db.is_personal) label = `Persoonlijk (${db.owner_email})`;
+    else if (db.owner_email) label = `${label} (${db.owner_email})`;
     return `<option value="${db.owner_user_id}" ${Number(db.owner_user_id) === Number(selectedId) ? 'selected' : ''}>${label}</option>`;
   }).join('');
   if (selectedId && !accessibleDatabases.some(db => Number(db.owner_user_id) === Number(selectedId))) {
-    localStorage.setItem('activeDatabaseOwnerId', String(ownId || ''));
+    const personal = accessibleDatabases.find(db => !!db.is_personal) || accessibleDatabases[0];
+    if (personal) localStorage.setItem('activeDatabaseOwnerId', String(personal.owner_user_id));
   }
 }
 
 async function loadSharePanelData() {
   if (!getValidToken() || !shareMembersList || !shareInvitesList) return;
-  const ownId = getCurrentUserId();
   const activeId = getActiveDatabaseOwnerId();
-  const canManage = ownId && activeId && Number(ownId) === Number(activeId);
+  const activeDb = accessibleDatabases.find(db => Number(db.owner_user_id) === Number(activeId));
+  const canManage = !!activeDb?.can_manage;
   if (!canManage) {
-    shareMembersList.innerHTML = '<p class="share-empty">Schakel naar je eigen database om delen te beheren.</p>';
-    shareInvitesList.innerHTML = '<p class="share-empty">Schakel naar je eigen database om uitnodigingen te beheren.</p>';
+    shareMembersList.innerHTML = '<p class="share-empty">Schakel naar een database met beheerrechten om delen te beheren.</p>';
+    shareInvitesList.innerHTML = '<p class="share-empty">Schakel naar een database met beheerrechten om uitnodigingen te beheren.</p>';
     return;
   }
 
-  const res = await fetch(`${API_BASE}/api/databases/shares`, { headers: authHeaders() });
+  const params = new URLSearchParams();
+  appendActiveDatabaseParam(params);
+  const res = await fetch(`${API_BASE}/api/databases/shares?${params.toString()}`, { headers: authHeaders() });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     shareMembersList.innerHTML = '<p class="share-empty">Kon leden niet laden.</p>';
@@ -381,8 +391,8 @@ async function loadSharePanelData() {
   shareMembersList.innerHTML = members.length
     ? members.map(m => `
         <div class="share-item">
-          <span>${m.email}</span>
-          <button type="button" class="pink-btn share-remove-member-btn" data-member-id="${m.member_user_id}">Intrekken</button>
+          <span>${m.email}${m.role === 'admin' ? ' (beheerder)' : ''}</span>
+          ${m.role === 'admin' ? '' : `<button type="button" class="pink-btn share-remove-member-btn" data-member-id="${m.member_user_id}">Intrekken</button>`}
         </div>`).join('')
     : '<p class="share-empty">Nog geen gedeelde leden.</p>';
 
@@ -407,9 +417,9 @@ async function loadAccessibleDatabases() {
   const res = await fetch(`${API_BASE}/api/databases`, { headers: authHeaders() });
   const list = await res.json().catch(() => []);
   accessibleDatabases = Array.isArray(list) ? list : [];
-  const ownId = getCurrentUserId();
-  if (ownId && !localStorage.getItem('activeDatabaseOwnerId')) {
-    localStorage.setItem('activeDatabaseOwnerId', String(ownId));
+  if (accessibleDatabases.length && !localStorage.getItem('activeDatabaseOwnerId')) {
+    const personal = accessibleDatabases.find(db => !!db.is_personal) || accessibleDatabases[0];
+    localStorage.setItem('activeDatabaseOwnerId', String(personal.owner_user_id));
   }
   if (databaseMenuBtn) databaseMenuBtn.classList.toggle('hidden', accessibleDatabases.length === 0);
   renderDatabaseSelect();
@@ -456,7 +466,7 @@ shareInviteBtn?.addEventListener('click', async () => {
   const res = await fetch(`${API_BASE}/api/databases/invite`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ email })
+    body: JSON.stringify(withActiveDatabaseBody({ email }))
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -472,7 +482,9 @@ sharePanel?.addEventListener('click', async e => {
   const removeMemberBtn = e.target.closest('.share-remove-member-btn');
   if (removeMemberBtn) {
     const memberId = removeMemberBtn.dataset.memberId;
-    await fetch(`${API_BASE}/api/databases/members/${memberId}`, {
+    const params = new URLSearchParams();
+    appendActiveDatabaseParam(params);
+    await fetch(`${API_BASE}/api/databases/members/${memberId}?${params.toString()}`, {
       method: 'DELETE',
       headers: authHeaders()
     });
@@ -483,7 +495,9 @@ sharePanel?.addEventListener('click', async e => {
   const cancelInviteBtn = e.target.closest('.share-cancel-invite-btn');
   if (cancelInviteBtn) {
     const inviteId = cancelInviteBtn.dataset.inviteId;
-    await fetch(`${API_BASE}/api/databases/invites/${inviteId}`, {
+    const params = new URLSearchParams();
+    appendActiveDatabaseParam(params);
+    await fetch(`${API_BASE}/api/databases/invites/${inviteId}?${params.toString()}`, {
       method: 'DELETE',
       headers: authHeaders()
     });
@@ -1196,13 +1210,13 @@ async function importRecipeBetweenDatabases(recipeId, targetDbOwnerId, successMe
 }
 
 async function handleImportRecipe(recipeId, importMode) {
-  const ownId = getCurrentUserId();
   const activeOwnerId = getActiveDatabaseOwnerId();
-  if (!ownId || !activeOwnerId) return;
+  const personalDb = accessibleDatabases.find(db => !!db.is_personal);
+  if (!activeOwnerId || !personalDb) return;
 
   if (importMode === 'to-own') {
     if (!isSharedDatabaseActive()) return;
-    await importRecipeBetweenDatabases(recipeId, ownId, 'Recept geïmporteerd naar je eigen database.');
+    await importRecipeBetweenDatabases(recipeId, Number(personalDb.owner_user_id), 'Recept geïmporteerd naar je eigen database.');
     return;
   }
 
@@ -1827,10 +1841,6 @@ function updateAuthUI(){
   }
 
   if (loggedIn){
-    const ownId = getCurrentUserId();
-    if (ownId && !localStorage.getItem('activeDatabaseOwnerId')) {
-      localStorage.setItem('activeDatabaseOwnerId', String(ownId));
-    }
     loadAccessibleDatabases().catch(() => {});
     setAuthPane(loggedInPane);
   } else {

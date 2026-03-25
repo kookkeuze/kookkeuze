@@ -111,6 +111,127 @@ async function initializeDatabase() {
     console.log('✅ Meal plans table created/verified');
 
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS recipe_databases (
+        id SERIAL PRIMARY KEY,
+        owner_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        is_personal BOOLEAN NOT NULL DEFAULT FALSE,
+        is_default_shared BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_recipe_databases_personal_owner
+      ON recipe_databases (owner_user_id)
+      WHERE is_personal = TRUE
+    `);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_recipe_databases_default_shared_owner
+      ON recipe_databases (owner_user_id)
+      WHERE is_default_shared = TRUE
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS database_members (
+        id SERIAL PRIMARY KEY,
+        database_id INTEGER NOT NULL REFERENCES recipe_databases(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(20) NOT NULL DEFAULT 'member'
+          CHECK (role IN ('admin', 'member')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (database_id, user_id)
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_database_members_user
+      ON database_members (user_id)
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS database_invites (
+        id SERIAL PRIMARY KEY,
+        database_id INTEGER NOT NULL REFERENCES recipe_databases(id) ON DELETE CASCADE,
+        invited_email VARCHAR(255) NOT NULL,
+        invited_by_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending'
+          CHECK (status IN ('pending', 'accepted', 'revoked')),
+        accepted_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        accepted_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_database_invites_db_status
+      ON database_invites (database_id, status)
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_database_invites_email
+      ON database_invites (LOWER(invited_email))
+    `);
+
+    await pool.query(`
+      INSERT INTO recipe_databases (owner_user_id, name, is_personal)
+      SELECT u.id, 'Mijn persoonlijke database', TRUE
+      FROM users u
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM recipe_databases rd
+        WHERE rd.owner_user_id = u.id
+          AND rd.is_personal = TRUE
+      )
+    `);
+    await pool.query(`
+      INSERT INTO database_members (database_id, user_id, role)
+      SELECT rd.id, rd.owner_user_id, 'admin'
+      FROM recipe_databases rd
+      WHERE rd.is_personal = TRUE
+      ON CONFLICT (database_id, user_id) DO NOTHING
+    `);
+
+    await pool.query(`
+      ALTER TABLE recipes
+        ADD COLUMN IF NOT EXISTS database_id INTEGER REFERENCES recipe_databases(id) ON DELETE CASCADE
+    `);
+    await pool.query(`
+      ALTER TABLE meal_plans
+        ADD COLUMN IF NOT EXISTS database_id INTEGER REFERENCES recipe_databases(id) ON DELETE CASCADE
+    `);
+
+    await pool.query(`
+      UPDATE recipes r
+      SET database_id = rd.id
+      FROM recipe_databases rd
+      WHERE r.database_id IS NULL
+        AND rd.owner_user_id = r.user_id
+        AND rd.is_personal = TRUE
+    `);
+    await pool.query(`
+      UPDATE meal_plans mp
+      SET database_id = rd.id
+      FROM recipe_databases rd
+      WHERE mp.database_id IS NULL
+        AND rd.owner_user_id = mp.user_id
+        AND rd.is_personal = TRUE
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_recipes_database_id
+      ON recipes (database_id)
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_meal_plans_database_week
+      ON meal_plans (database_id, week_start)
+    `);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_meal_plans_database_slot
+      ON meal_plans (database_id, week_start, day_of_week, meal_slot)
+    `);
+    await pool.query(`
+      ALTER TABLE meal_plans
+      DROP CONSTRAINT IF EXISTS meal_plans_user_id_week_start_day_of_week_meal_slot_key
+    `);
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS shared_database_access (
         id SERIAL PRIMARY KEY,
         owner_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -227,12 +348,12 @@ function getRecipes(filters, callback) {
 
   // Alleen recepten van de ingelogde gebruiker
   if (filters.user_id) {
-    query += ` AND user_id = $${paramIndex}`;
+    query += ` AND database_id = $${paramIndex}`;
     params.push(filters.user_id);
     paramIndex++;
-    console.log('Added user_id filter:', filters.user_id);
+    console.log('Added database_id filter:', filters.user_id);
   } else {
-    console.log('⚠️ No user_id provided in filters!');
+    console.log('⚠️ No database_id provided in filters!');
   }
 
   const dishTypes = normalizeFilterArray(filters.dish_type, 'Soort gerecht');
@@ -337,21 +458,22 @@ function addRecipe(recipe, callback) {
     time_required,
     meal_category,
     calories,
-    user_id
+    user_id,
+    database_id
   } = recipe;
 
   console.log('addRecipe called with:', recipe);
 
   const query = `
-    INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING id
   `;
   
   console.log('Insert query:', query);
-  console.log('Insert params:', [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id]);
+  console.log('Insert params:', [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id]);
   
-  pool.query(query, [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id],
+  pool.query(query, [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id],
     (err, result) => {
       if (err) {
         console.error('Fout bij invoegen recept:', err);
@@ -372,13 +494,13 @@ function updateRecipe(id, updatedData, callback) {
     time_required,
     meal_category,
     calories,
-    user_id
+    database_id
   } = updatedData;
 
   const query = `
     UPDATE recipes
     SET title = $1, url = $2, dish_type = $3, meal_type = $4, time_required = $5, meal_category = $6, calories = $7
-    WHERE id = $8 AND user_id = $9
+    WHERE id = $8 AND database_id = $9
   `;
   pool.query(query, [
     title,
@@ -389,7 +511,7 @@ function updateRecipe(id, updatedData, callback) {
     meal_category,
     calories,
     id,
-    user_id
+    database_id
   ], (err) => {
     if (err) {
       console.error('Fout bij updaten recept:', err);
@@ -399,9 +521,9 @@ function updateRecipe(id, updatedData, callback) {
   });
 }
 
-function deleteRecipe(id, userId, callback) {
-  const query = 'DELETE FROM recipes WHERE id = $1 AND user_id = $2';
-  pool.query(query, [id, userId], (err) => {
+function deleteRecipe(id, databaseId, callback) {
+  const query = 'DELETE FROM recipes WHERE id = $1 AND database_id = $2';
+  pool.query(query, [id, databaseId], (err) => {
     if (err) {
       console.error('Fout bij verwijderen recept:', err);
       return callback(err);
@@ -410,13 +532,13 @@ function deleteRecipe(id, userId, callback) {
   });
 }
 
-function getRecipeByIdForOwner(recipeId, ownerUserId, callback) {
+function getRecipeByIdForOwner(recipeId, databaseId, callback) {
   const query = `
     SELECT * FROM recipes
-    WHERE id = $1 AND user_id = $2
+    WHERE id = $1 AND database_id = $2
     LIMIT 1
   `;
-  pool.query(query, [recipeId, ownerUserId], (err, result) => {
+  pool.query(query, [recipeId, databaseId], (err, result) => {
     if (err) return callback(err);
     const row = result.rows[0] || null;
     if (!row) return callback(null, null);
@@ -430,15 +552,15 @@ function getRecipeByIdForOwner(recipeId, ownerUserId, callback) {
   });
 }
 
-function importRecipeToUserDatabase(recipeId, sourceOwnerUserId, targetUserId, callback) {
+function importRecipeToUserDatabase(recipeId, sourceDatabaseId, targetDatabaseId, callback) {
   const query = `
-    INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id)
-    SELECT title, url, dish_type, meal_type, time_required, meal_category, calories, $3
+    INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id)
+    SELECT title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, $3
     FROM recipes
-    WHERE id = $1 AND user_id = $2
+    WHERE id = $1 AND database_id = $2
     RETURNING id
   `;
-  pool.query(query, [recipeId, sourceOwnerUserId, targetUserId], (err, result) => {
+  pool.query(query, [recipeId, sourceDatabaseId, targetDatabaseId], (err, result) => {
     if (err) return callback(err);
     callback(null, result.rows[0] || null);
   });
@@ -462,8 +584,8 @@ function getMealPlanForWeek(filters, callback) {
     FROM meal_plans mp
     JOIN recipes r
       ON r.id = mp.recipe_id
-     AND r.user_id = mp.user_id
-    WHERE mp.user_id = $1
+     AND r.database_id = mp.database_id
+    WHERE mp.database_id = $1
       AND mp.week_start = $2
     ORDER BY mp.day_of_week, mp.meal_slot
   `;
@@ -488,11 +610,13 @@ function upsertMealPlanEntry(entry, callback) {
   const { user_id, week_start, day_of_week, meal_slot, recipe_id } = entry;
 
   const query = `
-    INSERT INTO meal_plans (user_id, week_start, day_of_week, meal_slot, recipe_id, updated_at)
-    SELECT $1, $2, $3, $4, r.id, NOW()
-    FROM recipes r
-    WHERE r.id = $5 AND r.user_id = $1
-    ON CONFLICT (user_id, week_start, day_of_week, meal_slot)
+    INSERT INTO meal_plans (user_id, database_id, week_start, day_of_week, meal_slot, recipe_id, updated_at)
+    SELECT rd.owner_user_id, $1, $2, $3, $4, r.id, NOW()
+    FROM recipe_databases rd
+    JOIN recipes r ON r.database_id = rd.id
+    WHERE rd.id = $1
+      AND r.id = $5
+    ON CONFLICT (database_id, week_start, day_of_week, meal_slot)
     DO UPDATE
       SET recipe_id = EXCLUDED.recipe_id,
           updated_at = NOW()
@@ -515,7 +639,7 @@ function deleteMealPlanEntry(entry, callback) {
   const { user_id, week_start, day_of_week, meal_slot } = entry;
   const query = `
     DELETE FROM meal_plans
-    WHERE user_id = $1
+    WHERE database_id = $1
       AND week_start = $2
       AND day_of_week = $3
       AND meal_slot = $4
@@ -540,8 +664,48 @@ function addUser(email, passwordHash, callback) {
       }
       return callback(err);
     }
-    console.log('✅ User added with ID:', result.rows[0].id);
-    callback(null, { id: result.rows[0].id });
+    const userId = result.rows[0].id;
+    pool.query(`
+      INSERT INTO recipe_databases (owner_user_id, name, is_personal)
+      VALUES ($1, 'Mijn persoonlijke database', TRUE)
+      ON CONFLICT DO NOTHING
+      RETURNING id
+    `, [userId], (dbErr, dbRes) => {
+      if (dbErr) return callback(dbErr);
+      const dbId = dbRes.rows[0]?.id;
+      if (!dbId) {
+        pool.query(`
+          SELECT id
+          FROM recipe_databases
+          WHERE owner_user_id = $1
+            AND is_personal = TRUE
+          LIMIT 1
+        `, [userId], (lookupErr, lookupRes) => {
+          if (lookupErr) return callback(lookupErr);
+          const personalDbId = lookupRes.rows[0]?.id;
+          if (!personalDbId) return callback(new Error('Persoonlijke database kon niet worden aangemaakt.'));
+          pool.query(`
+            INSERT INTO database_members (database_id, user_id, role)
+            VALUES ($1, $2, 'admin')
+            ON CONFLICT (database_id, user_id) DO NOTHING
+          `, [personalDbId, userId], memberErr => {
+            if (memberErr) return callback(memberErr);
+            console.log('✅ User added with ID:', userId);
+            callback(null, { id: userId });
+          });
+        });
+        return;
+      }
+      pool.query(`
+        INSERT INTO database_members (database_id, user_id, role)
+        VALUES ($1, $2, 'admin')
+        ON CONFLICT (database_id, user_id) DO NOTHING
+      `, [dbId, userId], memberErr => {
+        if (memberErr) return callback(memberErr);
+        console.log('✅ User added with ID:', userId);
+        callback(null, { id: userId });
+      });
+    });
   });
 }
 
@@ -637,20 +801,18 @@ async function updateUserPasswordById(userId, passwordHash) {
 function listAccessibleDatabases(userId, callback) {
   const query = `
     SELECT
-      u.id AS owner_user_id,
-      u.email AS owner_email,
-      TRUE AS is_owner
-    FROM users u
-    WHERE u.id = $1
-    UNION
-    SELECT
-      owner.id AS owner_user_id,
+      rd.id AS owner_user_id,
+      rd.id AS database_id,
       owner.email AS owner_email,
-      FALSE AS is_owner
-    FROM shared_database_access sda
-    JOIN users owner ON owner.id = sda.owner_user_id
-    WHERE sda.member_user_id = $1
-    ORDER BY is_owner DESC, owner_email ASC
+      rd.name AS database_name,
+      rd.is_personal AS is_personal,
+      (dm.role = 'admin') AS is_owner,
+      (dm.role = 'admin') AS can_manage
+    FROM database_members dm
+    JOIN recipe_databases rd ON rd.id = dm.database_id
+    JOIN users owner ON owner.id = rd.owner_user_id
+    WHERE dm.user_id = $1
+    ORDER BY rd.is_personal DESC, LOWER(rd.name) ASC
   `;
   pool.query(query, [userId], (err, result) => {
     if (err) return callback(err);
@@ -658,121 +820,208 @@ function listAccessibleDatabases(userId, callback) {
   });
 }
 
-function userHasDatabaseAccess(userId, ownerUserId, callback) {
-  if (Number(userId) === Number(ownerUserId)) return callback(null, true);
+function userHasDatabaseAccess(userId, databaseId, callback) {
   const query = `
     SELECT 1
-    FROM shared_database_access
-    WHERE owner_user_id = $1
-      AND member_user_id = $2
+    FROM database_members
+    WHERE database_id = $1
+      AND user_id = $2
     LIMIT 1
   `;
-  pool.query(query, [ownerUserId, userId], (err, result) => {
+  pool.query(query, [databaseId, userId], (err, result) => {
     if (err) return callback(err);
     callback(null, !!result.rows[0]);
   });
 }
 
-function inviteUserToDatabase(ownerUserId, inviteEmail, callback) {
+function userCanManageDatabase(userId, databaseId, callback) {
+  const query = `
+    SELECT 1
+    FROM database_members
+    WHERE database_id = $1
+      AND user_id = $2
+      AND role = 'admin'
+    LIMIT 1
+  `;
+  pool.query(query, [databaseId, userId], (err, result) => {
+    if (err) return callback(err);
+    callback(null, !!result.rows[0]);
+  });
+}
+
+async function getPersonalDatabaseId(userId) {
+  const query = `
+    SELECT id
+    FROM recipe_databases
+    WHERE owner_user_id = $1
+      AND is_personal = TRUE
+    LIMIT 1
+  `;
+  const result = await pool.query(query, [userId]);
+  return result.rows[0]?.id || null;
+}
+
+async function getOrCreateDefaultSharedDatabase(ownerUserId) {
+  const existing = await pool.query(`
+    SELECT id
+    FROM recipe_databases
+    WHERE owner_user_id = $1
+      AND is_default_shared = TRUE
+    LIMIT 1
+  `, [ownerUserId]);
+  if (existing.rows[0]?.id) return existing.rows[0].id;
+
+  const created = await pool.query(`
+    INSERT INTO recipe_databases (owner_user_id, name, is_personal, is_default_shared)
+    VALUES ($1, 'Gezamenlijke database', FALSE, TRUE)
+    RETURNING id
+  `, [ownerUserId]);
+  const dbId = created.rows[0].id;
+
+  await pool.query(`
+    INSERT INTO database_members (database_id, user_id, role)
+    VALUES ($1, $2, 'admin')
+    ON CONFLICT (database_id, user_id) DO NOTHING
+  `, [dbId, ownerUserId]);
+
+  const personalDbId = await getPersonalDatabaseId(ownerUserId);
+  if (personalDbId) {
+    await pool.query(`
+      INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id)
+      SELECT r.title, r.url, r.dish_type, r.meal_type, r.time_required, r.meal_category, r.calories, r.user_id, $2
+      FROM recipes r
+      WHERE r.database_id = $1
+        AND NOT EXISTS (
+          SELECT 1
+          FROM recipes r2
+          WHERE r2.database_id = $2
+            AND r2.title = r.title
+            AND r2.url = r.url
+        )
+    `, [personalDbId, dbId]);
+  }
+
+  return dbId;
+}
+
+function inviteUserToDatabase(databaseId, inviterUserId, inviteEmail, callback) {
   const normalizedEmail = String(inviteEmail || '').trim().toLowerCase();
   if (!normalizedEmail) return callback(new Error('E-mailadres ontbreekt.'));
 
-  const selectUserQuery = 'SELECT id, email FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1';
-  pool.query(selectUserQuery, [normalizedEmail], (err, userRes) => {
-    if (err) return callback(err);
+  (async () => {
+    const canManage = await new Promise((resolve, reject) => {
+      userCanManageDatabase(inviterUserId, databaseId, (err, ok) => err ? reject(err) : resolve(ok));
+    });
+    if (!canManage) throw new Error('Je mag deze database niet delen.');
+
+    const dbRes = await pool.query(`
+      SELECT owner_user_id, is_personal
+      FROM recipe_databases
+      WHERE id = $1
+      LIMIT 1
+    `, [databaseId]);
+    const dbRow = dbRes.rows[0];
+    if (!dbRow) throw new Error('Database niet gevonden.');
+
+    let targetDatabaseId = Number(databaseId);
+    if (dbRow.is_personal) {
+      targetDatabaseId = await getOrCreateDefaultSharedDatabase(dbRow.owner_user_id);
+    }
+
+    const userRes = await pool.query(
+      'SELECT id, email FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1',
+      [normalizedEmail]
+    );
     const invitedUser = userRes.rows[0] || null;
 
-    if (invitedUser && Number(invitedUser.id) === Number(ownerUserId)) {
-      return callback(new Error('Je kunt jezelf niet uitnodigen.'));
+    if (invitedUser && Number(invitedUser.id) === Number(inviterUserId)) {
+      throw new Error('Je kunt jezelf niet uitnodigen.');
     }
 
     if (invitedUser) {
-      const insertAccessQuery = `
-        INSERT INTO shared_database_access (owner_user_id, member_user_id)
-        VALUES ($1, $2)
-        ON CONFLICT (owner_user_id, member_user_id) DO NOTHING
+      const insertRes = await pool.query(`
+        INSERT INTO database_members (database_id, user_id, role)
+        VALUES ($1, $2, 'member')
+        ON CONFLICT (database_id, user_id) DO NOTHING
         RETURNING id
-      `;
-      pool.query(insertAccessQuery, [ownerUserId, invitedUser.id], (insertErr, insertRes) => {
-        if (insertErr) return callback(insertErr);
-        return callback(null, {
-          type: 'member',
-          email: invitedUser.email,
-          member_user_id: invitedUser.id,
-          already_had_access: !insertRes.rows[0]
-        });
+      `, [targetDatabaseId, invitedUser.id]);
+      callback(null, {
+        type: 'member',
+        email: invitedUser.email,
+        member_user_id: invitedUser.id,
+        database_id: targetDatabaseId,
+        already_had_access: !insertRes.rows[0]
       });
       return;
     }
 
-    const inviteQuery = `
-      INSERT INTO shared_database_invites (owner_user_id, invite_email, status)
-      VALUES ($1, $2, 'pending')
-      RETURNING id, invite_email, status, created_at
-    `;
-    pool.query(inviteQuery, [ownerUserId, normalizedEmail], (inviteErr, inviteRes) => {
-      if (inviteErr) return callback(inviteErr);
-      callback(null, {
-        type: 'invite',
-        ...inviteRes.rows[0]
-      });
+    const inviteRes = await pool.query(`
+      INSERT INTO database_invites (database_id, invited_email, invited_by_user_id, status)
+      VALUES ($1, $2, $3, 'pending')
+      RETURNING id, database_id, invited_email, status, created_at
+    `, [targetDatabaseId, normalizedEmail, inviterUserId]);
+    callback(null, {
+      type: 'invite',
+      ...inviteRes.rows[0]
     });
-  });
+  })().catch(callback);
 }
 
-function listDatabaseMembers(ownerUserId, callback) {
+function listDatabaseMembers(databaseId, callback) {
   const query = `
     SELECT
-      sda.member_user_id,
+      dm.user_id AS member_user_id,
       u.email,
-      sda.created_at
-    FROM shared_database_access sda
-    JOIN users u ON u.id = sda.member_user_id
-    WHERE sda.owner_user_id = $1
+      dm.role,
+      dm.created_at
+    FROM database_members dm
+    JOIN users u ON u.id = dm.user_id
+    WHERE dm.database_id = $1
     ORDER BY LOWER(u.email) ASC
   `;
-  pool.query(query, [ownerUserId], (err, result) => {
+  pool.query(query, [databaseId], (err, result) => {
     if (err) return callback(err);
     callback(null, result.rows || []);
   });
 }
 
-function listDatabaseInvites(ownerUserId, callback) {
+function listDatabaseInvites(databaseId, callback) {
   const query = `
-    SELECT id, invite_email, status, created_at
-    FROM shared_database_invites
-    WHERE owner_user_id = $1
+    SELECT id, invited_email AS invite_email, status, created_at
+    FROM database_invites
+    WHERE database_id = $1
       AND status = 'pending'
     ORDER BY created_at DESC
   `;
-  pool.query(query, [ownerUserId], (err, result) => {
+  pool.query(query, [databaseId], (err, result) => {
     if (err) return callback(err);
     callback(null, result.rows || []);
   });
 }
 
-function revokeDatabaseMember(ownerUserId, memberUserId, callback) {
+function revokeDatabaseMember(databaseId, memberUserId, callback) {
   const query = `
-    DELETE FROM shared_database_access
-    WHERE owner_user_id = $1
-      AND member_user_id = $2
+    DELETE FROM database_members
+    WHERE database_id = $1
+      AND user_id = $2
+      AND role <> 'admin'
   `;
-  pool.query(query, [ownerUserId, memberUserId], (err) => {
+  pool.query(query, [databaseId, memberUserId], (err) => {
     if (err) return callback(err);
     callback(null);
   });
 }
 
-function revokeDatabaseInvite(ownerUserId, inviteId, callback) {
+function revokeDatabaseInvite(databaseId, inviteId, callback) {
   const query = `
-    UPDATE shared_database_invites
+    UPDATE database_invites
     SET status = 'revoked'
     WHERE id = $1
-      AND owner_user_id = $2
+      AND database_id = $2
       AND status = 'pending'
     RETURNING id
   `;
-  pool.query(query, [inviteId, ownerUserId], (err, result) => {
+  pool.query(query, [inviteId, databaseId], (err, result) => {
     if (err) return callback(err);
     callback(null, !!result.rows[0]);
   });
@@ -783,23 +1032,21 @@ function acceptPendingInvitesForUser(userId, email, callback) {
   if (!normalizedEmail) return callback(null, { accepted: 0 });
 
   const insertAccessQuery = `
-    INSERT INTO shared_database_access (owner_user_id, member_user_id)
-    SELECT DISTINCT sdi.owner_user_id, $1
-    FROM shared_database_invites sdi
-    WHERE LOWER(sdi.invite_email) = LOWER($2)
-      AND sdi.status = 'pending'
-      AND sdi.owner_user_id <> $1
-    ON CONFLICT (owner_user_id, member_user_id) DO NOTHING
+    INSERT INTO database_members (database_id, user_id, role)
+    SELECT DISTINCT di.database_id, $1, 'member'
+    FROM database_invites di
+    WHERE LOWER(di.invited_email) = LOWER($2)
+      AND di.status = 'pending'
+    ON CONFLICT (database_id, user_id) DO NOTHING
   `;
 
   const acceptInviteQuery = `
-    UPDATE shared_database_invites
+    UPDATE database_invites
     SET status = 'accepted',
         accepted_by_user_id = $1,
         accepted_at = NOW()
-    WHERE LOWER(invite_email) = LOWER($2)
+    WHERE LOWER(invited_email) = LOWER($2)
       AND status = 'pending'
-      AND owner_user_id <> $1
   `;
 
   pool.query(insertAccessQuery, [userId, normalizedEmail], (insertErr) => {
@@ -833,6 +1080,8 @@ module.exports = {
   deleteMealPlanEntry,
   listAccessibleDatabases,
   userHasDatabaseAccess,
+  userCanManageDatabase,
+  getPersonalDatabaseId,
   inviteUserToDatabase,
   listDatabaseMembers,
   listDatabaseInvites,
