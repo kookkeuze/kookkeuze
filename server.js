@@ -1152,7 +1152,17 @@ app.post('/api/recipes/:id/import', async (req, res) => {
     }
 
     const imported = await dbCall(importRecipeToUserDatabase, recipeId, sourceOwnerId, targetOwnerId);
-    if (!imported) return res.status(404).json({ error: 'Recept niet gevonden in deze database.' });
+    if (!imported || !imported.source_found) {
+      return res.status(404).json({ error: 'Recept niet gevonden in deze database.' });
+    }
+    if (imported.already_exists) {
+      const isOwnRecipe = Number(imported.source_user_id) === Number(req.user.id);
+      return res.status(409).json({
+        error: isOwnRecipe
+          ? 'Dit is je eigen recept en het staat al in je database.'
+          : 'Dit recept staat al in de doel-database.'
+      });
+    }
     return res.json({ message: 'Recept geïmporteerd.', id: imported.id });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });

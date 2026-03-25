@@ -554,11 +554,31 @@ function getRecipeByIdForOwner(recipeId, databaseId, callback) {
 
 function importRecipeToUserDatabase(recipeId, sourceDatabaseId, targetDatabaseId, callback) {
   const query = `
-    INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id)
-    SELECT title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, $3
-    FROM recipes
-    WHERE id = $1 AND database_id = $2
-    RETURNING id
+    WITH source AS (
+      SELECT id, title, url, dish_type, meal_type, time_required, meal_category, calories, user_id
+      FROM recipes
+      WHERE id = $1 AND database_id = $2
+      LIMIT 1
+    ),
+    existing AS (
+      SELECT t.id
+      FROM recipes t
+      JOIN source s ON LOWER(t.url) = LOWER(s.url)
+      WHERE t.database_id = $3
+      LIMIT 1
+    ),
+    inserted AS (
+      INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id)
+      SELECT s.title, s.url, s.dish_type, s.meal_type, s.time_required, s.meal_category, s.calories, s.user_id, $3
+      FROM source s
+      WHERE NOT EXISTS (SELECT 1 FROM existing)
+      RETURNING id
+    )
+    SELECT
+      COALESCE((SELECT id FROM inserted), (SELECT id FROM existing)) AS id,
+      EXISTS (SELECT 1 FROM source) AS source_found,
+      EXISTS (SELECT 1 FROM existing) AS already_exists,
+      (SELECT user_id FROM source) AS source_user_id
   `;
   pool.query(query, [recipeId, sourceDatabaseId, targetDatabaseId], (err, result) => {
     if (err) return callback(err);
@@ -883,23 +903,6 @@ async function getOrCreateDefaultSharedDatabase(ownerUserId) {
     VALUES ($1, $2, 'admin')
     ON CONFLICT (database_id, user_id) DO NOTHING
   `, [dbId, ownerUserId]);
-
-  const personalDbId = await getPersonalDatabaseId(ownerUserId);
-  if (personalDbId) {
-    await pool.query(`
-      INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id)
-      SELECT r.title, r.url, r.dish_type, r.meal_type, r.time_required, r.meal_category, r.calories, r.user_id, $2
-      FROM recipes r
-      WHERE r.database_id = $1
-        AND NOT EXISTS (
-          SELECT 1
-          FROM recipes r2
-          WHERE r2.database_id = $2
-            AND r2.title = r.title
-            AND r2.url = r.url
-        )
-    `, [personalDbId, dbId]);
-  }
 
   return dbId;
 }
