@@ -751,7 +751,7 @@ function showRecipes(arr) {
         </div>
         <div class="recipe-card-content">
           <h3>${r.title}</h3>
-          <div class="recipe-card-actions">
+          <div class="recipe-card-actions${importMode ? ' has-import' : ' single-action'}">
             <p class="recipe-link"><a href="${r.url}" target="_blank" class="ext-link">
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
             <button type="button" class="plan-weekmenu-btn plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${(r.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
@@ -1003,7 +1003,18 @@ async function loadWeekMenu() {
 
 function renderWeekMenuGrid() {
   if (!weekmenuGrid) return;
-  let html = '<div class="weekmenu-calendar">';
+  let html = `
+    <div class="weekmenu-mobile-nav" aria-hidden="true">
+      <button type="button" class="weekmenu-mobile-arrow prev" data-direction="prev" aria-label="Vorige dag">
+        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+      </button>
+      <span class="weekmenu-mobile-hint">Swipe door dagen</span>
+      <button type="button" class="weekmenu-mobile-arrow next" data-direction="next" aria-label="Volgende dag">
+        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="weekmenu-calendar">
+  `;
 
   const daySlots = [
     { key: 'breakfast', label: 'Ontbijt' },
@@ -1041,7 +1052,7 @@ function renderWeekMenuGrid() {
     };
 
     html += `
-      <article class="weekmenu-day-card">
+      <article class="weekmenu-day-card" data-day-index="${day - 1}">
         <header class="weekmenu-day-header">
           <p class="weekmenu-day-name">${plannerDays[day - 1]}</p>
           <p class="weekmenu-day-date">${formatDayNumber(plannerWeekStart, day - 1)}</p>
@@ -1052,9 +1063,56 @@ function renderWeekMenuGrid() {
       </article>`;
   }
 
-  html += '</div>';
+  html += `
+    </div>
+    <div class="weekmenu-mobile-dots" aria-hidden="true">
+      ${plannerDays.map((_day, idx) => `<span class="weekmenu-mobile-dot${idx === 0 ? ' active' : ''}" data-dot-index="${idx}"></span>`).join('')}
+    </div>
+  `;
   weekmenuGrid.innerHTML = html;
   hydrateWeekmenuImages();
+
+  const calendar = weekmenuGrid.querySelector('.weekmenu-calendar');
+  const cards = Array.from(weekmenuGrid.querySelectorAll('.weekmenu-day-card'));
+  const dots = Array.from(weekmenuGrid.querySelectorAll('.weekmenu-mobile-dot'));
+
+  const updateMobileIndicators = () => {
+    if (!calendar || cards.length === 0) return;
+    const scrollLeft = calendar.scrollLeft;
+    const cardWidth = cards[0].getBoundingClientRect().width || 1;
+    const rawIndex = Math.round(scrollLeft / cardWidth);
+    const activeIndex = Math.max(0, Math.min(cards.length - 1, rawIndex));
+    dots.forEach((dot, idx) => dot.classList.toggle('active', idx === activeIndex));
+    const prevBtn = weekmenuGrid.querySelector('.weekmenu-mobile-arrow.prev');
+    const nextBtn = weekmenuGrid.querySelector('.weekmenu-mobile-arrow.next');
+    if (prevBtn) prevBtn.disabled = activeIndex <= 0;
+    if (nextBtn) nextBtn.disabled = activeIndex >= cards.length - 1;
+  };
+
+  const scrollToCard = direction => {
+    if (!calendar || cards.length === 0) return;
+    const scrollLeft = calendar.scrollLeft;
+    const cardWidth = cards[0].getBoundingClientRect().width || 1;
+    const currentIndex = Math.round(scrollLeft / cardWidth);
+    const nextIndex = direction === 'next'
+      ? Math.min(cards.length - 1, currentIndex + 1)
+      : Math.max(0, currentIndex - 1);
+    calendar.scrollTo({ left: nextIndex * cardWidth, behavior: 'smooth' });
+  };
+
+  weekmenuGrid.querySelectorAll('.weekmenu-mobile-arrow').forEach(btn => {
+    btn.addEventListener('click', () => scrollToCard(btn.dataset.direction || 'next'));
+  });
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      if (!calendar || cards.length === 0) return;
+      const idx = Number(dot.dataset.dotIndex || '0');
+      const cardWidth = cards[0].getBoundingClientRect().width || 1;
+      calendar.scrollTo({ left: idx * cardWidth, behavior: 'smooth' });
+    });
+  });
+  calendar?.addEventListener('scroll', updateMobileIndicators, { passive: true });
+  requestAnimationFrame(updateMobileIndicators);
 
   weekmenuGrid.querySelectorAll('.weekmenu-clear-btn').forEach(btn => {
     btn.addEventListener('click', async () => {

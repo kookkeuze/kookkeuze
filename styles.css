@@ -1267,10 +1267,24 @@ select:focus {
 }
 
 .recipe-card-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 10px;
+}
+
+.recipe-card-actions .recipe-link {
+  grid-column: 1 / -1;
+}
+
+.recipe-card-actions.single-action {
+  grid-template-columns: 1fr;
+}
+
+.recipe-card-actions .recipe-link a {
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
 }
 
 .recipe-card p a {
@@ -1569,6 +1583,11 @@ select:focus {
   overflow: hidden;
 }
 
+.weekmenu-mobile-nav,
+.weekmenu-mobile-dots {
+  display: none;
+}
+
 .weekmenu-cell-title {
   color: #2e3934;
   font-weight: 700;
@@ -1842,21 +1861,27 @@ select:focus {
 }
 
 .recipe-card-actions .plan-recipe-btn {
-  width: 206px;
-  max-width: 100%;
-  min-height: 36px;
-  padding: 7px 12px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
   font-size: 11px;
   justify-content: center;
 }
 
 .recipe-card-actions .import-transfer-btn {
-  width: 206px;
-  max-width: 100%;
-  min-height: 36px;
-  padding: 7px 12px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
   font-size: 11px;
   justify-content: center;
+  color: #235b2a;
+  border-color: #235b2a;
+  background: #ffffff;
+}
+
+.recipe-card-actions .import-transfer-btn:hover {
+  background: #235b2a;
+  color: #ffffff;
 }
 
 .weekmenu-search-item .weekmenu-assign-btn {
@@ -1988,6 +2013,10 @@ select:focus {
 }
 
 @media (max-width: 560px) {
+  .weekmenu-grid {
+    overflow: visible;
+  }
+
   .weekmenu-toolbar {
     gap: 8px;
   }
@@ -1997,8 +2026,81 @@ select:focus {
     font-size: 12px;
   }
 
+  .weekmenu-mobile-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 10px;
+    color: #6f7d76;
+  }
+
+  .weekmenu-mobile-hint {
+    font-size: 12px;
+    font-weight: 600;
+    color: #7b8881;
+  }
+
+  .weekmenu-mobile-arrow {
+    min-width: 30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid #d7e5da;
+    background: #ffffff;
+    color: #476a50;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  .weekmenu-mobile-arrow:disabled {
+    opacity: 0.45;
+  }
+
   .weekmenu-calendar {
-    grid-template-columns: 1fr;
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    grid-template-columns: none;
+  }
+
+  .weekmenu-calendar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .weekmenu-day-card {
+    flex: 0 0 100%;
+    width: 100%;
+    scroll-snap-align: start;
+  }
+
+  .weekmenu-mobile-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    margin-bottom: 2px;
+  }
+
+  .weekmenu-mobile-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #cad8cd;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+  }
+
+  .weekmenu-mobile-dot.active {
+    background: #2f6a37;
+    transform: scale(1.2);
   }
 
   .weekmenu-day-body {
