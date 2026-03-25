@@ -117,6 +117,7 @@ async function initializeDatabase() {
         name VARCHAR(255) NOT NULL,
         is_personal BOOLEAN NOT NULL DEFAULT FALSE,
         is_default_shared BOOLEAN NOT NULL DEFAULT FALSE,
+        legacy_seed_cleaned BOOLEAN NOT NULL DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -168,6 +169,11 @@ async function initializeDatabase() {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_database_invites_email
       ON database_invites (LOWER(invited_email))
+    `);
+
+    await pool.query(`
+      ALTER TABLE recipe_databases
+      ADD COLUMN IF NOT EXISTS legacy_seed_cleaned BOOLEAN NOT NULL DEFAULT FALSE
     `);
 
     await pool.query(`
@@ -229,6 +235,28 @@ async function initializeDatabase() {
     await pool.query(`
       ALTER TABLE meal_plans
       DROP CONSTRAINT IF EXISTS meal_plans_user_id_week_start_day_of_week_meal_slot_key
+    `);
+
+    // Eenmalige opschoning: oude gedeelde databases die ooit met persoonlijke recepten zijn voorgevuld.
+    // We verwijderen alleen recepten die ook in de persoonlijke database van dezelfde eigenaar staan (zelfde URL).
+    await pool.query(`
+      DELETE FROM recipes shared_recipe
+      USING recipe_databases shared_db,
+            recipe_databases personal_db,
+            recipes personal_recipe
+      WHERE shared_recipe.database_id = shared_db.id
+        AND shared_db.is_default_shared = TRUE
+        AND shared_db.legacy_seed_cleaned = FALSE
+        AND personal_db.owner_user_id = shared_db.owner_user_id
+        AND personal_db.is_personal = TRUE
+        AND personal_recipe.database_id = personal_db.id
+        AND LOWER(shared_recipe.url) = LOWER(personal_recipe.url)
+    `);
+    await pool.query(`
+      UPDATE recipe_databases
+      SET legacy_seed_cleaned = TRUE
+      WHERE is_default_shared = TRUE
+        AND legacy_seed_cleaned = FALSE
     `);
 
     await pool.query(`
@@ -883,7 +911,7 @@ async function getPersonalDatabaseId(userId) {
 
 async function getOrCreateDefaultSharedDatabase(ownerUserId) {
   const existing = await pool.query(`
-    SELECT id
+    SELECT id, legacy_seed_cleaned
     FROM recipe_databases
     WHERE owner_user_id = $1
       AND is_default_shared = TRUE
@@ -892,8 +920,8 @@ async function getOrCreateDefaultSharedDatabase(ownerUserId) {
   if (existing.rows[0]?.id) return existing.rows[0].id;
 
   const created = await pool.query(`
-    INSERT INTO recipe_databases (owner_user_id, name, is_personal, is_default_shared)
-    VALUES ($1, 'Gezamenlijke database', FALSE, TRUE)
+    INSERT INTO recipe_databases (owner_user_id, name, is_personal, is_default_shared, legacy_seed_cleaned)
+    VALUES ($1, 'Gezamenlijke database', FALSE, TRUE, TRUE)
     RETURNING id
   `, [ownerUserId]);
   const dbId = created.rows[0].id;
