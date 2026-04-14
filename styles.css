@@ -510,7 +510,7 @@ button {
 
 #addRecipeForm > div {
  display: grid;
-  grid-template-columns: 1fr; /* Laat alles in één kolom vallen */
+  grid-template-columns: 1fr; /* Laat alles in Ã©Ã©n kolom vallen */
   gap: 16px; /* Verminder de ruimte tussen de velden */
   margin-bottom: 16px; /* Verminder de marge onder elk veld */
 }
@@ -576,7 +576,7 @@ button {
 /* Verbeterde dropdown styling voor alle tabs */
 select {
   appearance: none;
-  background-color: #ffffff;                    /* <— altijd wit   */
+  background-color: #ffffff;                    /* <â€” altijd wit   */
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2363D671' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 12px center;
@@ -2340,7 +2340,7 @@ select:focus {
 /* om de icon-positionering te behouden nu het select buiten .container staat */
 .mobile-nav-wrap { position: relative; }
 
-/* link-stijl voor “Vernieuw het overzicht” */
+/* link-stijl voor â€œVernieuw het overzichtâ€ */
 .refresh-link{
   color: var(--accent-color);
   text-decoration:underline;
@@ -2352,7 +2352,7 @@ select:focus {
 }
 
 
-/* ══════════════ TOP-BAR ══════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• TOP-BAR â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -2574,7 +2574,7 @@ select:focus {
   }
 }
 
-/* ══════════════ MODAL OVERLAY ══════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• MODAL OVERLAY â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .modal {
   position: fixed;
   inset: 0;
@@ -2837,8 +2837,8 @@ select:focus {
 
 /* 1. Close-icoon beter uitlijnen */
 .modal-close {
-  top: 12px;          /* i.p.v. 16px → iets hoger */
-  right: 12px;        /* i.p.v. 16px → iets dichter op de rand */
+  top: 12px;          /* i.p.v. 16px â†’ iets hoger */
+  right: 12px;        /* i.p.v. 16px â†’ iets dichter op de rand */
   font-size: 22px;    /* net iets groter voor visuele balans */
 }
 
@@ -2874,7 +2874,7 @@ select:focus {
 .auth-title  { margin-bottom: 10px; }
 .auth-sub    { margin-bottom: 28px; }
 
-/* labels → iets meer afstand tot veld eronder */
+/* labels â†’ iets meer afstand tot veld eronder */
 .auth-label  { margin-bottom: 6px; }
 
 /* input-blokken onderling ruimer */
@@ -3164,6 +3164,5 @@ select:focus {
     min-height: 20px;
   }
 }
-
 
 
