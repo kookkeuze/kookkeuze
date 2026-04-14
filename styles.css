@@ -2026,6 +2026,7 @@ select:focus {
 
   .weekmenu-label {
     grid-column: 1 / -1;
+    grid-row: 1;
     margin-bottom: 2px;
   }
 
@@ -2035,6 +2036,16 @@ select:focus {
     min-width: 0;
     padding: 8px 10px;
     font-size: 11px;
+  }
+
+  #weekPrevBtn {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  #weekNextBtn {
+    grid-column: 2;
+    grid-row: 2;
   }
 
   .weekmenu-toolbar .overview-view-btn {
@@ -2210,6 +2221,67 @@ select:focus {
 @media (max-width:767px){
   /* oude tab-balk verbergen, dropdown tonen */
   .nav-tabs { display:none; }
+
+  .weekmenu-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 8px;
+  }
+
+  .weekmenu-label {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin-bottom: 2px;
+  }
+
+  #weekPrevBtn,
+  #weekNextBtn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #weekPrevBtn {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  #weekNextBtn {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .weekmenu-search,
+  .weekmenu-search input,
+  .weekmenu-search-results,
+  .weekmenu-search-item,
+  .weekmenu-search-main,
+  .weekmenu-search-actions {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .weekmenu-search-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .weekmenu-search-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .weekmenu-search-item .weekmenu-assign-btn,
+  .weekmenu-search-item .weekmenu-import-btn {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+    line-height: 1.15;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
 
   .mobile-nav-wrap {
     display: block;
