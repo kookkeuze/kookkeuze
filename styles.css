@@ -43,7 +43,7 @@ textarea {
 
 .url-fetch-row {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -55,16 +55,19 @@ textarea {
 
 .green-btn.fetch-info-btn {
   white-space: nowrap;
-  padding: 10px 16px;
-  font-size: 14px;
-  background: #235b2a;
-  border: 1px solid #235b2a;
+  padding: 9px 14px;
+  font-size: 12px;
+  background: #63D671;
+  border: none;
   color: #ffffff;
+  border-radius: 10px;
 }
 
 .green-btn.fetch-info-btn:hover {
-  background: #1b4a21;
-  border-color: #1b4a21;
+  background: #63D671;
+  color: #ffffff;
+  transform: none;
+  box-shadow: none;
 }
 
 .url-help-text {
@@ -497,38 +500,51 @@ button {
 }
 
 #voegReceptToe h2 {
-  text-align: center;
-  margin-bottom: 32px;
-  color: #333;
+  text-align: left;
+  margin: 0 0 14px;
+  color: #2f3a35;
 }
 
 #addRecipeForm {
-  max-width: 800px; /* Beperk de maximale breedte van het formulier */
-  margin: 32px auto; /* Centreer het formulier horizontaal */
-  padding: 0 16px; /* Voeg padding toe aan de zijkanten */
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #d9e8dc;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fbfffc 0%, #f6faf7 100%);
+  display: grid;
+  gap: 10px;
 }
 
 #addRecipeForm > div {
- display: grid;
-  grid-template-columns: 1fr; /* Laat alles in Ã©Ã©n kolom vallen */
-  gap: 16px; /* Verminder de ruimte tussen de velden */
-  margin-bottom: 16px; /* Verminder de marge onder elk veld */
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-bottom: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
 
 #addRecipeForm > div > label {
   font-weight: 700;
-    color: #333;
-    margin-top: 8px;
+  color: #3f4e45;
+  margin-top: 0;
+  font-size: 13px;
 }
 
 #addRecipeForm input,
 #addRecipeForm select {
   width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 16px;
+  padding: 11px 13px;
+  border: 1.5px solid #d5e3d9;
+  border-radius: 10px;
+  font-size: 15px;
+  color: #2f3a35;
+  background: #ffffff;
   transition: all 0.2s ease;
 }
 
@@ -559,18 +575,19 @@ button {
 }
 
 .url-manual-note {
-  margin-top: 8px;
+  margin-top: 2px;
   color: #5f6b63;
   font-size: 12px;
   line-height: 1.35;
 }
 
 #addRecipeForm button[type="submit"] {
-  margin-top: 24px;
-  width: 200px;
+  margin-top: 6px;
+  width: 220px;
   align-self: center;
-  padding: 12px 24px;
-  font-size: 16px;
+  padding: 10px 16px;
+  font-size: 13px;
+  border-radius: var(--btn-radius);
 }
 
 /* Verbeterde dropdown styling voor alle tabs */
@@ -996,6 +1013,17 @@ select:focus {
   #addRecipeForm > div {
     grid-template-columns: 1fr;
     gap: 12px;
+    padding: 0;
+  }
+
+  #addRecipeForm {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  #addRecipeForm button[type="submit"] {
+    width: 100%;
+    max-width: 260px;
   }
 
   .hero-filters select {
@@ -1046,6 +1074,15 @@ select:focus {
     width: 100%;
     margin: 0;
     border-radius: 0;
+  }
+
+  #addRecipeForm {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  #addRecipeForm > div {
+    padding: 0;
   }
 
   /* dropdowns & inputs volle breedte */
