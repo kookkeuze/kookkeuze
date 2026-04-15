@@ -1035,11 +1035,14 @@ function renderWeekMenuGrid() {
               <div class="weekmenu-slot-thumb-skeleton"></div>
             </div>
             <a href="${entry.url}" target="_blank" rel="noopener noreferrer" class="weekmenu-open-link">
-              ${entry.title} <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+              <span class="weekmenu-open-link-title">${entry.title}</span>
+              <span class="weekmenu-open-link-icon" aria-hidden="true"><i class="fas fa-external-link-alt"></i></span>
             </a>
             <div class="weekmenu-cell-actions">
               <button type="button" class="green-btn weekmenu-replace-btn" data-day="${day}" data-slot="${slotKey}">Wijzig</button>
-              <button type="button" class="pink-btn weekmenu-clear-btn" data-day="${day}" data-slot="${slotKey}">Wis</button>
+              <button type="button" class="pink-btn weekmenu-clear-btn weekmenu-clear-icon-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Verwijder recept uit ${slotLabel}">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
             </div>
           </div>`;
       }
@@ -1047,7 +1050,11 @@ function renderWeekMenuGrid() {
         <div class="weekmenu-slot-item">
           <p class="weekmenu-slot-name">${slotLabel}</p>
           <p class="weekmenu-empty">Nog niets gepland</p>
-          <button type="button" class="green-btn weekmenu-replace-btn" data-day="${day}" data-slot="${slotKey}">Kies recept</button>
+          <div class="weekmenu-cell-actions weekmenu-cell-actions-empty">
+            <button type="button" class="green-btn weekmenu-replace-btn weekmenu-add-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Kies recept voor ${slotLabel}">
+              <i class="fas fa-plus" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>`;
     };
 
