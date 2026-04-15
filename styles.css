@@ -510,7 +510,7 @@ button {
 
 #addRecipeForm > div {
  display: grid;
-  grid-template-columns: 1fr; /* Laat alles in één kolom vallen */
+  grid-template-columns: 1fr; /* Laat alles in Ã©Ã©n kolom vallen */
   gap: 16px; /* Verminder de ruimte tussen de velden */
   margin-bottom: 16px; /* Verminder de marge onder elk veld */
 }
@@ -576,7 +576,7 @@ button {
 /* Verbeterde dropdown styling voor alle tabs */
 select {
   appearance: none;
-  background-color: #ffffff;                    /* <— altijd wit   */
+  background-color: #ffffff;                    /* <â€” altijd wit   */
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2363D671' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 12px center;
@@ -1607,15 +1607,48 @@ select:focus {
   color: #235b2a;
   font-size: 13px;
   font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  text-decoration: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  line-height: 1.32;
 }
 
 .weekmenu-open-link:hover {
+  text-decoration: none;
+}
+
+.weekmenu-open-link-title {
+  min-width: 0;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.weekmenu-open-link:hover .weekmenu-open-link-title,
+.weekmenu-open-link:focus-visible .weekmenu-open-link-title {
   text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+
+.weekmenu-open-link-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid #cfe1d2;
+  background: #f4fbf5;
+  color: #2a6a34;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
 }
 
 .weekmenu-empty {
@@ -1626,16 +1659,47 @@ select:focus {
 
 .weekmenu-cell-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
-.weekmenu-cell-actions .green-btn,
-.weekmenu-cell-actions .pink-btn,
-.weekmenu-cell .green-btn {
-  padding: 6px 10px;
-  min-width: 74px;
-  font-size: 11px;
+.weekmenu-cell-actions-empty {
+  justify-content: flex-end;
+}
+
+.weekmenu-slot-item .weekmenu-replace-btn {
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  min-width: 62px;
+  font-size: 10px;
+  border-width: 1px;
+  border-color: #cfe1d2;
+  color: #2f6a37;
+  background: #ffffff;
+}
+
+.weekmenu-slot-item .weekmenu-replace-btn:hover {
+  border-color: #bdd4c1;
+  background: #f4faf5;
+  color: #25572e;
+  transform: none;
+  box-shadow: none;
+}
+
+.weekmenu-slot-item .weekmenu-clear-icon-btn,
+.weekmenu-slot-item .weekmenu-add-btn {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  border-width: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
 }
 
 .weekmenu-calendar {
@@ -1696,11 +1760,32 @@ select:focus {
   font-weight: 700;
 }
 
-.weekmenu-slot-item .weekmenu-replace-btn,
-.weekmenu-slot-item .weekmenu-clear-btn {
-  padding: 6px 10px;
-  min-width: 0;
-  font-size: 11px;
+.weekmenu-slot-item .weekmenu-add-btn {
+  border-color: #63D671;
+  color: #2f8a44;
+  background: #f4fcf6;
+}
+
+.weekmenu-slot-item .weekmenu-add-btn:hover {
+  border-color: #56c465;
+  color: #2a7c3e;
+  background: #eaf8ed;
+  transform: none;
+  box-shadow: none;
+}
+
+.weekmenu-slot-item .weekmenu-clear-icon-btn {
+  border-color: #efc5c5;
+  color: #c65d5d;
+  background: #fff7f7;
+}
+
+.weekmenu-slot-item .weekmenu-clear-icon-btn:hover {
+  border-color: #e9abab;
+  color: #b84b4b;
+  background: #ffefef;
+  transform: none;
+  box-shadow: none;
 }
 
 .assign-modal-content {
@@ -2395,7 +2480,7 @@ select:focus {
 /* om de icon-positionering te behouden nu het select buiten .container staat */
 .mobile-nav-wrap { position: relative; }
 
-/* link-stijl voor “Vernieuw het overzicht” */
+/* link-stijl voor â€œVernieuw het overzichtâ€ */
 .refresh-link{
   color: var(--accent-color);
   text-decoration:underline;
@@ -2407,7 +2492,7 @@ select:focus {
 }
 
 
-/* ══════════════ TOP-BAR ══════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• TOP-BAR â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -2629,7 +2714,7 @@ select:focus {
   }
 }
 
-/* ══════════════ MODAL OVERLAY ══════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• MODAL OVERLAY â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .modal {
   position: fixed;
   inset: 0;
@@ -2892,8 +2977,8 @@ select:focus {
 
 /* 1. Close-icoon beter uitlijnen */
 .modal-close {
-  top: 12px;          /* i.p.v. 16px → iets hoger */
-  right: 12px;        /* i.p.v. 16px → iets dichter op de rand */
+  top: 12px;          /* i.p.v. 16px â†’ iets hoger */
+  right: 12px;        /* i.p.v. 16px â†’ iets dichter op de rand */
   font-size: 22px;    /* net iets groter voor visuele balans */
 }
 
@@ -2929,7 +3014,7 @@ select:focus {
 .auth-title  { margin-bottom: 10px; }
 .auth-sub    { margin-bottom: 28px; }
 
-/* labels → iets meer afstand tot veld eronder */
+/* labels â†’ iets meer afstand tot veld eronder */
 .auth-label  { margin-bottom: 6px; }
 
 /* input-blokken onderling ruimer */
@@ -3234,6 +3319,5 @@ select:focus {
     font-size: 9px;
   }
 }
-
 
 
