@@ -510,7 +510,7 @@ button {
 
 #addRecipeForm > div {
  display: grid;
-  grid-template-columns: 1fr; /* Laat alles in Ã©Ã©n kolom vallen */
+  grid-template-columns: 1fr; /* Laat alles in één kolom vallen */
   gap: 16px; /* Verminder de ruimte tussen de velden */
   margin-bottom: 16px; /* Verminder de marge onder elk veld */
 }
@@ -576,7 +576,7 @@ button {
 /* Verbeterde dropdown styling voor alle tabs */
 select {
   appearance: none;
-  background-color: #ffffff;                    /* <â€” altijd wit   */
+  background-color: #ffffff;                    /* <— altijd wit   */
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2363D671' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 12px center;
@@ -1497,25 +1497,27 @@ select:focus {
 
 .weekmenu-search-results {
   display: grid;
-  gap: 8px;
+  gap: 12px;
 }
 
 .weekmenu-search-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  background: #fff;
-  border: 1px solid #e0e9e2;
-  border-radius: 10px;
-  padding: 10px 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
+  border: 1px solid #dfe9e2;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(47, 106, 55, 0.05);
 }
 
 .weekmenu-search-main {
   min-width: 0;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1 1 auto;
 }
 
 .weekmenu-search-actions {
@@ -1527,8 +1529,9 @@ select:focus {
 }
 
 .weekmenu-search-item:hover {
-  border-color: #e0e9e2;
+  border-color: #d0ddd3;
   background: #fff;
+  box-shadow: 0 4px 14px rgba(47, 106, 55, 0.08);
 }
 
 .plan-weekmenu-btn {
@@ -1559,11 +1562,12 @@ select:focus {
 
 .weekmenu-search-title {
   min-width: 0;
-  width: 100%;
+  flex: 1 1 auto;
   color: #2e3934;
   text-decoration: none;
   font-weight: 600;
-  line-height: 1.25;
+  font-size: 1.05rem;
+  line-height: 1.35;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -1572,7 +1576,7 @@ select:focus {
   padding: 0;
   cursor: pointer;
   text-align: left;
-  font: inherit;
+  font-family: inherit;
 }
 
 .weekmenu-search-title:hover {
@@ -1941,11 +1945,13 @@ select:focus {
 }
 
 .weekmenu-search-thumb-wrap {
-  width: 62px;
-  height: 62px;
-  border-radius: 10px;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
   overflow: hidden;
   flex-shrink: 0;
+  border: 1px solid #d9e8dc;
+  background: #f5faf6;
 }
 
 .weekmenu-search-thumb,
@@ -1956,7 +1962,7 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .weekmenu-search-thumb {
@@ -2142,10 +2148,28 @@ select:focus {
   .weekmenu-search-item {
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
+    padding: 11px;
   }
 
   .weekmenu-search-main {
     width: 100%;
+    gap: 10px;
+  }
+
+  .weekmenu-search-thumb-wrap {
+    width: 56px;
+    height: 56px;
+    border-radius: 11px;
+  }
+
+  .weekmenu-search-title {
+    font-size: 0.98rem;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .weekmenu-search-actions {
@@ -2371,7 +2395,7 @@ select:focus {
 /* om de icon-positionering te behouden nu het select buiten .container staat */
 .mobile-nav-wrap { position: relative; }
 
-/* link-stijl voor â€œVernieuw het overzichtâ€ */
+/* link-stijl voor “Vernieuw het overzicht” */
 .refresh-link{
   color: var(--accent-color);
   text-decoration:underline;
@@ -2383,7 +2407,7 @@ select:focus {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• TOP-BAR â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════ TOP-BAR ══════════════ */
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -2605,7 +2629,7 @@ select:focus {
   }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• MODAL OVERLAY â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════ MODAL OVERLAY ══════════════ */
 .modal {
   position: fixed;
   inset: 0;
@@ -2868,8 +2892,8 @@ select:focus {
 
 /* 1. Close-icoon beter uitlijnen */
 .modal-close {
-  top: 12px;          /* i.p.v. 16px â†’ iets hoger */
-  right: 12px;        /* i.p.v. 16px â†’ iets dichter op de rand */
+  top: 12px;          /* i.p.v. 16px → iets hoger */
+  right: 12px;        /* i.p.v. 16px → iets dichter op de rand */
   font-size: 22px;    /* net iets groter voor visuele balans */
 }
 
@@ -2905,7 +2929,7 @@ select:focus {
 .auth-title  { margin-bottom: 10px; }
 .auth-sub    { margin-bottom: 28px; }
 
-/* labels â†’ iets meer afstand tot veld eronder */
+/* labels → iets meer afstand tot veld eronder */
 .auth-label  { margin-bottom: 6px; }
 
 /* input-blokken onderling ruimer */
@@ -3210,5 +3234,6 @@ select:focus {
     font-size: 9px;
   }
 }
+
 
 
