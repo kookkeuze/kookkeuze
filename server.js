@@ -801,7 +801,12 @@ app.get('/api/verify', async (req, res) => {
     }
 
     await verifyUserById(user.id);
-    await dbCall(acceptPendingInvitesForUser, user.id, user.email);
+    // Uitnodigingen accepteren mag verificatie nooit blokkeren.
+    try {
+      await dbCall(acceptPendingInvitesForUser, user.id, user.email);
+    } catch (inviteErr) {
+      console.warn('⚠️ Verify: invites konden niet worden verwerkt, ga door met login redirect.', inviteErr);
+    }
 
     // JWT aanmaken en redirect naar frontend voor auto-login
     const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '12h' });
