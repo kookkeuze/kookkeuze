@@ -2614,6 +2614,10 @@ select:focus {
   padding-top: 12px;
 }
 
+.mobile-header-database-link {
+  margin-top: 2px;
+}
+
 .topbar .logo {
   font-size: 22px;
   font-weight: 700;
@@ -2757,6 +2761,18 @@ select:focus {
 }
 
 @media (max-width: 767px) {
+  .topbar {
+    top: 8px;
+    margin: 0 10px;
+    border-radius: 12px;
+    border: 1px solid #dfe8e2;
+    box-shadow: 0 6px 18px rgba(34, 51, 41, 0.1);
+  }
+
+  .topbar-inner {
+    width: 100%;
+  }
+
   .mobile-menu-btn {
     display: inline-flex;
   }

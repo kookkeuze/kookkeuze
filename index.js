@@ -302,6 +302,7 @@ const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const mobileHeaderMenu = document.getElementById('mobileHeaderMenu');
 const mobileHeaderMenuLinks = document.querySelectorAll('.mobile-header-menu-link[data-target]');
 const mobileInstallAppBtn = document.getElementById('mobileInstallAppBtn');
+const mobileDatabaseMenuBtn = document.getElementById('mobileDatabaseMenuBtn');
 const databaseMenuBtn = document.getElementById('databaseMenuBtn');
 const databaseModal = document.getElementById('databaseModal');
 const closeDatabaseModal = document.getElementById('closeDatabaseModal');
@@ -362,6 +363,11 @@ mobileHeaderMenuLinks.forEach(btn => {
 mobileInstallAppBtn?.addEventListener('click', () => {
   closeMobileHeaderMenu();
   installAppBtn?.click();
+});
+
+mobileDatabaseMenuBtn?.addEventListener('click', () => {
+  closeMobileHeaderMenu();
+  databaseMenuBtn?.click();
 });
 
 mobileMenuBtn?.addEventListener('click', e => {
@@ -458,6 +464,7 @@ async function loadAccessibleDatabases() {
   if (!getValidToken()) {
     accessibleDatabases = [];
     if (databaseMenuBtn) databaseMenuBtn.classList.add('hidden');
+    if (mobileDatabaseMenuBtn) mobileDatabaseMenuBtn.classList.add('hidden');
     if (sharePanel) sharePanel.classList.add('hidden');
     if (databaseModal) databaseModal.classList.add('hidden');
     return;
@@ -471,6 +478,7 @@ async function loadAccessibleDatabases() {
     localStorage.setItem('activeDatabaseOwnerId', String(personal.owner_user_id));
   }
   if (databaseMenuBtn) databaseMenuBtn.classList.toggle('hidden', accessibleDatabases.length === 0);
+  if (mobileDatabaseMenuBtn) mobileDatabaseMenuBtn.classList.toggle('hidden', accessibleDatabases.length === 0);
   renderDatabaseSelect();
   await loadSharePanelData();
 }
@@ -1960,6 +1968,7 @@ function updateAuthUI(){
   } else {
     localStorage.removeItem('activeDatabaseOwnerId');
     if (databaseMenuBtn) databaseMenuBtn.classList.add('hidden');
+    if (mobileDatabaseMenuBtn) mobileDatabaseMenuBtn.classList.add('hidden');
     if (databaseModal) databaseModal.classList.add('hidden');
     if (sharePanel) sharePanel.classList.add('hidden');
     setAuthPane(pendingResetToken ? resetPane : loginPane);
