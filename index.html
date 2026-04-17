@@ -401,6 +401,9 @@
       <h2>Overzicht van alle recepten</h2>
       <div class="overview-toolbar">
         <a id="refreshBtn" href="#" class="refresh-link">Vernieuw het overzicht</a>
+        <button id="openRecipePacksBtn" type="button" class="overview-view-btn recipe-packs-btn">
+          <i class="fas fa-box-open"></i> Recept pakketten
+        </button>
         <div class="overview-view-switch" role="group" aria-label="Weergave kiezen">
           <button id="overviewListBtn" type="button" class="overview-view-btn active"><i class="fas fa-list"></i> Lijst</button>
           <button id="overviewGridBtn" type="button" class="overview-view-btn"><i class="fas fa-th-large"></i> Raster</button>
@@ -506,6 +509,19 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div id="recipePackModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content recipe-pack-modal-content">
+        <button id="closeRecipePackModal" class="modal-close" aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="recipe-pack-modal-header">
+          <h3 class="assign-modal-title">Recept pakketten</h3>
+          <p class="recipe-pack-modal-sub">Voeg in 1 klik complete sets recepten toe aan je database.</p>
+        </div>
+        <div id="recipePackModalBody"></div>
       </div>
     </div>
 

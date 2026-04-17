@@ -316,9 +316,18 @@ const shareInviteBtn = document.getElementById('shareInviteBtn');
 const sharePanelMsg = document.getElementById('sharePanelMsg');
 const shareMembersList = document.getElementById('shareMembersList');
 const shareInvitesList = document.getElementById('shareInvitesList');
+const recipePackModal = document.getElementById('recipePackModal');
+const closeRecipePackModalBtn = document.getElementById('closeRecipePackModal');
+const recipePackModalBody = document.getElementById('recipePackModalBody');
 let deferredInstallPrompt = null;
 let accessibleDatabases = [];
 let activeDatabaseOwnerId = null;
+let recipePackList = [];
+let recipePackIndex = 0;
+let recipePackFromOnboarding = false;
+let recipePackStats = { added: 0, skipped: 0, inserted: 0, duplicates: 0 };
+let recipePackOnboardingCheckedForUserId = null;
+let recipePackOnboardingMarkedDone = false;
 
 function closeMobileHeaderMenu() {
   if (!mobileHeaderMenu || !mobileMenuBtn) return;
@@ -578,6 +587,156 @@ sharePanel?.addEventListener('click', async e => {
     });
     await loadSharePanelData();
   }
+});
+
+async function fetchRecipePacks() {
+  if (!getValidToken()) return [];
+  const res = await fetch(`${API_BASE}/api/recipe-packs`, { headers: authHeaders() });
+  const data = await res.json().catch(() => []);
+  if (!res.ok) return [];
+  return Array.isArray(data) ? data : [];
+}
+
+async function markRecipePackOnboardingComplete() {
+  if (!getValidToken() || recipePackOnboardingMarkedDone) return;
+  recipePackOnboardingMarkedDone = true;
+  await fetch(`${API_BASE}/api/recipe-packs/onboarding-complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() }
+  }).catch(() => {});
+}
+
+function renderRecipePackSummary() {
+  if (!recipePackModalBody) return;
+  recipePackModalBody.innerHTML = `
+    <div class="recipe-pack-summary">
+      <h4>Klaar! Je pakketten zijn verwerkt.</h4>
+      <p>Toegevoegd: <strong>${recipePackStats.inserted}</strong> recepten</p>
+      <p>Overgeslagen (bestond al): <strong>${recipePackStats.duplicates}</strong></p>
+      <button id="recipePackDoneBtn" type="button" class="green-btn">Sluiten</button>
+    </div>
+  `;
+  document.getElementById('recipePackDoneBtn')?.addEventListener('click', closeRecipePackModal);
+}
+
+function renderRecipePackStep() {
+  if (!recipePackModalBody) return;
+  if (!recipePackList.length || recipePackIndex >= recipePackList.length) {
+    renderRecipePackSummary();
+    return;
+  }
+
+  const pack = recipePackList[recipePackIndex];
+  const progress = `${recipePackIndex + 1} / ${recipePackList.length}`;
+  recipePackModalBody.innerHTML = `
+    <div class="recipe-pack-card">
+      <p class="recipe-pack-progress">${progress}</p>
+      <div class="recipe-pack-icon"><i class="fas ${pack.icon || 'fa-box-open'}"></i></div>
+      <h4>${pack.title}</h4>
+      <p class="recipe-pack-subtitle">${pack.subtitle || ''}</p>
+      <p class="recipe-pack-description">${pack.description || ''}</p>
+      <p class="recipe-pack-count">${pack.total_recipes || 0} recepten</p>
+      <div class="recipe-pack-actions">
+        <button id="recipePackSkipBtn" type="button" class="recipe-pack-skip-btn" aria-label="Pakket overslaan">
+          <i class="fas fa-times"></i>
+        </button>
+        <button id="recipePackAddBtn" type="button" class="recipe-pack-add-btn" aria-label="Pakket toevoegen">
+          <i class="fas fa-check"></i>
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('recipePackSkipBtn')?.addEventListener('click', () => {
+    recipePackStats.skipped += 1;
+    recipePackIndex += 1;
+    renderRecipePackStep();
+  });
+
+  document.getElementById('recipePackAddBtn')?.addEventListener('click', async (e) => {
+    const addBtn = e.currentTarget;
+    addBtn.disabled = true;
+    addBtn.classList.add('is-loading');
+    try {
+      const res = await fetch(`${API_BASE}/api/recipe-packs/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify(withActiveDatabaseBody({ packKey: pack.key }))
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Pakket toevoegen mislukt.');
+      } else {
+        recipePackStats.added += 1;
+        recipePackStats.inserted += Number(data.inserted || 0);
+        recipePackStats.duplicates += Number(data.skipped || 0);
+        showRecipeAddedToast(`${pack.title}: ${data.inserted || 0} toegevoegd`);
+        fetchAllRecipes();
+        renderPlannerSearchResults();
+      }
+    } catch (_err) {
+      alert('Pakket toevoegen mislukt.');
+    } finally {
+      recipePackIndex += 1;
+      renderRecipePackStep();
+    }
+  });
+}
+
+function closeRecipePackModal() {
+  recipePackModal?.classList.add('hidden');
+  if (recipePackFromOnboarding) {
+    recipePackFromOnboarding = false;
+    activateTab('#kiesRecept');
+  }
+}
+
+async function openRecipePackFlow(options = {}) {
+  if (!getValidToken()) return;
+  const { fromOnboarding = false } = options;
+  recipePackFromOnboarding = !!fromOnboarding;
+  if (recipePackFromOnboarding) {
+    await markRecipePackOnboardingComplete();
+  }
+  recipePackList = await fetchRecipePacks();
+  if (!recipePackList.length) {
+    alert('Er zijn nu geen pakketten beschikbaar.');
+    return;
+  }
+  recipePackIndex = 0;
+  recipePackStats = { added: 0, skipped: 0, inserted: 0, duplicates: 0 };
+  recipePackModal?.classList.remove('hidden');
+  renderRecipePackStep();
+}
+
+async function maybeStartRecipePackOnboarding() {
+  const token = getValidToken();
+  if (!token) return;
+  const userId = getCurrentUserId();
+  if (!userId || recipePackOnboardingCheckedForUserId === userId) return;
+  recipePackOnboardingCheckedForUserId = userId;
+  recipePackOnboardingMarkedDone = false;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/recipe-packs/onboarding-status`, {
+      headers: authHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return;
+    if (data.shouldShow) {
+      activateTab('#overzichtRecepten');
+      await openRecipePackFlow({ fromOnboarding: true });
+    } else if (data.seen) {
+      recipePackOnboardingMarkedDone = true;
+    }
+  } catch (_err) {
+    // onboarding check is best effort
+  }
+}
+
+closeRecipePackModalBtn?.addEventListener('click', closeRecipePackModal);
+recipePackModal?.addEventListener('click', e => {
+  if (e.target === recipePackModal) closeRecipePackModal();
 });
 
 /* ========= FILTERS & ZOEKEN (TAB 1) ========= */
@@ -1716,6 +1875,7 @@ addRecipeForm.addEventListener('submit', e => {
 /* ========= OVERZICHT RECEPTEN (TAB 3) ========= */
 const allRecipesDiv = document.getElementById('allRecipes');
 const refreshBtn    = document.getElementById('refreshBtn');
+const openRecipePacksBtn = document.getElementById('openRecipePacksBtn');
 const overviewListBtn = document.getElementById('overviewListBtn');
 const overviewGridBtn = document.getElementById('overviewGridBtn');
 const overviewListContainer = document.getElementById('overviewListContainer');
@@ -1726,6 +1886,9 @@ let overviewAllRecipes = [];
 let overviewCurrentPage = 1;
 let overviewViewMode = 'list';
 if (refreshBtn) refreshBtn.addEventListener('click', fetchAllRecipes);
+openRecipePacksBtn?.addEventListener('click', () => {
+  openRecipePackFlow({ fromOnboarding: false });
+});
 
 if (overviewListBtn && overviewGridBtn) {
   overviewListBtn.addEventListener('click', () => {
@@ -1983,9 +2146,14 @@ function updateAuthUI(){
   }
 
   if (loggedIn){
-    loadAccessibleDatabases().catch(() => {});
+    loadAccessibleDatabases()
+      .then(() => maybeStartRecipePackOnboarding())
+      .catch(() => {});
     setAuthPane(loggedInPane);
   } else {
+    recipePackOnboardingCheckedForUserId = null;
+    recipePackOnboardingMarkedDone = false;
+    recipePackModal?.classList.add('hidden');
     localStorage.removeItem('activeDatabaseOwnerId');
     if (databaseMenuBtn) databaseMenuBtn.classList.add('hidden');
     if (mobileDatabaseMenuBtn) mobileDatabaseMenuBtn.classList.add('hidden');

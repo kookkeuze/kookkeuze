@@ -333,6 +333,10 @@ const {
   deleteRecipe,
   addUser,
   getUserByEmail,
+  getUserRecipePackOnboardingSeen,
+  setUserRecipePackOnboardingSeen,
+  getRecipeCountForDatabase,
+  addRecipePackToDatabase,
   // helpers uit database.js
   setVerificationToken,
   getUserByVerificationToken,
@@ -939,6 +943,202 @@ function normalizeRecipeField(raw) {
   return values.join('||');
 }
 
+function packRecipe(title, url, recipeMeta) {
+  return {
+    title,
+    url,
+    dish_type: recipeMeta.dish_type || null,
+    meal_category: recipeMeta.meal_category || null,
+    meal_type: recipeMeta.meal_type || null,
+    time_required: recipeMeta.time_required || null,
+    calories: recipeMeta.calories ?? null
+  };
+}
+
+const RECIPE_PACKS = [
+  {
+    key: 'sporten',
+    title: 'Sporten',
+    subtitle: 'Eiwitrijk en voedzaam',
+    description: '20 recepten met focus op eiwitten en herstel.',
+    icon: 'fa-dumbbell',
+    recipes: [
+      ['5-Ingredient Salmon Teriyaki Bowls', 'https://www.allrecipes.com/5-ingredient-salmon-teriyaki-bowls-recipe-11871553'],
+      ['Skillet Chicken and White Bean Stew', 'https://www.allrecipes.com/skillet-chicken-and-white-bean-stew-recipe-11871872'],
+      ['Chicken and Chickpea Curry Stuffed Sweet Potatoes', 'https://www.allrecipes.com/chicken-and-chickpea-curry-stuffed-sweet-potatoes-recipe-11871410'],
+      ['High Protein Sheet Pan Pasta Bake', 'https://www.allrecipes.com/high-protein-sheet-pan-pasta-bake-recipe-11871461'],
+      ['Kadai Chicken', 'https://www.allrecipes.com/recipe/246849/kadai-chicken/'],
+      ['Ultra Easy Pineapple Chicken Kabobs', 'https://www.allrecipes.com/recipe/234348/ultra-easy-pineapple-chicken-kabobs/'],
+      ['Peachy Broccoli Chicken', 'https://www.allrecipes.com/recipe/62106/peachy-broccoli-chicken/'],
+      ['Cinnamon Chicken', 'https://www.allrecipes.com/recipe/16759/cinnamon-chicken/'],
+      ['Spanish Rice Chicken I', 'https://www.allrecipes.com/recipe/8985/spanish-rice-chicken-i/'],
+      ['Spicy Steamed Shrimp', 'https://www.allrecipes.com/recipe/21330/spicy-steamed-shrimp/'],
+      ['Slow Cooker Chicken Chili with Greens and Beans', 'https://www.allrecipes.com/recipe/219932/slow-cooker-chicken-chili-with-greens-and-beans/'],
+      ['Italian White Bean and Sausage Stew', 'https://www.allrecipes.com/recipe/279875/italian-white-bean-and-sausage-stew/'],
+      ['Instant Pot Keto Chicken and Kale Stew', 'https://www.allrecipes.com/recipe/263873/instant-pot-keto-chicken-and-kale-stew/'],
+      ['Spicy Chicken and Sweet Potato Stew', 'https://www.allrecipes.com/recipe/149586/spicy-chicken-and-sweet-potato-stew/'],
+      ['Belizean Chicken Stew', 'https://www.allrecipes.com/recipe/244520/belizean-chicken-stew/'],
+      ['Peppers Stuffed with Spinach and Ground Chicken', 'https://www.allrecipes.com/recipe/282480/peppers-stuffed-with-spinach-and-ground-chicken/'],
+      ['Stuffed Zucchini with Chicken Sausage', 'https://www.allrecipes.com/recipe/215679/stuffed-zucchini-with-chicken-sausage/'],
+      ['Stuffed Peppers with Turkey and Vegetables', 'https://www.allrecipes.com/recipe/79805/stuffed-peppers-with-turkey-and-vegetables/'],
+      ['Slow Cooked Chicken Stew', 'https://www.allrecipes.com/recipe/260603/slow-cooked-chicken-stew/'],
+      ['Creole Chicken Stew with Baby Lima Beans', 'https://www.allrecipes.com/recipe/282867/creole-chicken-stew-with-baby-lima-beans/']
+    ].map(([title, url]) => packRecipe(title, url, {
+      dish_type: 'Kip',
+      meal_category: 'Hoofdgerecht',
+      meal_type: 'Sporten',
+      time_required: '30 - 45 minuten'
+    }))
+  },
+  {
+    key: 'snacks-toetjes',
+    title: 'Snacks en toetjes',
+    subtitle: 'Lekkere tussendoortjes',
+    description: '20 makkelijke snacks en desserts voor elk moment.',
+    icon: 'fa-ice-cream',
+    recipes: [
+      ['Dark Chocolate Almond Rocks', 'https://www.allrecipes.com/recipe/256321/dark-chocolate-almond-rocks/'],
+      ['Air Fryer Apple Chips', 'https://www.allrecipes.com/recipe/276459/air-fryer-tajin-apple-chips/'],
+      ['Candied Almond Bark Popcorn', 'https://www.allrecipes.com/recipe/260870/candied-almond-bark-popcorn/'],
+      ['Nutella Crescent Rolls', 'https://www.allrecipes.com/recipe/280431/nutella-crescent-rolls/'],
+      ['Chocolate Covered Potato Chips', 'https://www.allrecipes.com/recipe/79655/chocolate-covered-potato-chips/'],
+      ['Oreo Cookie Bark', 'https://www.allrecipes.com/recipe/15684/oreo-cookie-bark/'],
+      ['Birthday Cake Dip', 'https://www.allrecipes.com/birthday-cake-dip-recipe-11803153'],
+      ['Almond Croissant Ooey Gooey Butter Cake', 'https://www.allrecipes.com/almond-croissant-ooey-gooey-butter-cake-recipe-11811360'],
+      ['Chocolate Pudding Cake', 'https://www.allrecipes.com/recipe/17499/chocolate-pudding-cake-iii/'],
+      ['Snickers Cheesecake Bars', 'https://www.allrecipes.com/snickers-cheesecake-bars-recipe-11822745'],
+      ['Salted Caramel Pecan Pie Bars', 'https://www.allrecipes.com/salted-caramel-pecan-pie-bars-recipe-11848104'],
+      ['Heavenly Raspberry Dessert', 'https://www.allrecipes.com/recipe/244321/heavenly-raspberry-dessert/'],
+      ['Nutella Swirl Cheesecake Bars', 'https://www.allrecipes.com/nutella-swirl-cheesecake-bars-recipe-8779386'],
+      ['Blackberry Cheesecake Brownies', 'https://www.allrecipes.com/blackberry-cheesecake-brownies-recipe-8693993'],
+      ['Cookie Butter Pie', 'https://www.allrecipes.com/recipe/278704/cookie-butter-pie/'],
+      ['No-Bake Chocolate Pistachio Cheesecake Bars', 'https://www.allrecipes.com/no-bake-chocolate-pistachio-cheesecake-bars-recipe-11714362'],
+      ['Red, White, and Blue Cheesecake Bites', 'https://www.allrecipes.com/red-white-and-blue-cheesecake-bites-recipe-7554460'],
+      ['Strawberry Chiffon Pie', 'https://www.allrecipes.com/recipe/274398/strawberry-chiffon-pie/'],
+      ['No Bake Irish Cream Cheesecake', 'https://www.allrecipes.com/no-bake-irish-cream-cheesecake-recipe-11922193'],
+      ['Vegan Chocolate Pie', 'https://www.allrecipes.com/recipe/277909/vegan-chocolate-pie/']
+    ].map(([title, url]) => packRecipe(title, url, {
+      dish_type: 'Zoet',
+      meal_category: 'Dessert',
+      meal_type: 'Cheaten',
+      time_required: 'Onder de 30 minuten'
+    }))
+  },
+  {
+    key: 'snel-klaar',
+    title: 'Snel klaar',
+    subtitle: 'Binnen 30 minuten op tafel',
+    description: '20 snelle recepten voor drukke dagen.',
+    icon: 'fa-bolt',
+    recipes: [
+      ['5-Ingredient Salmon Teriyaki Bowls', 'https://www.allrecipes.com/5-ingredient-salmon-teriyaki-bowls-recipe-11871553'],
+      ['Chicken and Chickpea Curry Stuffed Sweet Potatoes', 'https://www.allrecipes.com/chicken-and-chickpea-curry-stuffed-sweet-potatoes-recipe-11871410'],
+      ['High Protein Sheet Pan Pasta Bake', 'https://www.allrecipes.com/high-protein-sheet-pan-pasta-bake-recipe-11871461'],
+      ['Pineapple, Black Beans, and Couscous', 'https://www.allrecipes.com/recipe/223548/pineapple-black-beans-and-couscous/'],
+      ['Simple Mexican Quinoa', 'https://www.allrecipes.com/recipe/242110/simple-mexican-quinoa/'],
+      ['Kadai Chicken', 'https://www.allrecipes.com/recipe/246849/kadai-chicken/'],
+      ['Eggplant Pasta', 'https://www.allrecipes.com/recipe/240955/eggplant-pasta/'],
+      ['Ultra Easy Pineapple Chicken Kabobs', 'https://www.allrecipes.com/recipe/234348/ultra-easy-pineapple-chicken-kabobs/'],
+      ['Peachy Broccoli Chicken', 'https://www.allrecipes.com/recipe/62106/peachy-broccoli-chicken/'],
+      ['Bow Ties with Veggies', 'https://www.allrecipes.com/recipe/23972/bow-ties-with-veggies/'],
+      ['Spanish Rice Chicken I', 'https://www.allrecipes.com/recipe/8985/spanish-rice-chicken-i/'],
+      ['Spicy Steamed Shrimp', 'https://www.allrecipes.com/recipe/21330/spicy-steamed-shrimp/'],
+      ['Parmesan Puff Pastry Stars', 'https://www.allrecipes.com/recipe/260957/parmesan-puff-pastry-stars/'],
+      ['World\'s Easiest and Most Amazing Two-Ingredient Dip', 'https://www.allrecipes.com/recipe/244677/worlds-easiest-and-most-amazing-two-ingredient-dip/'],
+      ['Nutella Crescent Rolls', 'https://www.allrecipes.com/recipe/280431/nutella-crescent-rolls/'],
+      ['Chickpea Curry', 'https://www.allrecipes.com/recipe/34689/chickpea-curry/'],
+      ['Quick Vegetable Curry', 'https://www.allrecipes.com/recipe/143002/quick-vegetable-curry/'],
+      ['Butternut Squash Curry', 'https://www.allrecipes.com/recipe/281702/butternut-squash-curry/'],
+      ['Vegan Coconut-Lentil Curry with Sweet Potatoes', 'https://www.allrecipes.com/recipe/273844/vegan-coconut-lentil-curry-with-sweet-potatoes/'],
+      ['Vegan Sweet Potato Chickpea Curry', 'https://www.allrecipes.com/recipe/265472/vegan-sweet-potato-chickpea-curry/']
+    ].map(([title, url]) => packRecipe(title, url, {
+      dish_type: 'Pasta',
+      meal_category: 'Hoofdgerecht',
+      meal_type: 'Normaal',
+      time_required: 'Onder de 30 minuten'
+    }))
+  },
+  {
+    key: 'budget',
+    title: 'Budget',
+    subtitle: 'Voordelig en vullend',
+    description: '20 betaalbare recepten met simpele ingrediënten.',
+    icon: 'fa-coins',
+    recipes: [
+      ['Scrumptious Chicken Vegetable Stew', 'https://www.allrecipes.com/recipe/78016/scrumptious-chicken-vegetable-stew/'],
+      ['Instant Pot Brunswick Stew', 'https://www.allrecipes.com/recipe/262403/instant-pot-brunswick-stew/'],
+      ['Slow Cooker Chicken Chili with Greens and Beans', 'https://www.allrecipes.com/recipe/219932/slow-cooker-chicken-chili-with-greens-and-beans/'],
+      ['Moroccan-Style Chicken and Eggplant Stew', 'https://www.allrecipes.com/recipe/256940/moroccan-style-chicken-and-eggplant-stew/'],
+      ['Italian White Bean and Sausage Stew', 'https://www.allrecipes.com/recipe/279875/italian-white-bean-and-sausage-stew/'],
+      ['Chamberlayne Chicken and Kale Stew', 'https://www.allrecipes.com/recipe/179908/chamberlayne-chicken-and-kale-stew/'],
+      ['Skillet Gnocchi with Chard and White Beans', 'https://www.allrecipes.com/recipe/238785/skillet-gnocchi-with-chard-white-beans/'],
+      ['Slow Cooked Chicken Stew', 'https://www.allrecipes.com/recipe/260603/slow-cooked-chicken-stew/'],
+      ['Creole Chicken Stew with Baby Lima Beans', 'https://www.allrecipes.com/recipe/282867/creole-chicken-stew-with-baby-lima-beans/'],
+      ['Hearty Winter Stew', 'https://www.allrecipes.com/recipe/282693/hearty-winter-stew/'],
+      ['West African Peanut Stew', 'https://www.allrecipes.com/recipe/217952/west-african-peanut-stew/'],
+      ['Millet-Stuffed Peppers', 'https://www.allrecipes.com/recipe/75785/millet-stuffed-peppers/'],
+      ['Taco-Stuffed Zucchini Boats', 'https://www.allrecipes.com/recipe/242032/taco-stuffed-zucchini-boats/'],
+      ['Stuffed Zucchini Casserole', 'https://www.allrecipes.com/recipe/16366/stuffed-zucchini-casserole/'],
+      ['Zucchini with Chickpea and Mushroom Stuffing', 'https://www.allrecipes.com/recipe/25920/zucchini-with-chickpea-and-mushroom-stuffing/'],
+      ['Spiced Sweet Potato Dahl', 'https://www.allrecipes.com/recipe/256725/spiced-sweet-potato-dahl/'],
+      ['Zucchini Boats on the Grill', 'https://www.allrecipes.com/recipe/72788/zucchini-boats-on-the-grill/'],
+      ['Butternut Squash Curry', 'https://www.allrecipes.com/recipe/281702/butternut-squash-curry/'],
+      ['Chickpea Curry', 'https://www.allrecipes.com/recipe/34689/chickpea-curry/'],
+      ['Quick Vegetable Curry', 'https://www.allrecipes.com/recipe/143002/quick-vegetable-curry/']
+    ].map(([title, url]) => packRecipe(title, url, {
+      dish_type: 'Rijst',
+      meal_category: 'Hoofdgerecht',
+      meal_type: 'Normaal',
+      time_required: '30 - 45 minuten'
+    }))
+  },
+  {
+    key: 'vega',
+    title: 'Vega',
+    subtitle: 'Vol smaak, zonder vlees',
+    description: '20 vegetarische recepten voor variatie in je week.',
+    icon: 'fa-seedling',
+    recipes: [
+      ['Vegan Sweet Potato Chickpea Curry', 'https://www.allrecipes.com/recipe/265472/vegan-sweet-potato-chickpea-curry/'],
+      ['Stuffed Red Pepper with Quinoa and Chickpeas', 'https://www.allrecipes.com/recipe/233365/stuffed-red-pepper-with-quinoa-and-chickpeas/'],
+      ['Millet-Stuffed Peppers', 'https://www.allrecipes.com/recipe/75785/millet-stuffed-peppers/'],
+      ['Taco-Stuffed Zucchini Boats', 'https://www.allrecipes.com/recipe/242032/taco-stuffed-zucchini-boats/'],
+      ['Stuffed Zucchini Casserole', 'https://www.allrecipes.com/recipe/16366/stuffed-zucchini-casserole/'],
+      ['Vegan Butternut Squash and Chickpea Curry', 'https://www.allrecipes.com/recipe/263124/vegan-butternut-squash-and-chickpea-curry/'],
+      ['Zucchini with Chickpea and Mushroom Stuffing', 'https://www.allrecipes.com/recipe/25920/zucchini-with-chickpea-and-mushroom-stuffing/'],
+      ['Vegan Coconut-Lentil Curry with Sweet Potatoes', 'https://www.allrecipes.com/recipe/273844/vegan-coconut-lentil-curry-with-sweet-potatoes/'],
+      ['Spiced Sweet Potato Dahl', 'https://www.allrecipes.com/recipe/256725/spiced-sweet-potato-dahl/'],
+      ['Zucchini Boats on the Grill', 'https://www.allrecipes.com/recipe/72788/zucchini-boats-on-the-grill/'],
+      ['Butternut Squash Curry', 'https://www.allrecipes.com/recipe/281702/butternut-squash-curry/'],
+      ['Chickpea Curry', 'https://www.allrecipes.com/recipe/34689/chickpea-curry/'],
+      ['Quick Vegetable Curry', 'https://www.allrecipes.com/recipe/143002/quick-vegetable-curry/'],
+      ['Portobello Mushroom Caps and Veggies', 'https://www.allrecipes.com/recipe/45842/portobello-mushroom-caps-and-veggies/'],
+      ['Simple Mexican Quinoa', 'https://www.allrecipes.com/recipe/242110/simple-mexican-quinoa/'],
+      ['Eggplant Pasta', 'https://www.allrecipes.com/recipe/240955/eggplant-pasta/'],
+      ['Maple Cannellini Bean Salad with Baby Broccoli and Butternut Squash', 'https://www.allrecipes.com/recipe/228251/maple-cannellini-bean-salad-with-baby-broccoli-and-butternut-squash/'],
+      ['Skillet Gnocchi with Chard and White Beans', 'https://www.allrecipes.com/recipe/238785/skillet-gnocchi-with-chard-white-beans/'],
+      ['Parmesan Thyme Crisps', 'https://www.allrecipes.com/recipe/247068/parmesan-thyme-crisps/'],
+      ['Vegan Chocolate Pie', 'https://www.allrecipes.com/recipe/277909/vegan-chocolate-pie/']
+    ].map(([title, url]) => packRecipe(title, url, {
+      dish_type: 'Vegetarisch',
+      meal_category: 'Hoofdgerecht',
+      meal_type: 'Normaal',
+      time_required: '30 - 45 minuten'
+    }))
+  }
+];
+
+function getRecipePackSummaries() {
+  return RECIPE_PACKS.map(pack => ({
+    key: pack.key,
+    title: pack.title,
+    subtitle: pack.subtitle,
+    description: pack.description,
+    icon: pack.icon,
+    total_recipes: pack.recipes.length
+  }));
+}
+
 function dbCall(fn, ...args) {
   return new Promise((resolve, reject) => {
     fn(...args, (err, result) => {
@@ -990,6 +1190,62 @@ async function resolveDatabaseOwnerId(req) {
   }
   return ownerUserId;
 }
+
+app.get('/api/recipe-packs', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
+  return res.json(getRecipePackSummaries());
+});
+
+app.get('/api/recipe-packs/onboarding-status', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
+  try {
+    const personalDbId = await getPersonalDatabaseId(req.user.id);
+    if (!personalDbId) return res.status(404).json({ error: 'Persoonlijke database niet gevonden.' });
+    const [seen, recipeCount] = await Promise.all([
+      dbCall(getUserRecipePackOnboardingSeen, req.user.id),
+      dbCall(getRecipeCountForDatabase, personalDbId)
+    ]);
+    return res.json({
+      seen: !!seen,
+      recipeCount,
+      shouldShow: !seen && recipeCount === 0
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Kon onboarding-status niet ophalen.' });
+  }
+});
+
+app.post('/api/recipe-packs/onboarding-complete', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
+  try {
+    await dbCall(setUserRecipePackOnboardingSeen, req.user.id, true);
+    return res.json({ message: 'Onboarding gemarkeerd als afgerond.' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Kon onboarding-status niet opslaan.' });
+  }
+});
+
+app.post('/api/recipe-packs/apply', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
+  const packKey = String(req.body?.packKey || '').trim();
+  const pack = RECIPE_PACKS.find(p => p.key === packKey);
+  if (!pack) return res.status(400).json({ error: 'Onbekend receptenpakket.' });
+
+  try {
+    const ownerUserId = await resolveDatabaseOwnerId(req);
+    const result = await dbCall(addRecipePackToDatabase, ownerUserId, req.user.id, pack.recipes);
+    return res.json({
+      message: `Pakket "${pack.title}" verwerkt.`,
+      packKey: pack.key,
+      inserted: result.inserted,
+      skipped: result.skipped,
+      total: result.total
+    });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Kon pakket niet toevoegen.' });
+  }
+});
 
 // 1. Haal (gefilterde) recepten op
 app.get('/api/recipes', async (req, res) => {

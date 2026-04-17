@@ -584,7 +584,7 @@ button {
 }
 
 #addRecipeForm button[type="submit"] {
-  margin-top: 6px;
+  margin-top: 18px;
   width: 220px;
   align-self: center;
   padding: 10px 16px;
@@ -739,6 +739,25 @@ select:focus {
   max-width: 100%;
 }
 
+#addRecipeForm .multi-select-menu {
+  padding: 10px;
+}
+
+#addRecipeForm .multi-select-option {
+  grid-template-columns: 18px minmax(0, 1fr);
+  column-gap: 12px;
+  padding: 9px 10px;
+}
+
+#addRecipeForm .multi-select-option input {
+  width: 18px;
+  height: 18px;
+}
+
+#addRecipeForm .multi-select-option span {
+  line-height: 1.4;
+}
+
 /* Kleinere actieknoppen in overzicht tabel */
 .action-buttons button {
   min-width: 32px;
@@ -770,6 +789,12 @@ select:focus {
 .overview-view-switch {
   display: inline-flex;
   gap: 8px;
+}
+
+.recipe-packs-btn {
+  background: #eef8f0;
+  border-color: #c9e8cf;
+  color: #1f5b2c;
 }
 
 .overview-view-btn {
@@ -1025,7 +1050,8 @@ select:focus {
 
   #addRecipeForm button[type="submit"] {
     width: 100%;
-    max-width: 260px;
+    max-width: none;
+    margin-top: 20px;
   }
 
   .hero-filters select {
@@ -2548,6 +2574,24 @@ select:focus {
   .share-columns {
     grid-template-columns: 1fr;
   }
+
+  .overview-toolbar {
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .recipe-packs-btn,
+  .overview-view-switch {
+    width: 100%;
+  }
+
+  .overview-view-switch .overview-view-btn {
+    flex: 1;
+  }
+
+  .recipe-pack-card h4 {
+    font-size: 28px;
+  }
 }
 
 /* om de icon-positionering te behouden nu het select buiten .container staat */
@@ -2945,6 +2989,125 @@ select:focus {
   width: min(820px, 96vw);
   max-width: min(820px, 96vw);
   padding: 20px;
+}
+
+.modal-content.recipe-pack-modal-content {
+  width: min(560px, 96vw);
+  max-width: min(560px, 96vw);
+  padding: 26px 24px;
+}
+
+.recipe-pack-modal-header {
+  margin-bottom: 16px;
+}
+
+.recipe-pack-modal-sub {
+  margin: 8px 0 0;
+  color: #6f7f76;
+  font-size: 15px;
+}
+
+.recipe-pack-card {
+  border: 1px solid #dcebe0;
+  border-radius: 18px;
+  padding: 20px;
+  text-align: center;
+  background: #fbfdfb;
+}
+
+.recipe-pack-progress {
+  margin: 0 0 8px;
+  color: #7a8a80;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.recipe-pack-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background: #e9f7eb;
+  color: #2c7b3d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.recipe-pack-card h4 {
+  margin: 0;
+  font-size: 32px;
+  color: #27332c;
+}
+
+.recipe-pack-subtitle {
+  margin: 6px 0 0;
+  color: #3f5e4b;
+  font-weight: 700;
+}
+
+.recipe-pack-description {
+  margin: 10px 0 0;
+  color: #58685f;
+}
+
+.recipe-pack-count {
+  margin: 10px 0 0;
+  color: #1f5b2c;
+  font-weight: 700;
+}
+
+.recipe-pack-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.recipe-pack-skip-btn,
+.recipe-pack-add-btn {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 999px;
+  border: 1px solid #d9e5dd;
+  background: #fff;
+  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recipe-pack-skip-btn {
+  color: #cc4c4c;
+}
+
+.recipe-pack-add-btn {
+  color: #2c8e45;
+}
+
+.recipe-pack-add-btn.is-loading {
+  opacity: 0.7;
+}
+
+.recipe-pack-summary {
+  border: 1px solid #dcebe0;
+  border-radius: 18px;
+  padding: 20px;
+  background: #fbfdfb;
+}
+
+.recipe-pack-summary h4 {
+  margin: 0 0 10px;
+}
+
+.recipe-pack-summary p {
+  margin: 6px 0;
+}
+
+.recipe-pack-summary .green-btn {
+  margin-top: 14px;
 }
 
 .weekmenu-preview-cards {

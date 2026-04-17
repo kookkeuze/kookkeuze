@@ -41,7 +41,8 @@ async function initializeDatabase() {
         ADD COLUMN IF NOT EXISTS verification_token TEXT,
         ADD COLUMN IF NOT EXISTS token_expires TIMESTAMP,
         ADD COLUMN IF NOT EXISTS reset_token TEXT,
-        ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP
+        ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS recipe_pack_onboarding_seen BOOLEAN DEFAULT FALSE
     `);
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_users_verification_token
@@ -772,6 +773,94 @@ function getUserByEmail(email, callback) {
   });
 }
 
+function getUserRecipePackOnboardingSeen(userId, callback) {
+  const query = `
+    SELECT recipe_pack_onboarding_seen
+    FROM users
+    WHERE id = $1
+    LIMIT 1
+  `;
+  pool.query(query, [userId], (err, result) => {
+    if (err) return callback(err);
+    const seen = !!(result.rows[0] && result.rows[0].recipe_pack_onboarding_seen);
+    callback(null, seen);
+  });
+}
+
+function setUserRecipePackOnboardingSeen(userId, seen, callback) {
+  const query = `
+    UPDATE users
+    SET recipe_pack_onboarding_seen = $1
+    WHERE id = $2
+  `;
+  pool.query(query, [!!seen, userId], (err) => {
+    if (err) return callback(err);
+    callback(null, { success: true });
+  });
+}
+
+function getRecipeCountForDatabase(databaseId, callback) {
+  const query = `
+    SELECT COUNT(*)::int AS count
+    FROM recipes
+    WHERE database_id = $1
+  `;
+  pool.query(query, [databaseId], (err, result) => {
+    if (err) return callback(err);
+    callback(null, Number(result.rows[0]?.count || 0));
+  });
+}
+
+function addRecipePackToDatabase(databaseId, userId, recipes, callback) {
+  const normalizedRecipes = Array.isArray(recipes) ? recipes : [];
+  const run = async () => {
+    let inserted = 0;
+    let skipped = 0;
+
+    for (const recipe of normalizedRecipes) {
+      const title = String(recipe?.title || '').trim();
+      const url = String(recipe?.url || '').trim();
+      if (!title || !url) {
+        skipped += 1;
+        continue;
+      }
+
+      const existing = await pool.query(
+        `SELECT id FROM recipes WHERE database_id = $1 AND LOWER(url) = LOWER($2) LIMIT 1`,
+        [databaseId, url]
+      );
+      if (existing.rows[0]) {
+        skipped += 1;
+        continue;
+      }
+
+      await pool.query(
+        `INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [
+          title,
+          url,
+          recipe.dish_type || null,
+          recipe.meal_type || null,
+          recipe.time_required || null,
+          recipe.meal_category || null,
+          recipe.calories ?? null,
+          userId,
+          databaseId
+        ]
+      );
+      inserted += 1;
+    }
+
+    return { inserted, skipped, total: normalizedRecipes.length };
+  };
+
+  run().then(
+    result => callback(null, result),
+    err => callback(err)
+  );
+}
+
 // ----- Email verification helpers -----
 async function setVerificationToken(email, token, expires) {
   const q = `
@@ -1100,6 +1189,10 @@ module.exports = {
   importRecipeToUserDatabase,
   addUser,
   getUserByEmail,
+  getUserRecipePackOnboardingSeen,
+  setUserRecipePackOnboardingSeen,
+  getRecipeCountForDatabase,
+  addRecipePackToDatabase,
   setVerificationToken,          
   getUserByVerificationToken,    
   verifyUserById,
