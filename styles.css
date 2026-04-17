@@ -1596,8 +1596,8 @@ select:focus {
 
 .weekmenu-secondary-action {
   background: #ffffff;
-  color: #d97d44;
-  border-color: #d97d44;
+  color: #235b2a;
+  border-color: #235b2a;
 }
 
 .plan-weekmenu-btn:hover {
@@ -1614,6 +1614,12 @@ select:focus {
 
 .import-transfer-btn:hover {
   background: #d97d44;
+  color: #ffffff;
+}
+
+.weekmenu-secondary-action:hover {
+  background: #235b2a;
+  border-color: #235b2a;
   color: #ffffff;
 }
 
