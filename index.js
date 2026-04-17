@@ -296,9 +296,12 @@ function resetForms() {
 /* ========= TABS ========= */
 const tabLinks     = document.querySelectorAll('.tab-link');
 const tabContents  = document.querySelectorAll('.tab-content');
-const navDropdown  = document.getElementById('navDropdown');
 const installAppBtn = document.getElementById('installAppBtn');
 const installAppText = document.getElementById('installAppText');
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const mobileHeaderMenu = document.getElementById('mobileHeaderMenu');
+const mobileHeaderMenuLinks = document.querySelectorAll('.mobile-header-menu-link[data-target]');
+const mobileInstallAppBtn = document.getElementById('mobileInstallAppBtn');
 const databaseMenuBtn = document.getElementById('databaseMenuBtn');
 const databaseModal = document.getElementById('databaseModal');
 const closeDatabaseModal = document.getElementById('closeDatabaseModal');
@@ -315,32 +318,78 @@ let deferredInstallPrompt = null;
 let accessibleDatabases = [];
 let activeDatabaseOwnerId = null;
 
+function closeMobileHeaderMenu() {
+  if (!mobileHeaderMenu || !mobileMenuBtn) return;
+  mobileHeaderMenu.classList.add('hidden');
+  mobileHeaderMenu.setAttribute('aria-hidden', 'true');
+  mobileMenuBtn.setAttribute('aria-expanded', 'false');
+}
+
+function activateTab(targetId) {
+  if (!targetId) return;
+  const targetLink = document.querySelector(`.nav-tabs a[href="${targetId}"]`);
+  const targetContent = document.querySelector(targetId);
+  if (!targetLink || !targetContent) return;
+
+  tabLinks.forEach(l => l.classList.remove('active'));
+  tabContents.forEach(tc => tc.classList.remove('active'));
+  mobileHeaderMenuLinks.forEach(btn => btn.classList.remove('active'));
+
+  targetLink.classList.add('active');
+  targetContent.classList.add('active');
+  mobileHeaderMenuLinks.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.target === targetId);
+  });
+
+  if (targetId === '#overzichtRecepten') fetchAllRecipes();
+  if (targetId === '#weekmenuPlanner') initWeekPlanner();
+}
+
 tabLinks.forEach(link => {
   link.addEventListener('click', e => {
     e.preventDefault();
-
-    tabLinks.forEach(l  => l.classList.remove('active'));
-    tabContents.forEach(tc => tc.classList.remove('active'));
-
-    link.classList.add('active');
-    const targetId      = link.getAttribute('href');
-    const targetContent = document.querySelector(targetId);
-    if (targetContent) targetContent.classList.add('active');
-
-    if (navDropdown) navDropdown.value = targetId;
-    if (targetId === '#overzichtRecepten') fetchAllRecipes();
-    if (targetId === '#weekmenuPlanner') initWeekPlanner();
+    activateTab(link.getAttribute('href'));
   });
 });
 
-if (navDropdown) {
-  navDropdown.addEventListener('change', e => {
-    const target = e.target.value;
-    document.querySelector(`.nav-tabs a[href="${target}"]`).click();
+mobileHeaderMenuLinks.forEach(btn => {
+  btn.addEventListener('click', () => {
+    activateTab(btn.dataset.target);
+    closeMobileHeaderMenu();
   });
-  const active = document.querySelector('.tab-link.active');
-  if (active) navDropdown.value = active.getAttribute('href');
-}
+});
+
+mobileInstallAppBtn?.addEventListener('click', () => {
+  closeMobileHeaderMenu();
+  installAppBtn?.click();
+});
+
+mobileMenuBtn?.addEventListener('click', e => {
+  e.stopPropagation();
+  if (!mobileHeaderMenu) return;
+  const willOpen = mobileHeaderMenu.classList.contains('hidden');
+  if (willOpen) {
+    mobileHeaderMenu.classList.remove('hidden');
+    mobileHeaderMenu.setAttribute('aria-hidden', 'false');
+    mobileMenuBtn.setAttribute('aria-expanded', 'true');
+    return;
+  }
+  closeMobileHeaderMenu();
+});
+
+document.addEventListener('click', e => {
+  if (!mobileHeaderMenu || !mobileMenuBtn) return;
+  if (mobileHeaderMenu.classList.contains('hidden')) return;
+  if (mobileHeaderMenu.contains(e.target) || mobileMenuBtn.contains(e.target)) return;
+  closeMobileHeaderMenu();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeMobileHeaderMenu();
+});
+
+const activeTabOnLoad = document.querySelector('.tab-link.active');
+if (activeTabOnLoad) activateTab(activeTabOnLoad.getAttribute('href'));
 
 function setSharePanelMessage(text, isError = false) {
   if (!sharePanelMsg) return;

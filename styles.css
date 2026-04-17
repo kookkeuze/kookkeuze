@@ -593,7 +593,7 @@ button {
 /* Verbeterde dropdown styling voor alle tabs */
 select {
   appearance: none;
-  background-color: #ffffff;                    /* <â€” altijd wit   */
+  background-color: #ffffff;                    /* <— altijd wit   */
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2363D671' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 12px center;
@@ -2373,6 +2373,14 @@ select:focus {
   /* oude tab-balk verbergen, dropdown tonen */
   .nav-tabs { display:none; }
 
+  .mobile-menu-btn {
+    display: inline-flex;
+  }
+
+  .install-app-btn {
+    display: none !important;
+  }
+
   .mobile-nav-wrap {
     margin-bottom: 22px;
   }
@@ -2517,7 +2525,7 @@ select:focus {
 /* om de icon-positionering te behouden nu het select buiten .container staat */
 .mobile-nav-wrap { position: relative; }
 
-/* link-stijl voor â€œVernieuw het overzichtâ€ */
+/* link-stijl voor “Vernieuw het overzicht” */
 .refresh-link{
   color: var(--accent-color);
   text-decoration:underline;
@@ -2529,7 +2537,7 @@ select:focus {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• TOP-BAR â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════ TOP-BAR ══════════════ */
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -2550,6 +2558,7 @@ select:focus {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
+  position: relative;
 }
 
 .topbar-actions {
@@ -2557,6 +2566,52 @@ select:focus {
   align-items: center;
   gap: 14px;
   flex-shrink: 0;
+}
+
+.mobile-menu-btn {
+  display: none;
+}
+
+.mobile-header-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(300px, 92vw);
+  padding: 8px;
+  border: 1px solid #d9e8dc;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(36, 54, 43, 0.15);
+  z-index: 1100;
+}
+
+.mobile-header-menu-link {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: #2f3a35;
+  padding: 10px 10px;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 13px;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  letter-spacing: 0.35px;
+}
+
+.mobile-header-menu-link.active {
+  background: #eef8f0;
+  color: #235b2a;
+}
+
+.mobile-header-menu-link:hover {
+  background: #f4faf5;
+}
+
+.mobile-header-install-link {
+  margin-top: 2px;
+  border-top: 1px solid #ebf2ed;
+  padding-top: 12px;
 }
 
 .topbar .logo {
@@ -2701,6 +2756,16 @@ select:focus {
   }
 }
 
+@media (max-width: 767px) {
+  .mobile-menu-btn {
+    display: inline-flex;
+  }
+
+  .install-app-btn {
+    display: none !important;
+  }
+}
+
 @media (max-width: 600px) {
   .topbar {
     padding: 6px 10px;
@@ -2751,7 +2816,7 @@ select:focus {
   }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â• MODAL OVERLAY â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════ MODAL OVERLAY ══════════════ */
 .modal {
   position: fixed;
   inset: 0;
@@ -3014,8 +3079,8 @@ select:focus {
 
 /* 1. Close-icoon beter uitlijnen */
 .modal-close {
-  top: 12px;          /* i.p.v. 16px â†’ iets hoger */
-  right: 12px;        /* i.p.v. 16px â†’ iets dichter op de rand */
+  top: 12px;          /* i.p.v. 16px → iets hoger */
+  right: 12px;        /* i.p.v. 16px → iets dichter op de rand */
   font-size: 22px;    /* net iets groter voor visuele balans */
 }
 
@@ -3051,7 +3116,7 @@ select:focus {
 .auth-title  { margin-bottom: 10px; }
 .auth-sub    { margin-bottom: 28px; }
 
-/* labels â†’ iets meer afstand tot veld eronder */
+/* labels → iets meer afstand tot veld eronder */
 .auth-label  { margin-bottom: 6px; }
 
 /* input-blokken onderling ruimer */
@@ -3356,5 +3421,6 @@ select:focus {
     font-size: 9px;
   }
 }
+
 
 

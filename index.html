@@ -43,6 +43,20 @@
         <span class="login-text">Inloggen</span>
         <i class="fas fa-chevron-down topbar-chevron"></i>
       </button>
+
+      <button id="mobileMenuBtn" class="topbar-action-btn mobile-menu-btn" aria-label="Open navigatiemenu" aria-expanded="false" aria-controls="mobileHeaderMenu">
+        <span class="action-icon-shell"><i class="fas fa-bars"></i></span>
+      </button>
+    </div>
+
+    <div id="mobileHeaderMenu" class="mobile-header-menu hidden" aria-hidden="true">
+      <button type="button" class="mobile-header-menu-link" data-target="#kiesRecept">Kies een recept</button>
+      <button type="button" class="mobile-header-menu-link" data-target="#voegReceptToe">Voeg een recept toe</button>
+      <button type="button" class="mobile-header-menu-link" data-target="#overzichtRecepten">Overzicht recepten</button>
+      <button type="button" class="mobile-header-menu-link" data-target="#weekmenuPlanner">Weekmenu planner</button>
+      <button id="mobileInstallAppBtn" type="button" class="mobile-header-menu-link mobile-header-install-link">
+        <i class="fas fa-mobile-alt" aria-hidden="true"></i> Installeer app
+      </button>
     </div>
   </div>
 </header>
@@ -199,17 +213,6 @@
   <div class="container">
 
 
-
-<!-- mobiele dropdown-navigatie -->
-<div class="mobile-nav-wrap">
-  <select id="navDropdown" class="mobile-nav">
-    <option value="#kiesRecept">Kies een recept</option>
-    <option value="#voegReceptToe">Voeg een recept toe</option>
-    <option value="#overzichtRecepten">Overzicht recepten</option>
-    <option value="#weekmenuPlanner">Weekmenu planner</option>
-  </select>
-  <span class="dropdown-icon"><i class="fas fa-chevron-down"></i></span>
-</div>
 
 <ul class="nav-tabs">
   <li><a href="#kiesRecept"  class="tab-link active">Kies een recept</a></li>
