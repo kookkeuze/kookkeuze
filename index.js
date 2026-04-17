@@ -303,6 +303,7 @@ const mobileHeaderMenu = document.getElementById('mobileHeaderMenu');
 const mobileHeaderMenuLinks = document.querySelectorAll('.mobile-header-menu-link[data-target]');
 const mobileInstallAppBtn = document.getElementById('mobileInstallAppBtn');
 const mobileDatabaseMenuBtn = document.getElementById('mobileDatabaseMenuBtn');
+const mobileActiveTabLabel = document.getElementById('mobileActiveTabLabel');
 const databaseMenuBtn = document.getElementById('databaseMenuBtn');
 const databaseModal = document.getElementById('databaseModal');
 const closeDatabaseModal = document.getElementById('closeDatabaseModal');
@@ -326,6 +327,15 @@ function closeMobileHeaderMenu() {
   mobileMenuBtn.setAttribute('aria-expanded', 'false');
 }
 
+function isMobileViewport() {
+  return window.matchMedia('(max-width: 767px)').matches;
+}
+
+function getTabLabel(targetId) {
+  const match = document.querySelector(`.nav-tabs a[href="${targetId}"]`);
+  return (match?.textContent || '').trim();
+}
+
 function activateTab(targetId) {
   if (!targetId) return;
   const targetLink = document.querySelector(`.nav-tabs a[href="${targetId}"]`);
@@ -341,9 +351,17 @@ function activateTab(targetId) {
   mobileHeaderMenuLinks.forEach(btn => {
     btn.classList.toggle('active', btn.dataset.target === targetId);
   });
+  if (mobileActiveTabLabel) {
+    mobileActiveTabLabel.textContent = getTabLabel(targetId);
+  }
 
   if (targetId === '#overzichtRecepten') fetchAllRecipes();
   if (targetId === '#weekmenuPlanner') initWeekPlanner();
+  if (isMobileViewport()) {
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
 }
 
 tabLinks.forEach(link => {
@@ -1201,6 +1219,7 @@ function renderWeekMenuGrid() {
 function renderPlannerSearchResults() {
   if (!weekmenuSearchResults) return;
   const term = (weekmenuSearchInput?.value || '').trim().toLowerCase();
+  const compactMobileLabels = isMobileViewport();
   const filtered = plannerRecipes
     .filter(r => (r.title || '').toLowerCase().includes(term));
   const sharedTargets = getSharedDatabaseTargets();
@@ -1208,8 +1227,9 @@ function renderPlannerSearchResults() {
     ? 'to-own'
     : (sharedTargets.length ? 'to-shared' : null);
   const importLabel = importMode === 'to-own'
-    ? 'Importeer naar mijn database'
-    : 'Importeer naar gedeelde database';
+    ? (compactMobileLabels ? 'Naar mijn db' : 'Importeer naar mijn database')
+    : (compactMobileLabels ? 'Naar gedeelde db' : 'Importeer naar gedeelde database');
+  const assignLabel = compactMobileLabels ? 'Plan' : 'Plan in weekmenu';
 
   if (filtered.length === 0) {
     weekmenuSearchResults.innerHTML = '<p class="weekmenu-search-empty">Geen recepten gevonden.</p>';
@@ -1235,8 +1255,8 @@ function renderPlannerSearchResults() {
           <button type="button" class="weekmenu-search-title weekmenu-preview-title" data-recipe-id="${recipe.id}">${recipe.title}</button>
         </div>
         <div class="weekmenu-search-actions">
-          <button type="button" class="plan-weekmenu-btn weekmenu-assign-btn" data-recipe-id="${recipe.id}" data-recipe-title="${(recipe.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
-          ${importMode ? `<button type="button" class="plan-weekmenu-btn import-transfer-btn weekmenu-import-btn" data-recipe-id="${recipe.id}" data-import-mode="${importMode}">${importLabel}</button>` : ''}
+          <button type="button" class="plan-weekmenu-btn weekmenu-assign-btn weekmenu-primary-action" data-recipe-id="${recipe.id}" data-recipe-title="${(recipe.title || 'Recept').replace(/"/g, '&quot;')}">${assignLabel}</button>
+          ${importMode ? `<button type="button" class="plan-weekmenu-btn import-transfer-btn weekmenu-import-btn weekmenu-secondary-action" data-recipe-id="${recipe.id}" data-import-mode="${importMode}">${importLabel}</button>` : ''}
         </div>
       </div>`;
   });

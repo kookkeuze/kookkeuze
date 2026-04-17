@@ -23,6 +23,7 @@
 <header class="topbar">
   <div class="topbar-inner">
     <img src="Logo/Kookkeuze-logo.svg" alt="Kookkeuze-logo" class="logo-img" id="homeLogo" />
+    <span id="mobileActiveTabLabel" class="mobile-active-tab-label" aria-live="polite"></span>
 
     <div class="topbar-actions">
       <button id="databaseMenuBtn" class="topbar-action-btn database-menu-btn hidden" aria-label="Database instellingen">
@@ -54,11 +55,11 @@
       <button type="button" class="mobile-header-menu-link" data-target="#voegReceptToe">Voeg een recept toe</button>
       <button type="button" class="mobile-header-menu-link" data-target="#overzichtRecepten">Overzicht recepten</button>
       <button type="button" class="mobile-header-menu-link" data-target="#weekmenuPlanner">Weekmenu planner</button>
-      <button id="mobileDatabaseMenuBtn" type="button" class="mobile-header-menu-link mobile-header-database-link hidden">
-        <i class="fas fa-database" aria-hidden="true"></i> Database
-      </button>
       <button id="mobileInstallAppBtn" type="button" class="mobile-header-menu-link mobile-header-install-link">
         <i class="fas fa-mobile-alt" aria-hidden="true"></i> Installeer app
+      </button>
+      <button id="mobileDatabaseMenuBtn" type="button" class="mobile-header-menu-link mobile-header-database-link hidden">
+        <i class="fas fa-database" aria-hidden="true"></i> Database
       </button>
     </div>
   </div>
