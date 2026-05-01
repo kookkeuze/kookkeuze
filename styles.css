@@ -1424,11 +1424,12 @@ select:focus {
 
 .recipe-secondary-actions {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: max-content max-content;
   align-items: start;
   justify-items: start;
-  gap: 10px 14px;
+  gap: 10px 24px;
   min-width: 0;
+  margin-bottom: 10px;
 }
 
 .recipe-inline-action {
@@ -1437,19 +1438,19 @@ select:focus {
   border: 0;
   background: transparent;
   color: #235b2a;
-  font-size: 12px;
+  font-size: 13px;
   font-family: inherit;
   font-weight: 700;
   line-height: 1.25;
   text-decoration: underline;
   text-underline-offset: 3px;
-  white-space: normal;
+  white-space: nowrap;
   text-align: left;
 }
 
 .import-recipe-btn.recipe-inline-action {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .recipe-inline-action:hover {
@@ -1459,6 +1460,8 @@ select:focus {
 
 .recipe-export-menu {
   position: relative;
+  grid-column: 1 / -1;
+  margin-top: 2px;
 }
 
 .recipe-export-trigger {
@@ -1558,10 +1561,11 @@ select:focus {
   }
 
   .recipe-secondary-actions {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    justify-items: stretch;
-    gap: 10px 14px;
+    grid-template-columns: max-content max-content;
+    align-items: start;
+    justify-items: start;
+    gap: 10px 24px;
+    margin-bottom: 12px;
   }
 
   .recipe-inline-action {
@@ -1569,6 +1573,7 @@ select:focus {
   }
 
   .recipe-export-menu {
+    grid-column: 1 / -1;
     justify-self: start;
   }
 
@@ -1595,17 +1600,18 @@ select:focus {
 
 @media (min-width: 980px) and (max-width: 1180px) {
   .recipe-secondary-actions {
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 8px 10px;
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .recipe-inline-action {
-    font-size: 12px;
-    white-space: nowrap;
+    font-size: 13px;
+    white-space: normal;
   }
 
   .recipe-export-menu {
     grid-column: 1 / -1;
+    margin-top: 2px;
   }
 
   .recipe-export-trigger {
@@ -2577,11 +2583,12 @@ select:focus {
 
   .recipe-secondary-actions {
     grid-template-columns: 1fr;
-    gap: 8px 12px;
+    gap: 8px;
+    margin-bottom: 10px;
   }
 
   .recipe-inline-action {
-    font-size: 11px;
+    font-size: 12px;
     white-space: normal;
     overflow-wrap: anywhere;
   }
