@@ -1494,7 +1494,7 @@ select:focus {
 .recipe-export-dropdown {
   position: absolute;
   right: 0;
-  bottom: calc(100% + 8px);
+  top: calc(100% + 8px);
   min-width: 230px;
   padding: 8px;
   border: 1px solid #dfe8e2;
@@ -1747,11 +1747,6 @@ select:focus {
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
-}
-
-.weekmenu-search-actions .recipe-export-dropdown {
-  bottom: auto;
-  top: calc(100% + 8px);
 }
 
 .weekmenu-search-item:hover {
@@ -2614,6 +2609,10 @@ select:focus {
     margin-bottom: 10px;
   }
 
+  .recipe-export-menu {
+    width: 100%;
+  }
+
   .recipe-inline-action {
     font-size: 12px;
     white-space: normal;
@@ -2621,8 +2620,11 @@ select:focus {
   }
 
   .recipe-export-dropdown {
-    min-width: 148px;
-    right: 0;
+    position: static;
+    width: 100%;
+    min-width: 0;
+    margin-top: 8px;
+    box-shadow: 0 8px 18px rgba(28, 47, 35, 0.12);
   }
 
   .recipe-export-trigger {
@@ -2747,6 +2749,10 @@ select:focus {
     align-items: center;
     gap: 6px;
     justify-content: flex-start;
+  }
+
+  .weekmenu-export-menu {
+    width: 100%;
   }
 
   .weekmenu-search-item .plan-weekmenu-btn.weekmenu-assign-btn,
