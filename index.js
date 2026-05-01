@@ -1002,19 +1002,11 @@ function showRecipes(arr) {
         </div>
         <div class="recipe-card-content">
           <h3>${displayTitle}</h3>
-          <div class="recipe-card-actions has-picnic${importMode ? ' has-import' : ''}">
+          <div class="recipe-card-actions${importMode ? ' has-import' : ''}">
             <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
             <button type="button" class="plan-weekmenu-btn plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">Plan in weekmenu</button>
             ${importMode ? `<button type="button" class="plan-weekmenu-btn import-transfer-btn import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">${importLabel}</button>` : ''}
-            <button type="button" class="notes-recipe-btn" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}" aria-label="Exporteer ${safeTitle} naar Notities">
-              <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
-              <span>Notities</span>
-            </button>
-            <button type="button" class="picnic-recipe-btn" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}" aria-label="Picnic boodschappenlijst voor ${safeTitle}">
-              <span class="picnic-button-mark" aria-hidden="true">P</span>
-              <span>Picnic</span>
-            </button>
           </div>
           <div class="recipe-meta-row">
             <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
@@ -1025,6 +1017,32 @@ function showRecipes(arr) {
             <li><i class="fas fa-layer-group"></i> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
             <li><i class="fas fa-bullseye"></i> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
           </ul>
+          <div class="recipe-card-footer">
+            <div class="recipe-export-menu">
+              <button
+                type="button"
+                class="recipe-export-trigger"
+                data-export-toggle
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-label="Open exportmenu voor ${safeTitle}"
+              >
+                <i class="fas fa-share-alt" aria-hidden="true"></i>
+                <span>Exporteer</span>
+                <i class="fas fa-chevron-down export-chevron" aria-hidden="true"></i>
+              </button>
+              <div class="recipe-export-dropdown hidden" data-export-menu>
+                <button type="button" class="recipe-export-option notes-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
+                  <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
+                  <span>Notities</span>
+                </button>
+                <button type="button" class="recipe-export-option picnic-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
+                  <span class="picnic-button-mark" aria-hidden="true">P</span>
+                  <span>Picnic</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>`;
   });
@@ -1311,17 +1329,45 @@ picnicModal?.addEventListener('click', e => {
   if (e.target === picnicModal) closePicnicShoppingModal();
 });
 
+function closeAllRecipeExportMenus(exceptMenu = null) {
+  document.querySelectorAll('[data-export-menu]').forEach(menu => {
+    const shouldKeepOpen = exceptMenu && menu === exceptMenu;
+    menu.classList.toggle('hidden', !shouldKeepOpen);
+    const wrapper = menu.closest('.recipe-export-menu');
+    const trigger = wrapper?.querySelector('[data-export-toggle]');
+    trigger?.setAttribute('aria-expanded', shouldKeepOpen ? 'true' : 'false');
+    wrapper?.classList.toggle('is-open', !!shouldKeepOpen);
+  });
+}
+
+document.addEventListener('click', e => {
+  if (e.target.closest('.recipe-export-menu')) return;
+  closeAllRecipeExportMenus();
+});
+
 resultDiv?.addEventListener('click', e => {
-  const notesBtn = e.target.closest('.notes-recipe-btn');
+  const exportToggle = e.target.closest('[data-export-toggle]');
+  if (exportToggle) {
+    const wrapper = exportToggle.closest('.recipe-export-menu');
+    const menu = wrapper?.querySelector('[data-export-menu]');
+    if (!menu) return;
+    const willOpen = menu.classList.contains('hidden');
+    closeAllRecipeExportMenus(willOpen ? menu : null);
+    return;
+  }
+
+  const notesBtn = e.target.closest('.notes-export-option');
   if (notesBtn) {
     const recipeUrl = decodeURIComponent(notesBtn.dataset.recipeUrl || '');
+    closeAllRecipeExportMenus();
     openNotesExport(recipeUrl, notesBtn.dataset.recipeTitle || 'Recept');
     return;
   }
 
-  const picnicBtn = e.target.closest('.picnic-recipe-btn');
+  const picnicBtn = e.target.closest('.picnic-export-option');
   if (picnicBtn) {
     const recipeUrl = decodeURIComponent(picnicBtn.dataset.recipeUrl || '');
+    closeAllRecipeExportMenus();
     openPicnicShoppingModal(recipeUrl, picnicBtn.dataset.recipeTitle || 'Recept');
     return;
   }

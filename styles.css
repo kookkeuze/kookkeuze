@@ -1347,6 +1347,10 @@ select:focus {
   grid-template-columns: 1fr;
 }
 
+.recipe-card-actions.has-import {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .recipe-card-actions .recipe-link a {
   width: 100%;
   min-height: 44px;
@@ -1421,6 +1425,81 @@ select:focus {
 .recipe-card li i {
   color: var(--accent-color);
   min-width: 16px;
+}
+
+.recipe-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.recipe-export-menu {
+  position: relative;
+}
+
+.recipe-export-trigger {
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid #dbe4de;
+  background: #ffffff;
+  color: #51635a;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+}
+
+.recipe-export-trigger:hover,
+.recipe-export-menu.is-open .recipe-export-trigger {
+  border-color: #c6d4ca;
+  background: #f8fbf9;
+  color: #2f3b34;
+  transform: translateY(-1px);
+}
+
+.recipe-export-trigger .export-chevron {
+  font-size: 10px;
+  transition: transform 0.18s ease;
+}
+
+.recipe-export-menu.is-open .export-chevron {
+  transform: rotate(180deg);
+}
+
+.recipe-export-dropdown {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  min-width: 156px;
+  padding: 8px;
+  border: 1px solid #dfe8e2;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(28, 47, 35, 0.14);
+  display: grid;
+  gap: 6px;
+  z-index: 30;
+}
+
+.recipe-export-option {
+  min-width: 0;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #edf2ee;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #33423a;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.recipe-export-option:hover {
+  background: #f8fbf9;
+  border-color: #d7e2da;
 }
 
 @media (min-width: 980px) {
@@ -1685,26 +1764,6 @@ select:focus {
   color: var(--picnic-red);
 }
 
-.notes-recipe-btn {
-  background: #ffffff;
-  color: #5d4ca5;
-  border: 2px solid #5d4ca5;
-  padding: 8px 14px;
-  font-size: 12px;
-  min-width: 126px;
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-}
-
-.notes-recipe-btn:hover {
-  background: #5d4ca5;
-  color: #ffffff;
-  transform: translateY(-1px);
-}
-
 .notes-button-mark {
   width: 20px;
   height: 20px;
@@ -1723,11 +1782,6 @@ select:focus {
 
 .notes-button-mark i {
   font-size: 11px;
-}
-
-.notes-recipe-btn:hover .notes-button-mark {
-  background: #ffffff;
-  color: #5d4ca5;
 }
 
 .weekmenu-secondary-action:hover {
@@ -2459,14 +2513,16 @@ select:focus {
     gap: 8px;
   }
 
+  .recipe-card-actions.has-import {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .recipe-card-actions .recipe-link {
     grid-column: 1 / -1;
   }
 
   .recipe-card-actions .plan-recipe-btn,
-  .recipe-card-actions .notes-recipe-btn,
-  .recipe-card-actions .import-transfer-btn,
-  .recipe-card-actions .picnic-recipe-btn {
+  .recipe-card-actions .import-transfer-btn {
     width: 100%;
     min-height: 36px;
     min-width: 0;
@@ -2477,6 +2533,16 @@ select:focus {
     font-size: 10px;
     letter-spacing: 0.2px;
     overflow-wrap: anywhere;
+  }
+
+  .recipe-export-dropdown {
+    min-width: 148px;
+    right: 0;
+  }
+
+  .recipe-export-trigger {
+    font-size: 10px;
+    padding: 7px 9px;
   }
 
   .assign-modal-content {
