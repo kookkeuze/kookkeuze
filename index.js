@@ -1008,16 +1008,7 @@ function showRecipes(arr) {
             <button type="button" class="plan-weekmenu-btn plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">Plan in weekmenu</button>
             ${importMode ? `<button type="button" class="plan-weekmenu-btn import-transfer-btn import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">${importLabel}</button>` : ''}
           </div>
-          <div class="recipe-meta-row">
-            <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
-            <span class="recipe-meta-pill"><i class="fas fa-fire"></i> ${r.calories ?? '-'} kcal</span>
-          </div>
-          <ul>
-            <li><i class="fas fa-utensils"></i> <strong>Soort:</strong> ${r.dish_type || '-'}</li>
-            <li><i class="fas fa-layer-group"></i> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
-            <li><i class="fas fa-bullseye"></i> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
-          </ul>
-          <div class="recipe-card-footer">
+          <div class="recipe-card-export-row">
             <div class="recipe-export-menu">
               <button
                 type="button"
@@ -1043,6 +1034,15 @@ function showRecipes(arr) {
               </div>
             </div>
           </div>
+          <div class="recipe-meta-row">
+            <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
+            <span class="recipe-meta-pill"><i class="fas fa-fire"></i> ${r.calories ?? '-'} kcal</span>
+          </div>
+          <ul>
+            <li><i class="fas fa-utensils"></i> <strong>Soort:</strong> ${r.dish_type || '-'}</li>
+            <li><i class="fas fa-layer-group"></i> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
+            <li><i class="fas fa-bullseye"></i> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
+          </ul>
         </div>
       </div>`;
   });

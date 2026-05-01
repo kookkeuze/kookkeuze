@@ -1427,10 +1427,10 @@ select:focus {
   min-width: 16px;
 }
 
-.recipe-card-footer {
+.recipe-card-export-row {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 6px;
+  justify-content: flex-start;
+  margin: 2px 0 2px;
 }
 
 .recipe-export-menu {
