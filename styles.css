@@ -1440,7 +1440,7 @@ select:focus {
   line-height: 1.25;
   text-decoration: underline;
   text-underline-offset: 3px;
-  white-space: nowrap;
+  white-space: normal;
   text-align: left;
 }
 
@@ -1525,34 +1525,37 @@ select:focus {
   .recipe-card {
     flex: 1 1 900px;
     display: grid;
-    grid-template-columns: minmax(0, 60%) minmax(320px, 40%);
+    grid-template-columns: minmax(0, 55%) minmax(320px, 45%);
     align-items: stretch;
   }
 
   .result-image-cell {
     width: 100%;
-    aspect-ratio: 1.35 / 1;
-    min-height: 392px;
-    height: 100%;
+    height: 340px;
+    min-height: 340px;
   }
 
   .recipe-card-image,
   .recipe-card-image-skeleton,
   .recipe-card-image-fallback {
-    height: 100%;
-    min-height: 392px;
+    height: 340px;
+    min-height: 340px;
     max-height: none;
   }
 
   .recipe-card-content {
     width: 100%;
     padding: 26px 28px;
-    min-height: 392px;
     align-content: start;
   }
 
   .recipe-secondary-actions {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+  }
+
+  .recipe-export-menu {
+    flex: 0 0 auto;
   }
 
   .overview-grid-cards .recipe-card {
@@ -1583,6 +1586,7 @@ select:focus {
 
   .recipe-inline-action {
     font-size: 12px;
+    white-space: normal;
   }
 
   .recipe-export-trigger {
