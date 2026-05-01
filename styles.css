@@ -1296,6 +1296,7 @@ select:focus {
   margin-bottom: 0;
   flex-shrink: 0;
   align-self: stretch;
+  overflow: hidden;
 }
 
 .recipe-card-image,
@@ -1439,7 +1440,7 @@ select:focus {
   line-height: 1.25;
   text-decoration: underline;
   text-underline-offset: 3px;
-  white-space: normal;
+  white-space: nowrap;
   text-align: left;
 }
 
@@ -1465,6 +1466,7 @@ select:focus {
   align-items: center;
   gap: 7px;
   border-radius: 999px;
+  white-space: nowrap;
 }
 
 .recipe-export-trigger:hover,
@@ -1523,27 +1525,34 @@ select:focus {
   .recipe-card {
     flex: 1 1 900px;
     display: grid;
-    grid-template-columns: minmax(0, 58%) minmax(320px, 42%);
+    grid-template-columns: minmax(0, 60%) minmax(320px, 40%);
     align-items: stretch;
   }
 
   .result-image-cell {
     width: 100%;
+    aspect-ratio: 1.35 / 1;
+    min-height: 392px;
     height: 100%;
-    min-height: 100%;
   }
 
   .recipe-card-image,
   .recipe-card-image-skeleton,
   .recipe-card-image-fallback {
     height: 100%;
-    min-height: 100%;
+    min-height: 392px;
     max-height: none;
   }
 
   .recipe-card-content {
     width: 100%;
     padding: 26px 28px;
+    min-height: 392px;
+    align-content: start;
+  }
+
+  .recipe-secondary-actions {
+    flex-wrap: nowrap;
   }
 
   .overview-grid-cards .recipe-card {
@@ -1564,6 +1573,21 @@ select:focus {
   .overview-grid-cards .recipe-card h3 {
     font-size: 1.55rem;
     margin-bottom: 12px;
+  }
+}
+
+@media (min-width: 980px) and (max-width: 1180px) {
+  .recipe-secondary-actions {
+    gap: 8px 10px;
+  }
+
+  .recipe-inline-action {
+    font-size: 12px;
+  }
+
+  .recipe-export-trigger {
+    font-size: 10px;
+    padding: 6px 9px;
   }
 }
 
@@ -2530,10 +2554,12 @@ select:focus {
 
   .recipe-secondary-actions {
     gap: 8px 12px;
+    flex-wrap: wrap;
   }
 
   .recipe-inline-action {
     font-size: 11px;
+    white-space: normal;
     overflow-wrap: anywhere;
   }
 
