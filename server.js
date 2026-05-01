@@ -207,6 +207,49 @@ function parseCalories(cal) {
   return match ? parseInt(match[1], 10) : null;
 }
 
+function normalizeIngredientText(value) {
+  if (!value) return null;
+
+  if (typeof value === 'string') {
+    return value.replace(/\s+/g, ' ').trim() || null;
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map(item => normalizeIngredientText(item))
+      .filter(Boolean)
+      .join(', ') || null;
+  }
+
+  if (typeof value === 'object') {
+    const amount = normalizeIngredientText(value.amount || value.quantity);
+    const unit = normalizeIngredientText(value.unit || value.unitText);
+    const name = normalizeIngredientText(value.name || value.text || value.ingredient || value.food);
+    return [amount, unit, name].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim() || null;
+  }
+
+  return String(value).replace(/\s+/g, ' ').trim() || null;
+}
+
+function extractRecipeIngredients(recipe) {
+  const rawIngredients = recipe.recipeIngredient || recipe.ingredients || recipe.ingredient;
+  const ingredients = Array.isArray(rawIngredients)
+    ? rawIngredients
+    : (rawIngredients ? [rawIngredients] : []);
+  const seen = new Set();
+
+  return ingredients
+    .map(item => normalizeIngredientText(item))
+    .filter(Boolean)
+    .filter(item => {
+      const key = item.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 80);
+}
+
 function parseDurationToMinutes(iso) {
   if (!iso) return null;
   const match = String(iso).match(/PT(?:(\d+)H)?(?:(\d+)M)?/i);
@@ -418,6 +461,7 @@ app.get('/api/recipe-info', async (req, res) => {
         meal_type: null,
         time_required: null,
         calories: null,
+        ingredients: [],
         missing: ['Titel', 'Soort gerecht', 'Menugang', 'Doel gerecht', 'Tijd', 'Calorieën']
       });
     }
@@ -432,6 +476,7 @@ app.get('/api/recipe-info', async (req, res) => {
       meal_type: mapMealType(text),
       time_required: mapTimeRequired(totalMinutes),
       calories: parseCalories(recipe.nutrition && recipe.nutrition.calories),
+      ingredients: extractRecipeIngredients(recipe),
       missing: []
     };
 

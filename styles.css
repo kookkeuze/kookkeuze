@@ -21,6 +21,7 @@ h2 {
   --btn-radius: 12px;
   --accent-color: #d97a45;
   --accent-color-hover: #c96936;
+  --picnic-red: #e51f32;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -1643,6 +1644,47 @@ select:focus {
   color: #ffffff;
 }
 
+.picnic-recipe-btn {
+  background: #ffffff;
+  color: var(--picnic-red);
+  border: 2px solid var(--picnic-red);
+  padding: 8px 14px;
+  font-size: 12px;
+  min-width: 126px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.picnic-recipe-btn:hover {
+  background: var(--picnic-red);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.picnic-button-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 7px;
+  background: var(--picnic-red);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.picnic-recipe-btn:hover .picnic-button-mark {
+  background: #ffffff;
+  color: var(--picnic-red);
+}
+
 .weekmenu-secondary-action:hover {
   background: #235b2a;
   border-color: #235b2a;
@@ -2377,7 +2419,8 @@ select:focus {
   }
 
   .recipe-card-actions .plan-recipe-btn,
-  .recipe-card-actions .import-transfer-btn {
+  .recipe-card-actions .import-transfer-btn,
+  .recipe-card-actions .picnic-recipe-btn {
     width: 100%;
     min-height: 36px;
     min-width: 0;
@@ -2997,6 +3040,184 @@ select:focus {
   padding: 26px 24px;
 }
 
+.modal-content.picnic-modal-content {
+  width: min(620px, 96vw);
+  max-width: min(620px, 96vw);
+  padding: 26px 24px 24px;
+}
+
+.picnic-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 34px;
+  margin-bottom: 18px;
+}
+
+.picnic-brand-mark {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 12px;
+  background: var(--picnic-red);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.picnic-loading,
+.picnic-empty-state {
+  border: 1px solid #e5e9e6;
+  border-radius: 12px;
+  padding: 20px;
+  background: #fbfcfb;
+  color: #3f4d44;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.picnic-loading p,
+.picnic-empty-state p {
+  margin: 0;
+}
+
+.picnic-empty-state i {
+  color: var(--picnic-red);
+  font-size: 24px;
+}
+
+.picnic-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #f1ced3;
+  border-top-color: var(--picnic-red);
+  border-radius: 999px;
+  animation: picnicSpin 0.75s linear infinite;
+}
+
+@keyframes picnicSpin {
+  to { transform: rotate(360deg); }
+}
+
+.picnic-list-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.picnic-selected-count {
+  color: #46564d;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.picnic-list-tools {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.picnic-tool-btn {
+  min-width: 0;
+  padding: 7px 12px;
+  border: 1px solid #d9e4dc;
+  background: #ffffff;
+  color: #235b2a;
+  font-size: 11px;
+}
+
+.picnic-tool-btn:hover {
+  border-color: #235b2a;
+}
+
+.picnic-ingredient-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(44vh, 360px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.picnic-ingredient-item {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  align-items: start;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid #e5e9e6;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #303b34;
+  line-height: 1.35;
+}
+
+.picnic-ingredient-item:hover {
+  border-color: #f0b6be;
+  background: #fffafb;
+}
+
+.picnic-ingredient-item input {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: var(--picnic-red);
+}
+
+.picnic-feedback {
+  min-height: 20px;
+  margin-top: 10px;
+  color: #9b3340;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.picnic-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.picnic-open-btn {
+  min-width: 0;
+  background: var(--picnic-red);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+}
+
+.picnic-open-btn:hover {
+  background: #c91d2d;
+  transform: translateY(-1px);
+}
+
+.picnic-open-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+.picnic-recipe-open-link {
+  color: var(--picnic-red);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.picnic-recipe-open-link:hover {
+  text-decoration: underline;
+}
+
 .recipe-pack-modal-header {
   margin-bottom: 16px;
 }
@@ -3349,6 +3570,33 @@ select:focus {
     padding: 24px 20px;
     max-width: 100%;
     border-radius: 12px;
+  }
+
+  .modal-content.picnic-modal-content {
+    padding: 24px 16px 18px;
+  }
+
+  .picnic-modal-header {
+    align-items: flex-start;
+    padding-right: 30px;
+  }
+
+  .picnic-list-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .picnic-list-tools,
+  .picnic-open-btn {
+    width: 100%;
+  }
+
+  .picnic-tool-btn {
+    flex: 1;
+  }
+
+  .picnic-modal-actions {
+    justify-content: stretch;
   }
   
   .auth-pane {

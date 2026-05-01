@@ -103,6 +103,21 @@ function ensureLoggedInOrNotify(targetEl) {
   return false;
 }
 
+const PICNIC_DEEPLINK_URL = 'https://picnic.app/nl/deeplink/?path=winkel';
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/`/g, '&#96;');
+}
+
 /* ========= RECEPT AFBEELDINGEN ========= */
 const recipeImageCache = new Map();
 let pendingResetToken = null;
@@ -977,19 +992,25 @@ function showRecipes(arr) {
   let html = `<div class="recipe-cards-container search-results${singleClass}">`;
   arr.forEach(r => {
     const safeUrl = encodeURIComponent(r.url || '');
-    const safeTitle = (r.title || 'Recept').replace(/"/g, '&quot;');
+    const safeHref = escapeAttr(r.url || '');
+    const safeTitle = escapeAttr(r.title || 'Recept');
+    const displayTitle = escapeHtml(r.title || 'Recept');
     html += `
       <div class="recipe-card">
         <div class="result-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
           <div class="recipe-card-image-skeleton"></div>
         </div>
         <div class="recipe-card-content">
-          <h3>${r.title}</h3>
-          <div class="recipe-card-actions${importMode ? ' has-import' : ' single-action'}">
-            <p class="recipe-link"><a href="${r.url}" target="_blank" class="ext-link">
+          <h3>${displayTitle}</h3>
+          <div class="recipe-card-actions has-picnic${importMode ? ' has-import' : ''}">
+            <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
-            <button type="button" class="plan-weekmenu-btn plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${(r.title || 'Recept').replace(/"/g, '&quot;')}">Plan in weekmenu</button>
+            <button type="button" class="plan-weekmenu-btn plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">Plan in weekmenu</button>
             ${importMode ? `<button type="button" class="plan-weekmenu-btn import-transfer-btn import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">${importLabel}</button>` : ''}
+            <button type="button" class="picnic-recipe-btn" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}" aria-label="Picnic boodschappenlijst voor ${safeTitle}">
+              <span class="picnic-button-mark" aria-hidden="true">P</span>
+              <span>Picnic</span>
+            </button>
           </div>
           <div class="recipe-meta-row">
             <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
@@ -1008,7 +1029,228 @@ function showRecipes(arr) {
   hydrateResultImages();
 }
 
+const picnicModal = document.getElementById('picnicModal');
+const closePicnicModal = document.getElementById('closePicnicModal');
+const picnicModalBody = document.getElementById('picnicModalBody');
+const picnicModalRecipeTitle = document.getElementById('picnicModalRecipeTitle');
+let picnicModalState = {
+  title: '',
+  url: '',
+  ingredients: []
+};
+
+function closePicnicShoppingModal() {
+  picnicModal?.classList.add('hidden');
+  picnicModal?.setAttribute('aria-hidden', 'true');
+}
+
+function setPicnicModalLoading() {
+  if (!picnicModalBody) return;
+  picnicModalBody.innerHTML = `
+    <div class="picnic-loading">
+      <span class="picnic-spinner" aria-hidden="true"></span>
+      <p>Ingrediënten ophalen...</p>
+    </div>
+  `;
+}
+
+function updatePicnicSelectedCount() {
+  const countEl = document.getElementById('picnicSelectedCount');
+  const actionBtn = document.getElementById('picnicOpenBtn');
+  if (!countEl) return;
+
+  const selectedCount = picnicModalBody
+    ? picnicModalBody.querySelectorAll('.picnic-ingredient-checkbox:checked').length
+    : 0;
+  countEl.textContent = `${selectedCount} geselecteerd`;
+  if (actionBtn) actionBtn.disabled = selectedCount === 0;
+}
+
+function renderPicnicIngredients(ingredients) {
+  if (!picnicModalBody) return;
+
+  if (!ingredients.length) {
+    const safeRecipeUrl = escapeAttr(picnicModalState.url);
+    picnicModalBody.innerHTML = `
+      <div class="picnic-empty-state">
+        <i class="fas fa-list-ul" aria-hidden="true"></i>
+        <p>Voor dit recept konden geen ingrediënten automatisch worden gevonden.</p>
+        <a href="${safeRecipeUrl}" target="_blank" rel="noopener noreferrer" class="picnic-recipe-open-link">Open recept</a>
+      </div>
+    `;
+    return;
+  }
+
+  const items = ingredients.map((ingredient, index) => `
+    <label class="picnic-ingredient-item">
+      <input class="picnic-ingredient-checkbox" type="checkbox" data-index="${index}" checked>
+      <span>${escapeHtml(ingredient)}</span>
+    </label>
+  `).join('');
+
+  picnicModalBody.innerHTML = `
+    <div class="picnic-list-toolbar">
+      <span id="picnicSelectedCount" class="picnic-selected-count"></span>
+      <div class="picnic-list-tools">
+        <button id="picnicSelectAllBtn" type="button" class="picnic-tool-btn">Alles</button>
+        <button id="picnicSelectNoneBtn" type="button" class="picnic-tool-btn">Niets</button>
+      </div>
+    </div>
+    <div class="picnic-ingredient-list">${items}</div>
+    <div id="picnicFeedback" class="picnic-feedback" role="status" aria-live="polite"></div>
+    <div class="picnic-modal-actions">
+      <button id="picnicOpenBtn" type="button" class="picnic-open-btn">
+        <i class="fas fa-shopping-basket" aria-hidden="true"></i>
+        Kopieer lijst & open Picnic
+      </button>
+    </div>
+  `;
+
+  document.getElementById('picnicSelectAllBtn')?.addEventListener('click', () => {
+    picnicModalBody.querySelectorAll('.picnic-ingredient-checkbox').forEach(input => {
+      input.checked = true;
+    });
+    updatePicnicSelectedCount();
+  });
+
+  document.getElementById('picnicSelectNoneBtn')?.addEventListener('click', () => {
+    picnicModalBody.querySelectorAll('.picnic-ingredient-checkbox').forEach(input => {
+      input.checked = false;
+    });
+    updatePicnicSelectedCount();
+  });
+
+  picnicModalBody.querySelectorAll('.picnic-ingredient-checkbox').forEach(input => {
+    input.addEventListener('change', updatePicnicSelectedCount);
+  });
+
+  document.getElementById('picnicOpenBtn')?.addEventListener('click', handlePicnicOpenClick);
+  updatePicnicSelectedCount();
+}
+
+function renderPicnicError() {
+  if (!picnicModalBody) return;
+  picnicModalBody.innerHTML = `
+    <div class="picnic-empty-state">
+      <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+      <p>De boodschappenlijst kon niet worden opgehaald. Probeer het later opnieuw.</p>
+    </div>
+  `;
+}
+
+async function openPicnicShoppingModal(recipeUrl, recipeTitle) {
+  if (!picnicModal || !picnicModalBody) return;
+
+  picnicModalState = {
+    title: recipeTitle || 'Recept',
+    url: recipeUrl || '',
+    ingredients: []
+  };
+
+  if (picnicModalRecipeTitle) {
+    picnicModalRecipeTitle.textContent = picnicModalState.title;
+  }
+
+  picnicModal.classList.remove('hidden');
+  picnicModal.setAttribute('aria-hidden', 'false');
+  setPicnicModalLoading();
+
+  try {
+    const res = await fetch(`${API_BASE}/api/recipe-info?url=${encodeURIComponent(recipeUrl)}`, {
+      headers: authHeaders()
+    });
+    const data = await res.json();
+    const ingredients = Array.isArray(data.ingredients) ? data.ingredients : [];
+    picnicModalState.ingredients = ingredients;
+    renderPicnicIngredients(ingredients);
+  } catch (err) {
+    console.error(err);
+    renderPicnicError();
+  }
+}
+
+function getSelectedPicnicIngredients() {
+  if (!picnicModalBody) return [];
+  return [...picnicModalBody.querySelectorAll('.picnic-ingredient-checkbox:checked')]
+    .map(input => picnicModalState.ingredients[Number(input.dataset.index)])
+    .filter(Boolean);
+}
+
+function buildPicnicShoppingListText(items) {
+  const title = picnicModalState.title || 'Recept';
+  return [`Boodschappenlijst voor ${title}`, '', ...items.map(item => `- ${item}`)].join('\n');
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_err) {
+      // val terug op execCommand
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  textarea.style.top = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    return document.execCommand('copy');
+  } catch (_err) {
+    return false;
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
+async function handlePicnicOpenClick() {
+  const selectedIngredients = getSelectedPicnicIngredients();
+  const feedback = document.getElementById('picnicFeedback');
+
+  if (!selectedIngredients.length) {
+    if (feedback) feedback.textContent = 'Selecteer minimaal 1 ingrediënt.';
+    return;
+  }
+
+  const text = buildPicnicShoppingListText(selectedIngredients);
+  const copied = await copyTextToClipboard(text);
+  const opened = window.open(PICNIC_DEEPLINK_URL, '_blank');
+
+  if (opened) {
+    opened.opener = null;
+  } else {
+    window.location.assign(PICNIC_DEEPLINK_URL);
+  }
+
+  if (copied) {
+    if (typeof showRecipeAddedToast === 'function') {
+      showRecipeAddedToast('Boodschappenlijst gekopieerd.');
+    }
+    closePicnicShoppingModal();
+  } else if (feedback) {
+    feedback.textContent = 'Kopiëren lukte niet automatisch. Selecteer de lijst handmatig en open Picnic opnieuw.';
+  }
+}
+
+closePicnicModal?.addEventListener('click', closePicnicShoppingModal);
+picnicModal?.addEventListener('click', e => {
+  if (e.target === picnicModal) closePicnicShoppingModal();
+});
+
 resultDiv?.addEventListener('click', e => {
+  const picnicBtn = e.target.closest('.picnic-recipe-btn');
+  if (picnicBtn) {
+    const recipeUrl = decodeURIComponent(picnicBtn.dataset.recipeUrl || '');
+    openPicnicShoppingModal(recipeUrl, picnicBtn.dataset.recipeTitle || 'Recept');
+    return;
+  }
+
   const importBtn = e.target.closest('.import-recipe-btn');
   if (importBtn) {
     handleImportRecipe(importBtn.dataset.recipeId, importBtn.dataset.importMode || '');
