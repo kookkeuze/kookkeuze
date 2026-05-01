@@ -1006,7 +1006,6 @@ function showRecipes(arr) {
             <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
             <div class="recipe-secondary-actions">
-              <button type="button" class="recipe-inline-action plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">Plan in weekmenu</button>
               <div class="recipe-export-menu">
                 <button
                   type="button"
@@ -1021,6 +1020,10 @@ function showRecipes(arr) {
                   <i class="fas fa-chevron-down export-chevron" aria-hidden="true"></i>
                 </button>
                 <div class="recipe-export-dropdown hidden" data-export-menu>
+                  <button type="button" class="recipe-export-option plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">
+                    <span class="export-option-icon" aria-hidden="true"><i class="fas fa-calendar-plus"></i></span>
+                    <span>Plan in weekmenu</span>
+                  </button>
                   ${importMode ? `<button type="button" class="recipe-export-option import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">
                     <span class="export-option-icon" aria-hidden="true"><i class="fas fa-database"></i></span>
                     <span>${importLabel}</span>
@@ -1754,7 +1757,6 @@ function renderPlannerSearchResults() {
   const importLabel = importMode === 'to-own'
     ? (compactMobileLabels ? 'Naar mijn db' : 'Importeer naar mijn database')
     : (compactMobileLabels ? 'Naar gedeelde db' : 'Importeer naar gedeelde database');
-  const assignLabel = compactMobileLabels ? 'Plan' : 'Plan in weekmenu';
 
   if (filtered.length === 0) {
     weekmenuSearchResults.innerHTML = '<p class="weekmenu-search-empty">Geen recepten gevonden.</p>';
@@ -1771,17 +1773,49 @@ function renderPlannerSearchResults() {
   let html = '';
   pageRecipes.forEach(recipe => {
     const safeUrl = encodeURIComponent(recipe.url || '');
+    const safeTitle = escapeAttr(recipe.title || 'Recept');
+    const displayTitle = escapeHtml(recipe.title || 'Recept');
     html += `
       <div class="weekmenu-search-item">
         <div class="weekmenu-search-main">
           <div class="weekmenu-search-thumb-wrap" data-url="${safeUrl}">
             <div class="weekmenu-search-thumb-skeleton"></div>
           </div>
-          <button type="button" class="weekmenu-search-title weekmenu-preview-title" data-recipe-id="${recipe.id}">${recipe.title}</button>
+          <button type="button" class="weekmenu-search-title weekmenu-preview-title" data-recipe-id="${recipe.id}">${displayTitle}</button>
         </div>
         <div class="weekmenu-search-actions">
-          <button type="button" class="plan-weekmenu-btn weekmenu-assign-btn weekmenu-primary-action" data-recipe-id="${recipe.id}" data-recipe-title="${(recipe.title || 'Recept').replace(/"/g, '&quot;')}">${assignLabel}</button>
-          ${importMode ? `<button type="button" class="plan-weekmenu-btn import-transfer-btn weekmenu-import-btn weekmenu-secondary-action" data-recipe-id="${recipe.id}" data-import-mode="${importMode}">${importLabel}</button>` : ''}
+          <div class="recipe-export-menu weekmenu-export-menu">
+            <button
+              type="button"
+              class="recipe-export-trigger"
+              data-export-toggle
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-label="Open exportmenu voor ${safeTitle}"
+            >
+              <i class="fas fa-share-alt" aria-hidden="true"></i>
+              <span>Exporteer</span>
+              <i class="fas fa-chevron-down export-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="recipe-export-dropdown hidden" data-export-menu>
+              <button type="button" class="recipe-export-option weekmenu-assign-btn" data-recipe-id="${recipe.id}" data-recipe-title="${safeTitle}">
+                <span class="export-option-icon" aria-hidden="true"><i class="fas fa-calendar-plus"></i></span>
+                <span>Plan in weekmenu</span>
+              </button>
+              ${importMode ? `<button type="button" class="recipe-export-option weekmenu-import-btn" data-recipe-id="${recipe.id}" data-import-mode="${importMode}">
+                <span class="export-option-icon" aria-hidden="true"><i class="fas fa-database"></i></span>
+                <span>${importLabel}</span>
+              </button>` : ''}
+              <button type="button" class="recipe-export-option notes-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
+                <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
+                <span>Notities</span>
+              </button>
+              <button type="button" class="recipe-export-option picnic-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
+                <span class="picnic-button-mark" aria-hidden="true">P</span>
+                <span>Picnic</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>`;
   });
@@ -1958,13 +1992,41 @@ async function initWeekPlanner() {
     renderPlannerSearchResults();
   });
   weekmenuSearchResults?.addEventListener('click', e => {
+    const exportToggle = e.target.closest('[data-export-toggle]');
+    if (exportToggle) {
+      const wrapper = exportToggle.closest('.recipe-export-menu');
+      const menu = wrapper?.querySelector('[data-export-menu]');
+      if (!menu) return;
+      const willOpen = menu.classList.contains('hidden');
+      closeAllRecipeExportMenus(willOpen ? menu : null);
+      return;
+    }
+
+    const notesBtn = e.target.closest('.notes-export-option');
+    if (notesBtn) {
+      const recipeUrl = decodeURIComponent(notesBtn.dataset.recipeUrl || '');
+      closeAllRecipeExportMenus();
+      openNotesExport(recipeUrl, notesBtn.dataset.recipeTitle || 'Recept');
+      return;
+    }
+
+    const picnicBtn = e.target.closest('.picnic-export-option');
+    if (picnicBtn) {
+      const recipeUrl = decodeURIComponent(picnicBtn.dataset.recipeUrl || '');
+      closeAllRecipeExportMenus();
+      openPicnicShoppingModal(recipeUrl, picnicBtn.dataset.recipeTitle || 'Recept');
+      return;
+    }
+
     const importBtn = e.target.closest('.weekmenu-import-btn');
     if (importBtn) {
+      closeAllRecipeExportMenus();
       handleImportRecipe(importBtn.dataset.recipeId, importBtn.dataset.importMode || '');
       return;
     }
     const btn = e.target.closest('.weekmenu-assign-btn');
     if (btn) {
+      closeAllRecipeExportMenus();
       openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
       return;
     }

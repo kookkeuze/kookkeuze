@@ -1749,10 +1749,30 @@ select:focus {
   justify-content: flex-end;
 }
 
+.weekmenu-search-actions .recipe-export-dropdown {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+
 .weekmenu-search-item:hover {
   border-color: #d0ddd3;
   background: #fff;
   box-shadow: 0 4px 14px rgba(47, 106, 55, 0.08);
+}
+
+@media (min-width: 900px) {
+  .weekmenu-search-results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .weekmenu-search-item {
+    align-items: center;
+  }
+
+  .weekmenu-search-actions {
+    flex: 0 0 auto;
+  }
 }
 
 .plan-weekmenu-btn {
@@ -2285,14 +2305,14 @@ select:focus {
   color: #ffffff;
 }
 
-.weekmenu-search-item .weekmenu-assign-btn {
+.weekmenu-search-item .plan-weekmenu-btn.weekmenu-assign-btn {
   min-width: 188px;
   min-height: 36px;
   padding: 7px 12px;
   font-size: 11px;
 }
 
-.weekmenu-search-item .weekmenu-import-btn {
+.weekmenu-search-item .plan-weekmenu-btn.weekmenu-import-btn {
   min-width: 188px;
   min-height: 36px;
   padding: 7px 12px;
@@ -2566,14 +2586,14 @@ select:focus {
 
   .weekmenu-search-actions {
     width: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    align-items: center;
     gap: 8px;
-    justify-content: initial;
+    justify-content: flex-start;
   }
 
-  .weekmenu-search-item .weekmenu-assign-btn,
-  .weekmenu-search-item .weekmenu-import-btn {
+  .weekmenu-search-item .plan-weekmenu-btn.weekmenu-assign-btn,
+  .weekmenu-search-item .plan-weekmenu-btn.weekmenu-import-btn {
     min-width: 0;
     width: 100%;
     white-space: normal;
@@ -2723,13 +2743,14 @@ select:focus {
 
   .weekmenu-search-actions {
     width: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    align-items: center;
     gap: 6px;
+    justify-content: flex-start;
   }
 
-  .weekmenu-search-item .weekmenu-assign-btn,
-  .weekmenu-search-item .weekmenu-import-btn {
+  .weekmenu-search-item .plan-weekmenu-btn.weekmenu-assign-btn,
+  .weekmenu-search-item .plan-weekmenu-btn.weekmenu-import-btn {
     width: 100%;
     min-width: 0;
     min-height: 44px;
