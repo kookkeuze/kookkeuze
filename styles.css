@@ -1685,6 +1685,47 @@ select:focus {
   color: var(--picnic-red);
 }
 
+.bring-recipe-btn {
+  background: #ffffff;
+  color: #1e7f70;
+  border: 2px solid #1e7f70;
+  padding: 8px 14px;
+  font-size: 12px;
+  min-width: 126px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.bring-recipe-btn:hover {
+  background: #1e7f70;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.bring-button-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 7px;
+  background: #1e7f70;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.bring-recipe-btn:hover .bring-button-mark {
+  background: #ffffff;
+  color: #1e7f70;
+}
+
 .weekmenu-secondary-action:hover {
   background: #235b2a;
   border-color: #235b2a;
@@ -2419,6 +2460,7 @@ select:focus {
   }
 
   .recipe-card-actions .plan-recipe-btn,
+  .recipe-card-actions .bring-recipe-btn,
   .recipe-card-actions .import-transfer-btn,
   .recipe-card-actions .picnic-recipe-btn {
     width: 100%;
@@ -3147,6 +3189,13 @@ select:focus {
   padding-right: 4px;
 }
 
+.picnic-help-text {
+  margin: 0 0 12px;
+  color: #5f6e66;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .picnic-ingredient-item {
   display: grid;
   grid-template-columns: 22px 1fr;
@@ -3175,26 +3224,53 @@ select:focus {
 .picnic-feedback {
   min-height: 20px;
   margin-top: 10px;
-  color: #9b3340;
   font-size: 13px;
   font-weight: 700;
+}
+
+.picnic-feedback[data-tone="error"] {
+  color: #9b3340;
+}
+
+.picnic-feedback[data-tone="success"] {
+  color: #2c7b3d;
+}
+
+.picnic-feedback[data-tone="info"] {
+  color: #5f6e66;
 }
 
 .picnic-modal-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
   margin-top: 10px;
 }
 
+.picnic-copy-btn,
 .picnic-open-btn {
   min-width: 0;
-  background: var(--picnic-red);
-  color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 11px 16px;
+}
+
+.picnic-copy-btn {
+  background: #ffffff;
+  color: #235b2a;
+  border: 1px solid #d9e4dc;
+}
+
+.picnic-copy-btn:hover {
+  border-color: #235b2a;
+  transform: translateY(-1px);
+}
+
+.picnic-open-btn {
+  background: var(--picnic-red);
+  color: #ffffff;
 }
 
 .picnic-open-btn:hover {

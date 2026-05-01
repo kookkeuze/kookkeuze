@@ -118,6 +118,13 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/`/g, '&#96;');
 }
 
+function buildBringImportUrl(recipeUrl, recipeTitle) {
+  const params = new URLSearchParams();
+  params.set('url', recipeUrl || '');
+  if (recipeTitle) params.set('title', recipeTitle);
+  return `${API_BASE}/bring-import?${params.toString()}`;
+}
+
 /* ========= RECEPT AFBEELDINGEN ========= */
 const recipeImageCache = new Map();
 let pendingResetToken = null;
@@ -1007,6 +1014,10 @@ function showRecipes(arr) {
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
             <button type="button" class="plan-weekmenu-btn plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">Plan in weekmenu</button>
             ${importMode ? `<button type="button" class="plan-weekmenu-btn import-transfer-btn import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">${importLabel}</button>` : ''}
+            <button type="button" class="bring-recipe-btn" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}" aria-label="Deel ${safeTitle} naar Bring">
+              <span class="bring-button-mark" aria-hidden="true">B</span>
+              <span>Bring</span>
+            </button>
             <button type="button" class="picnic-recipe-btn" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}" aria-label="Picnic boodschappenlijst voor ${safeTitle}">
               <span class="picnic-button-mark" aria-hidden="true">P</span>
               <span>Picnic</span>
@@ -1096,12 +1107,17 @@ function renderPicnicIngredients(ingredients) {
         <button id="picnicSelectNoneBtn" type="button" class="picnic-tool-btn">Niets</button>
       </div>
     </div>
+    <p class="picnic-help-text">Picnic importeert deze lijst niet automatisch. Kopieer je selectie en open daarna zelf de Picnic-app.</p>
     <div class="picnic-ingredient-list">${items}</div>
     <div id="picnicFeedback" class="picnic-feedback" role="status" aria-live="polite"></div>
     <div class="picnic-modal-actions">
+      <button id="picnicCopyBtn" type="button" class="picnic-copy-btn">
+        <i class="fas fa-copy" aria-hidden="true"></i>
+        Kopieer lijst
+      </button>
       <button id="picnicOpenBtn" type="button" class="picnic-open-btn">
         <i class="fas fa-shopping-basket" aria-hidden="true"></i>
-        Kopieer lijst & open Picnic
+        Open Picnic
       </button>
     </div>
   `;
@@ -1124,7 +1140,8 @@ function renderPicnicIngredients(ingredients) {
     input.addEventListener('change', updatePicnicSelectedCount);
   });
 
-  document.getElementById('picnicOpenBtn')?.addEventListener('click', handlePicnicOpenClick);
+  document.getElementById('picnicCopyBtn')?.addEventListener('click', handlePicnicCopyClick);
+  document.getElementById('picnicOpenBtn')?.addEventListener('click', handlePicnicAppOpenClick);
   updatePicnicSelectedCount();
 }
 
@@ -1209,33 +1226,66 @@ async function copyTextToClipboard(text) {
   }
 }
 
-async function handlePicnicOpenClick() {
-  const selectedIngredients = getSelectedPicnicIngredients();
+function setPicnicFeedback(message, tone = 'info') {
   const feedback = document.getElementById('picnicFeedback');
+  if (!feedback) return;
+  feedback.textContent = message;
+  feedback.dataset.tone = tone;
+}
+
+async function handlePicnicCopyClick() {
+  const selectedIngredients = getSelectedPicnicIngredients();
 
   if (!selectedIngredients.length) {
-    if (feedback) feedback.textContent = 'Selecteer minimaal 1 ingrediënt.';
+    setPicnicFeedback('Selecteer minimaal 1 ingrediënt.', 'error');
     return;
   }
 
   const text = buildPicnicShoppingListText(selectedIngredients);
   const copied = await copyTextToClipboard(text);
+
+  if (!copied) {
+    setPicnicFeedback('Kopiëren lukte niet automatisch. Probeer de lijst handmatig te selecteren.', 'error');
+    return;
+  }
+
+  if (typeof showRecipeAddedToast === 'function') {
+    showRecipeAddedToast('Boodschappenlijst gekopieerd.');
+  }
+  setPicnicFeedback('Lijst gekopieerd. Open nu Picnic en voeg de producten handmatig toe.', 'success');
+}
+
+function handlePicnicAppOpenClick() {
   const opened = window.open(PICNIC_DEEPLINK_URL, '_blank');
 
   if (opened) {
     opened.opener = null;
-  } else {
-    window.location.assign(PICNIC_DEEPLINK_URL);
+    return;
   }
 
-  if (copied) {
-    if (typeof showRecipeAddedToast === 'function') {
-      showRecipeAddedToast('Boodschappenlijst gekopieerd.');
+  window.location.assign(PICNIC_DEEPLINK_URL);
+}
+
+async function openBringShareFlow(recipeUrl, recipeTitle) {
+  const importUrl = buildBringImportUrl(recipeUrl, recipeTitle);
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: recipeTitle || 'Recept',
+        text: 'Importeer dit recept in Bring',
+        url: importUrl
+      });
+      if (typeof showRecipeAddedToast === 'function') {
+        showRecipeAddedToast('Deelmenu geopend voor Bring.');
+      }
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
     }
-    closePicnicShoppingModal();
-  } else if (feedback) {
-    feedback.textContent = 'Kopiëren lukte niet automatisch. Selecteer de lijst handmatig en open Picnic opnieuw.';
   }
+
+  window.open(importUrl, '_blank', 'noopener,noreferrer');
 }
 
 closePicnicModal?.addEventListener('click', closePicnicShoppingModal);
@@ -1244,6 +1294,13 @@ picnicModal?.addEventListener('click', e => {
 });
 
 resultDiv?.addEventListener('click', e => {
+  const bringBtn = e.target.closest('.bring-recipe-btn');
+  if (bringBtn) {
+    const recipeUrl = decodeURIComponent(bringBtn.dataset.recipeUrl || '');
+    openBringShareFlow(recipeUrl, bringBtn.dataset.recipeTitle || 'Recept');
+    return;
+  }
+
   const picnicBtn = e.target.closest('.picnic-recipe-btn');
   if (picnicBtn) {
     const recipeUrl = decodeURIComponent(picnicBtn.dataset.recipeUrl || '');

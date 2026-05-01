@@ -207,6 +207,15 @@ function parseCalories(cal) {
   return match ? parseInt(match[1], 10) : null;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function normalizeIngredientText(value) {
   if (!value) return null;
 
@@ -322,6 +331,69 @@ function mapMealType(text) {
   }
   return null;
 }
+
+function buildRecipePayload(recipe) {
+  if (!recipe) {
+    return {
+      title: null,
+      dish_type: null,
+      meal_category: null,
+      meal_type: null,
+      time_required: null,
+      calories: null,
+      ingredients: [],
+      missing: ['Titel', 'Soort gerecht', 'Menugang', 'Doel gerecht', 'Tijd', 'Calorieën']
+    };
+  }
+
+  const text = collectTextFields(recipe);
+  const totalMinutes = parseDurationToMinutes(recipe.totalTime || recipe.cookTime || recipe.prepTime);
+  const payload = {
+    title: recipe.name || null,
+    dish_type: mapDishType(text),
+    meal_category: mapMealCategory(text),
+    meal_type: mapMealType(text),
+    time_required: mapTimeRequired(totalMinutes),
+    calories: parseCalories(recipe.nutrition && recipe.nutrition.calories),
+    ingredients: extractRecipeIngredients(recipe),
+    missing: []
+  };
+
+  if (!payload.title) payload.missing.push('Titel');
+  if (!payload.dish_type) payload.missing.push('Soort gerecht');
+  if (!payload.meal_category) payload.missing.push('Menugang');
+  if (!payload.meal_type) payload.missing.push('Doel gerecht');
+  if (!payload.time_required) payload.missing.push('Tijd');
+  if (payload.calories == null) payload.missing.push('Calorieën');
+  return payload;
+}
+
+async function getRecipeInfoPayload(targetUrl) {
+  const cacheKey = targetUrl.toString();
+  const cached = recipeInfoCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.payload;
+  }
+
+  const html = await fetchHtmlWithRetries(cacheKey);
+  if (!html) {
+    return { error: 'Kon de pagina niet ophalen. Deze site blokkeert waarschijnlijk automatisch uitlezen.' };
+  }
+
+  const blocks = parseJsonLdBlocks(html);
+  let recipe = null;
+  for (const block of blocks) {
+    recipe = findRecipeObject(block);
+    if (recipe) break;
+  }
+
+  const payload = buildRecipePayload(recipe);
+  recipeInfoCache.set(cacheKey, {
+    payload,
+    expiresAt: Date.now() + RECIPE_INFO_TTL_MS
+  });
+  return payload;
+}
 /* ------------------------------------------------------------ */
 
 if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
@@ -435,67 +507,182 @@ app.get('/api/recipe-info', async (req, res) => {
     return res.status(400).json({ error: 'ongeldige url' });
   }
 
-  const cacheKey = pageUrl.toString();
-  const cached = recipeInfoCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return res.json(cached.payload);
-  }
-
   try {
-    const html = await fetchHtmlWithRetries(cacheKey);
-    if (!html) {
-      return res.json({ error: 'Kon de pagina niet ophalen. Deze site blokkeert waarschijnlijk automatisch uitlezen.' });
-    }
-    const blocks = parseJsonLdBlocks(html);
-    let recipe = null;
-    for (const block of blocks) {
-      recipe = findRecipeObject(block);
-      if (recipe) break;
-    }
-
-    if (!recipe) {
-      return res.json({
-        title: null,
-        dish_type: null,
-        meal_category: null,
-        meal_type: null,
-        time_required: null,
-        calories: null,
-        ingredients: [],
-        missing: ['Titel', 'Soort gerecht', 'Menugang', 'Doel gerecht', 'Tijd', 'Calorieën']
-      });
-    }
-
-    const text = collectTextFields(recipe);
-    const totalMinutes = parseDurationToMinutes(recipe.totalTime || recipe.cookTime || recipe.prepTime);
-
-    const payload = {
-      title: recipe.name || null,
-      dish_type: mapDishType(text),
-      meal_category: mapMealCategory(text),
-      meal_type: mapMealType(text),
-      time_required: mapTimeRequired(totalMinutes),
-      calories: parseCalories(recipe.nutrition && recipe.nutrition.calories),
-      ingredients: extractRecipeIngredients(recipe),
-      missing: []
-    };
-
-    if (!payload.title) payload.missing.push('Titel');
-    if (!payload.dish_type) payload.missing.push('Soort gerecht');
-    if (!payload.meal_category) payload.missing.push('Menugang');
-    if (!payload.meal_type) payload.missing.push('Doel gerecht');
-    if (!payload.time_required) payload.missing.push('Tijd');
-    if (payload.calories == null) payload.missing.push('Calorieën');
-
-    recipeInfoCache.set(cacheKey, {
-      payload,
-      expiresAt: Date.now() + RECIPE_INFO_TTL_MS
-    });
-
+    const payload = await getRecipeInfoPayload(pageUrl);
     return res.json(payload);
   } catch (err) {
     console.error('❌ recipe-info error:', err);
     return res.json({ error: 'Fout bij ophalen van receptinformatie.' });
+  }
+});
+
+app.get('/bring-import', async (req, res) => {
+  const { url, title } = req.query;
+  if (!url) return res.status(400).send('url ontbreekt');
+
+  let pageUrl;
+  try {
+    pageUrl = new URL(url);
+  } catch {
+    return res.status(400).send('ongeldige url');
+  }
+  if (!['http:', 'https:'].includes(pageUrl.protocol)) {
+    return res.status(400).send('ongeldige url');
+  }
+
+  try {
+    const payload = await getRecipeInfoPayload(pageUrl);
+    const recipeTitle = payload.title || String(title || 'Recept').trim() || 'Recept';
+    const ingredients = Array.isArray(payload.ingredients) ? payload.ingredients : [];
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'Recipe',
+      name: recipeTitle,
+      recipeIngredient: ingredients,
+      url: pageUrl.toString()
+    };
+
+    const ingredientItems = ingredients.length
+      ? ingredients.map(item => `<li>${escapeHtml(item)}</li>`).join('')
+      : '<li>Er konden geen ingrediënten automatisch worden opgehaald.</li>';
+    const safeTitle = escapeHtml(recipeTitle);
+    const safeSourceUrl = escapeHtml(pageUrl.toString());
+    const safeJson = JSON.stringify(schema).replace(/</g, '\\u003c');
+
+    res.setHeader('Cache-Control', 'no-store');
+    return res.send(`<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${safeTitle} | Bring import</title>
+  <meta name="description" content="Importeer deze receptingrediënten in Bring via delen.">
+  <script type="application/ld+json">${safeJson}</script>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #fff7f6 0%, #ffffff 100%);
+      color: #25312a;
+    }
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 24px 18px 48px;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #f1d6d9;
+      border-radius: 20px;
+      box-shadow: 0 16px 40px rgba(46, 37, 37, 0.08);
+      padding: 24px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #b12c3b;
+      margin-bottom: 12px;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(30px, 5vw, 42px);
+      line-height: 1.05;
+    }
+    p {
+      line-height: 1.5;
+      color: #4b5a52;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 18px 0 22px;
+    }
+    button, a {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .primary {
+      background: #ff5a6a;
+      color: #ffffff;
+    }
+    .secondary {
+      background: #ffffff;
+      color: #235b2a;
+      border: 1px solid #d9e4dc;
+    }
+    ul {
+      margin: 0;
+      padding-left: 20px;
+      display: grid;
+      gap: 8px;
+    }
+    .meta {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #6a7770;
+      word-break: break-word;
+    }
+    #feedback {
+      min-height: 20px;
+      margin: 8px 0 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: #2c7b3d;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="eyebrow">Bring import via Kookkeuze</div>
+      <h1>${safeTitle}</h1>
+      <p>Gebruik op je telefoon de deelknop hieronder en kies Bring. Bring kan dan deze receptpagina uitlezen en de ingrediënten overnemen als het formaat wordt herkend.</p>
+      <div class="actions">
+        <button id="shareBtn" class="primary" type="button">Deel naar Bring</button>
+        <a class="secondary" href="${safeSourceUrl}" target="_blank" rel="noopener noreferrer">Open bronrecept</a>
+      </div>
+      <div id="feedback"></div>
+      <ul>${ingredientItems}</ul>
+      <p class="meta">Bron: ${safeSourceUrl}</p>
+    </div>
+  </div>
+  <script>
+    const shareBtn = document.getElementById('shareBtn');
+    const feedback = document.getElementById('feedback');
+    shareBtn?.addEventListener('click', async () => {
+      if (!navigator.share) {
+        feedback.textContent = 'Delen wordt in deze browser niet ondersteund. Open deze pagina op je telefoon en deel dan naar Bring.';
+        return;
+      }
+      try {
+        await navigator.share({
+          title: ${JSON.stringify(recipeTitle)},
+          text: 'Importeer dit recept in Bring',
+          url: window.location.href
+        });
+        feedback.textContent = 'Gedeeld. Kies Bring in het deelmenu.';
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        feedback.textContent = 'Delen lukte niet. Open deze pagina op je telefoon en probeer opnieuw.';
+      }
+    });
+  </script>
+</body>
+</html>`);
+  } catch (err) {
+    console.error('❌ bring-import error:', err);
+    return res.status(500).send('Fout bij maken van Bring importpagina.');
   }
 });
 
