@@ -1007,7 +1007,6 @@ function showRecipes(arr) {
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
             <div class="recipe-secondary-actions">
               <button type="button" class="recipe-inline-action plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">Plan in weekmenu</button>
-              ${importMode ? `<button type="button" class="recipe-inline-action import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">${importLabel}</button>` : ''}
               <div class="recipe-export-menu">
                 <button
                   type="button"
@@ -1022,6 +1021,10 @@ function showRecipes(arr) {
                   <i class="fas fa-chevron-down export-chevron" aria-hidden="true"></i>
                 </button>
                 <div class="recipe-export-dropdown hidden" data-export-menu>
+                  ${importMode ? `<button type="button" class="recipe-export-option import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">
+                    <span class="export-option-icon" aria-hidden="true"><i class="fas fa-database"></i></span>
+                    <span>${importLabel}</span>
+                  </button>` : ''}
                   <button type="button" class="recipe-export-option notes-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
                     <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
                     <span>Notities</span>
