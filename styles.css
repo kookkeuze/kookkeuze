@@ -1685,10 +1685,10 @@ select:focus {
   color: var(--picnic-red);
 }
 
-.bring-recipe-btn {
+.notes-recipe-btn {
   background: #ffffff;
-  color: #1e7f70;
-  border: 2px solid #1e7f70;
+  color: #5d4ca5;
+  border: 2px solid #5d4ca5;
   padding: 8px 14px;
   font-size: 12px;
   min-width: 126px;
@@ -1699,17 +1699,17 @@ select:focus {
   gap: 7px;
 }
 
-.bring-recipe-btn:hover {
-  background: #1e7f70;
+.notes-recipe-btn:hover {
+  background: #5d4ca5;
   color: #ffffff;
   transform: translateY(-1px);
 }
 
-.bring-button-mark {
+.notes-button-mark {
   width: 20px;
   height: 20px;
   border-radius: 7px;
-  background: #1e7f70;
+  background: #5d4ca5;
   color: #ffffff;
   display: inline-flex;
   align-items: center;
@@ -1721,9 +1721,13 @@ select:focus {
   line-height: 1;
 }
 
-.bring-recipe-btn:hover .bring-button-mark {
+.notes-button-mark i {
+  font-size: 11px;
+}
+
+.notes-recipe-btn:hover .notes-button-mark {
   background: #ffffff;
-  color: #1e7f70;
+  color: #5d4ca5;
 }
 
 .weekmenu-secondary-action:hover {
@@ -2460,7 +2464,7 @@ select:focus {
   }
 
   .recipe-card-actions .plan-recipe-btn,
-  .recipe-card-actions .bring-recipe-btn,
+  .recipe-card-actions .notes-recipe-btn,
   .recipe-card-actions .import-transfer-btn,
   .recipe-card-actions .picnic-recipe-btn {
     width: 100%;
