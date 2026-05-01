@@ -1002,35 +1002,35 @@ function showRecipes(arr) {
         </div>
         <div class="recipe-card-content">
           <h3>${displayTitle}</h3>
-          <div class="recipe-card-actions${importMode ? ' has-import' : ''}">
+          <div class="recipe-card-actions">
             <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
-            <button type="button" class="plan-weekmenu-btn plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">Plan in weekmenu</button>
-            ${importMode ? `<button type="button" class="plan-weekmenu-btn import-transfer-btn import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">${importLabel}</button>` : ''}
-          </div>
-          <div class="recipe-card-export-row">
-            <div class="recipe-export-menu">
-              <button
-                type="button"
-                class="recipe-export-trigger"
-                data-export-toggle
-                aria-haspopup="true"
-                aria-expanded="false"
-                aria-label="Open exportmenu voor ${safeTitle}"
-              >
-                <i class="fas fa-share-alt" aria-hidden="true"></i>
-                <span>Exporteer</span>
-                <i class="fas fa-chevron-down export-chevron" aria-hidden="true"></i>
-              </button>
-              <div class="recipe-export-dropdown hidden" data-export-menu>
-                <button type="button" class="recipe-export-option notes-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                  <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
-                  <span>Notities</span>
+            <div class="recipe-secondary-actions">
+              <button type="button" class="recipe-inline-action plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">Plan in weekmenu</button>
+              ${importMode ? `<button type="button" class="recipe-inline-action import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">${importLabel}</button>` : ''}
+              <div class="recipe-export-menu">
+                <button
+                  type="button"
+                  class="recipe-export-trigger"
+                  data-export-toggle
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                  aria-label="Open exportmenu voor ${safeTitle}"
+                >
+                  <i class="fas fa-share-alt" aria-hidden="true"></i>
+                  <span>Exporteer</span>
+                  <i class="fas fa-chevron-down export-chevron" aria-hidden="true"></i>
                 </button>
-                <button type="button" class="recipe-export-option picnic-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                  <span class="picnic-button-mark" aria-hidden="true">P</span>
-                  <span>Picnic</span>
-                </button>
+                <div class="recipe-export-dropdown hidden" data-export-menu>
+                  <button type="button" class="recipe-export-option notes-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
+                    <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
+                    <span>Notities</span>
+                  </button>
+                  <button type="button" class="recipe-export-option picnic-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
+                    <span class="picnic-button-mark" aria-hidden="true">P</span>
+                    <span>Picnic</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
