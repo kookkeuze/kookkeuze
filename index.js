@@ -103,7 +103,8 @@ function ensureLoggedInOrNotify(targetEl) {
   return false;
 }
 
-const PICNIC_DEEPLINK_URL = 'https://picnic.app/nl/deeplink/?path=winkel';
+const ALBERT_HEIJN_FAVORITES_URL = 'https://www.ah.nl/allerhande/favorieten';
+const JUMBO_PRODUCTS_URL = 'https://www.jumbo.com/producten/';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -1032,9 +1033,13 @@ function showRecipes(arr) {
                     <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
                     <span>Notities</span>
                   </button>
-                  <button type="button" class="recipe-export-option picnic-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                    <span class="picnic-button-mark" aria-hidden="true">P</span>
-                    <span>Picnic</span>
+                  <button type="button" class="recipe-export-option ah-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
+                    <span class="ah-button-mark" aria-hidden="true">AH</span>
+                    <span>Albert Heijn</span>
+                  </button>
+                  <button type="button" class="recipe-export-option jumbo-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
+                    <span class="jumbo-button-mark" aria-hidden="true">J</span>
+                    <span>Jumbo</span>
                   </button>
                 </div>
               </div>
@@ -1057,152 +1062,6 @@ function showRecipes(arr) {
   hydrateResultImages();
 }
 
-const picnicModal = document.getElementById('picnicModal');
-const closePicnicModal = document.getElementById('closePicnicModal');
-const picnicModalBody = document.getElementById('picnicModalBody');
-const picnicModalRecipeTitle = document.getElementById('picnicModalRecipeTitle');
-let picnicModalState = {
-  title: '',
-  url: '',
-  ingredients: []
-};
-
-function closePicnicShoppingModal() {
-  picnicModal?.classList.add('hidden');
-  picnicModal?.setAttribute('aria-hidden', 'true');
-}
-
-function setPicnicModalLoading() {
-  if (!picnicModalBody) return;
-  picnicModalBody.innerHTML = `
-    <div class="picnic-loading">
-      <span class="picnic-spinner" aria-hidden="true"></span>
-      <p>Ingrediënten ophalen...</p>
-    </div>
-  `;
-}
-
-function updatePicnicSelectedCount() {
-  const countEl = document.getElementById('picnicSelectedCount');
-  const actionBtn = document.getElementById('picnicOpenBtn');
-  if (!countEl) return;
-
-  const selectedCount = picnicModalBody
-    ? picnicModalBody.querySelectorAll('.picnic-ingredient-checkbox:checked').length
-    : 0;
-  countEl.textContent = `${selectedCount} geselecteerd`;
-  if (actionBtn) actionBtn.disabled = selectedCount === 0;
-}
-
-function renderPicnicIngredients(ingredients) {
-  if (!picnicModalBody) return;
-
-  if (!ingredients.length) {
-    const safeRecipeUrl = escapeAttr(picnicModalState.url);
-    picnicModalBody.innerHTML = `
-      <div class="picnic-empty-state">
-        <i class="fas fa-list-ul" aria-hidden="true"></i>
-        <p>Voor dit recept konden geen ingrediënten automatisch worden gevonden.</p>
-        <a href="${safeRecipeUrl}" target="_blank" rel="noopener noreferrer" class="picnic-recipe-open-link">Open recept</a>
-      </div>
-    `;
-    return;
-  }
-
-  const items = ingredients.map((ingredient, index) => `
-    <label class="picnic-ingredient-item">
-      <input class="picnic-ingredient-checkbox" type="checkbox" data-index="${index}" checked>
-      <span>${escapeHtml(ingredient)}</span>
-    </label>
-  `).join('');
-
-  picnicModalBody.innerHTML = `
-    <div class="picnic-list-toolbar">
-      <span id="picnicSelectedCount" class="picnic-selected-count"></span>
-      <div class="picnic-list-tools">
-        <button id="picnicSelectAllBtn" type="button" class="picnic-tool-btn">Alles</button>
-        <button id="picnicSelectNoneBtn" type="button" class="picnic-tool-btn">Niets</button>
-      </div>
-    </div>
-    <p class="picnic-help-text">Picnic importeert deze lijst niet automatisch. Kopieer je selectie en open daarna zelf de Picnic-app.</p>
-    <div class="picnic-ingredient-list">${items}</div>
-    <div id="picnicFeedback" class="picnic-feedback" role="status" aria-live="polite"></div>
-    <div class="picnic-modal-actions">
-      <button id="picnicCopyBtn" type="button" class="picnic-copy-btn">
-        <i class="fas fa-copy" aria-hidden="true"></i>
-        Kopieer lijst
-      </button>
-      <button id="picnicOpenBtn" type="button" class="picnic-open-btn">
-        <i class="fas fa-shopping-basket" aria-hidden="true"></i>
-        Open Picnic
-      </button>
-    </div>
-  `;
-
-  document.getElementById('picnicSelectAllBtn')?.addEventListener('click', () => {
-    picnicModalBody.querySelectorAll('.picnic-ingredient-checkbox').forEach(input => {
-      input.checked = true;
-    });
-    updatePicnicSelectedCount();
-  });
-
-  document.getElementById('picnicSelectNoneBtn')?.addEventListener('click', () => {
-    picnicModalBody.querySelectorAll('.picnic-ingredient-checkbox').forEach(input => {
-      input.checked = false;
-    });
-    updatePicnicSelectedCount();
-  });
-
-  picnicModalBody.querySelectorAll('.picnic-ingredient-checkbox').forEach(input => {
-    input.addEventListener('change', updatePicnicSelectedCount);
-  });
-
-  document.getElementById('picnicCopyBtn')?.addEventListener('click', handlePicnicCopyClick);
-  document.getElementById('picnicOpenBtn')?.addEventListener('click', handlePicnicAppOpenClick);
-  updatePicnicSelectedCount();
-}
-
-function renderPicnicError() {
-  if (!picnicModalBody) return;
-  picnicModalBody.innerHTML = `
-    <div class="picnic-empty-state">
-      <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
-      <p>De boodschappenlijst kon niet worden opgehaald. Probeer het later opnieuw.</p>
-    </div>
-  `;
-}
-
-async function openPicnicShoppingModal(recipeUrl, recipeTitle) {
-  if (!picnicModal || !picnicModalBody) return;
-
-  picnicModalState = {
-    title: recipeTitle || 'Recept',
-    url: recipeUrl || '',
-    ingredients: []
-  };
-
-  if (picnicModalRecipeTitle) {
-    picnicModalRecipeTitle.textContent = picnicModalState.title;
-  }
-
-  picnicModal.classList.remove('hidden');
-  picnicModal.setAttribute('aria-hidden', 'false');
-  setPicnicModalLoading();
-
-  try {
-    const res = await fetch(`${API_BASE}/api/recipe-info?url=${encodeURIComponent(recipeUrl)}`, {
-      headers: authHeaders()
-    });
-    const data = await res.json();
-    const ingredients = Array.isArray(data.ingredients) ? data.ingredients : [];
-    picnicModalState.ingredients = ingredients;
-    renderPicnicIngredients(ingredients);
-  } catch (err) {
-    console.error(err);
-    renderPicnicError();
-  }
-}
-
 async function fetchRecipeIngredients(recipeUrl) {
   const res = await fetch(`${API_BASE}/api/recipe-info?url=${encodeURIComponent(recipeUrl)}`, {
     headers: authHeaders()
@@ -1210,21 +1069,26 @@ async function fetchRecipeIngredients(recipeUrl) {
   return res.json();
 }
 
-function getSelectedPicnicIngredients() {
-  if (!picnicModalBody) return [];
-  return [...picnicModalBody.querySelectorAll('.picnic-ingredient-checkbox:checked')]
-    .map(input => picnicModalState.ingredients[Number(input.dataset.index)])
-    .filter(Boolean);
-}
-
-function buildPicnicShoppingListText(items) {
-  const title = picnicModalState.title || 'Recept';
-  return [`Boodschappenlijst voor ${title}`, '', ...items.map(item => `- ${item}`)].join('\n');
-}
-
 function buildShoppingListText(title, items) {
   const safeTitle = title || 'Recept';
   return [`Boodschappenlijst voor ${safeTitle}`, '', ...items.map(item => `- ${item}`)].join('\n');
+}
+
+function buildAlbertHeijnExportText(title, recipeUrl, ingredients) {
+  const safeTitle = title || 'Recept';
+  const lines = [
+    `Albert Heijn import voor ${safeTitle}`,
+    '',
+    'Receptlink:',
+    recipeUrl || '-'
+  ];
+
+  if (ingredients.length) {
+    lines.push('', 'Ingrediënten:');
+    ingredients.forEach(item => lines.push(`- ${item}`));
+  }
+
+  return lines.join('\n');
 }
 
 async function copyTextToClipboard(text) {
@@ -1255,44 +1119,64 @@ async function copyTextToClipboard(text) {
   }
 }
 
-function setPicnicFeedback(message, tone = 'info') {
-  const feedback = document.getElementById('picnicFeedback');
-  if (!feedback) return;
-  feedback.textContent = message;
-  feedback.dataset.tone = tone;
+function openExternalStore(url) {
+  const popup = window.open(url, '_blank', 'noopener,noreferrer');
+  if (popup) {
+    popup.opener = null;
+    return;
+  }
+  window.location.assign(url);
 }
 
-async function handlePicnicCopyClick() {
-  const selectedIngredients = getSelectedPicnicIngredients();
+async function openAlbertHeijnExport(recipeUrl, recipeTitle) {
+  openExternalStore(ALBERT_HEIJN_FAVORITES_URL);
 
-  if (!selectedIngredients.length) {
-    setPicnicFeedback('Selecteer minimaal 1 ingrediënt.', 'error');
-    return;
+  let ingredients = [];
+  try {
+    const data = await fetchRecipeIngredients(recipeUrl);
+    ingredients = Array.isArray(data.ingredients) ? data.ingredients.filter(Boolean) : [];
+  } catch (err) {
+    console.error(err);
   }
 
-  const text = buildPicnicShoppingListText(selectedIngredients);
-  const copied = await copyTextToClipboard(text);
-
-  if (!copied) {
-    setPicnicFeedback('Kopiëren lukte niet automatisch. Probeer de lijst handmatig te selecteren.', 'error');
-    return;
-  }
+  const copied = await copyTextToClipboard(
+    buildAlbertHeijnExportText(recipeTitle || 'Recept', recipeUrl, ingredients)
+  );
 
   if (typeof showRecipeAddedToast === 'function') {
-    showRecipeAddedToast('Boodschappenlijst gekopieerd.');
+    showRecipeAddedToast(
+      copied
+        ? 'Albert Heijn geopend. Receptlink gekopieerd.'
+        : 'Albert Heijn geopend. Kies daar "Extern recept".'
+    );
   }
-  setPicnicFeedback('Lijst gekopieerd. Open nu Picnic en voeg de producten handmatig toe.', 'success');
 }
 
-function handlePicnicAppOpenClick() {
-  const opened = window.open(PICNIC_DEEPLINK_URL, '_blank');
+async function openJumboExport(recipeUrl, recipeTitle) {
+  openExternalStore(JUMBO_PRODUCTS_URL);
 
-  if (opened) {
-    opened.opener = null;
-    return;
+  try {
+    const data = await fetchRecipeIngredients(recipeUrl);
+    const ingredients = Array.isArray(data.ingredients) ? data.ingredients.filter(Boolean) : [];
+    const exportText = buildShoppingListText(
+      recipeTitle || 'Recept',
+      ingredients.length ? ingredients : ['Er konden geen ingrediënten automatisch worden opgehaald.']
+    );
+    const copied = await copyTextToClipboard(exportText);
+
+    if (typeof showRecipeAddedToast === 'function') {
+      showRecipeAddedToast(
+        copied
+          ? 'Jumbo geopend. Boodschappenlijst gekopieerd.'
+          : 'Jumbo geopend.'
+      );
+    }
+  } catch (err) {
+    console.error(err);
+    if (typeof showRecipeAddedToast === 'function') {
+      showRecipeAddedToast('Jumbo geopend. Ingrediënten ophalen lukte niet.');
+    }
   }
-
-  window.location.assign(PICNIC_DEEPLINK_URL);
 }
 
 async function openNotesExport(recipeUrl, recipeTitle) {
@@ -1330,11 +1214,6 @@ async function openNotesExport(recipeUrl, recipeTitle) {
   }
 }
 
-closePicnicModal?.addEventListener('click', closePicnicShoppingModal);
-picnicModal?.addEventListener('click', e => {
-  if (e.target === picnicModal) closePicnicShoppingModal();
-});
-
 function closeAllRecipeExportMenus(exceptMenu = null) {
   document.querySelectorAll('[data-export-menu]').forEach(menu => {
     const shouldKeepOpen = exceptMenu && menu === exceptMenu;
@@ -1370,11 +1249,19 @@ resultDiv?.addEventListener('click', e => {
     return;
   }
 
-  const picnicBtn = e.target.closest('.picnic-export-option');
-  if (picnicBtn) {
-    const recipeUrl = decodeURIComponent(picnicBtn.dataset.recipeUrl || '');
+  const ahBtn = e.target.closest('.ah-export-option');
+  if (ahBtn) {
+    const recipeUrl = decodeURIComponent(ahBtn.dataset.recipeUrl || '');
     closeAllRecipeExportMenus();
-    openPicnicShoppingModal(recipeUrl, picnicBtn.dataset.recipeTitle || 'Recept');
+    openAlbertHeijnExport(recipeUrl, ahBtn.dataset.recipeTitle || 'Recept');
+    return;
+  }
+
+  const jumboBtn = e.target.closest('.jumbo-export-option');
+  if (jumboBtn) {
+    const recipeUrl = decodeURIComponent(jumboBtn.dataset.recipeUrl || '');
+    closeAllRecipeExportMenus();
+    openJumboExport(recipeUrl, jumboBtn.dataset.recipeTitle || 'Recept');
     return;
   }
 
@@ -1810,9 +1697,13 @@ function renderPlannerSearchResults() {
                 <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
                 <span>Notities</span>
               </button>
-              <button type="button" class="recipe-export-option picnic-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                <span class="picnic-button-mark" aria-hidden="true">P</span>
-                <span>Picnic</span>
+              <button type="button" class="recipe-export-option ah-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
+                <span class="ah-button-mark" aria-hidden="true">AH</span>
+                <span>Albert Heijn</span>
+              </button>
+              <button type="button" class="recipe-export-option jumbo-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
+                <span class="jumbo-button-mark" aria-hidden="true">J</span>
+                <span>Jumbo</span>
               </button>
             </div>
           </div>
@@ -2010,11 +1901,19 @@ async function initWeekPlanner() {
       return;
     }
 
-    const picnicBtn = e.target.closest('.picnic-export-option');
-    if (picnicBtn) {
-      const recipeUrl = decodeURIComponent(picnicBtn.dataset.recipeUrl || '');
+    const ahBtn = e.target.closest('.ah-export-option');
+    if (ahBtn) {
+      const recipeUrl = decodeURIComponent(ahBtn.dataset.recipeUrl || '');
       closeAllRecipeExportMenus();
-      openPicnicShoppingModal(recipeUrl, picnicBtn.dataset.recipeTitle || 'Recept');
+      openAlbertHeijnExport(recipeUrl, ahBtn.dataset.recipeTitle || 'Recept');
+      return;
+    }
+
+    const jumboBtn = e.target.closest('.jumbo-export-option');
+    if (jumboBtn) {
+      const recipeUrl = decodeURIComponent(jumboBtn.dataset.recipeUrl || '');
+      closeAllRecipeExportMenus();
+      openJumboExport(recipeUrl, jumboBtn.dataset.recipeTitle || 'Recept');
       return;
     }
 
