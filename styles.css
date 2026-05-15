@@ -1570,6 +1570,10 @@ select:focus {
     align-content: start;
   }
 
+  .recipe-cards-container .recipe-card h3 {
+    min-height: calc(1.2em * 3);
+  }
+
   .recipe-secondary-actions {
     grid-template-columns: max-content;
     align-items: start;
