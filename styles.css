@@ -1238,6 +1238,7 @@ select:focus {
   border-radius: 12px;
   padding: 0;
   overflow: hidden;
+  position: relative;
   box-shadow: 0 6px 18px rgba(15, 30, 18, 0.08);
   transition: transform 0.2s ease;
 }
@@ -1457,6 +1458,10 @@ select:focus {
   margin-top: 2px;
 }
 
+.recipe-export-menu.is-open {
+  z-index: 80;
+}
+
 .recipe-export-trigger {
   min-width: 0;
   padding: 5px 10px;
@@ -1546,22 +1551,24 @@ select:focus {
     display: grid;
     grid-template-columns: minmax(0, 55%) minmax(320px, 45%);
     align-items: stretch;
+    overflow: visible;
   }
 
   .recipe-cards-container .result-image-cell {
     width: 100%;
-    height: 340px;
+    height: 100%;
     min-height: 340px;
-    max-height: 340px;
-    align-self: start;
+    max-height: none;
+    align-self: stretch;
+    border-radius: 12px 0 0 12px;
   }
 
   .recipe-cards-container .recipe-card-image,
   .recipe-cards-container .recipe-card-image-skeleton,
   .recipe-cards-container .recipe-card-image-fallback {
-    height: 340px;
+    height: 100%;
     min-height: 340px;
-    max-height: 340px;
+    max-height: none;
   }
 
   .recipe-card-content {
@@ -1836,32 +1843,6 @@ select:focus {
 }
 
 .notes-button-mark i {
-  font-size: 11px;
-}
-
-.ah-button-mark,
-.jumbo-button-mark {
-  width: 20px;
-  height: 20px;
-  border-radius: 7px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: Arial, sans-serif;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0;
-  line-height: 1;
-}
-
-.ah-button-mark {
-  background: #00a1e0;
-  color: #ffffff;
-}
-
-.jumbo-button-mark {
-  background: #ffd326;
-  color: #202020;
   font-size: 11px;
 }
 

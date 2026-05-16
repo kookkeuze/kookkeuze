@@ -103,9 +103,6 @@ function ensureLoggedInOrNotify(targetEl) {
   return false;
 }
 
-const ALBERT_HEIJN_FAVORITES_URL = 'https://www.ah.nl/allerhande/favorieten';
-const JUMBO_PRODUCTS_URL = 'https://www.jumbo.com/producten/';
-
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -1033,14 +1030,6 @@ function showRecipes(arr) {
                     <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
                     <span>Notities</span>
                   </button>
-                  <button type="button" class="recipe-export-option ah-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                    <span class="ah-button-mark" aria-hidden="true">AH</span>
-                    <span>Albert Heijn</span>
-                  </button>
-                  <button type="button" class="recipe-export-option jumbo-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                    <span class="jumbo-button-mark" aria-hidden="true">J</span>
-                    <span>Jumbo</span>
-                  </button>
                 </div>
               </div>
             </div>
@@ -1074,23 +1063,6 @@ function buildShoppingListText(title, items) {
   return [`Boodschappenlijst voor ${safeTitle}`, '', ...items.map(item => `- ${item}`)].join('\n');
 }
 
-function buildAlbertHeijnExportText(title, recipeUrl, ingredients) {
-  const safeTitle = title || 'Recept';
-  const lines = [
-    `Albert Heijn import voor ${safeTitle}`,
-    '',
-    'Receptlink:',
-    recipeUrl || '-'
-  ];
-
-  if (ingredients.length) {
-    lines.push('', 'Ingrediënten:');
-    ingredients.forEach(item => lines.push(`- ${item}`));
-  }
-
-  return lines.join('\n');
-}
-
 async function copyTextToClipboard(text) {
   if (navigator.clipboard && window.isSecureContext) {
     try {
@@ -1116,66 +1088,6 @@ async function copyTextToClipboard(text) {
     return false;
   } finally {
     document.body.removeChild(textarea);
-  }
-}
-
-function openExternalStore(url) {
-  const popup = window.open(url, '_blank', 'noopener,noreferrer');
-  if (popup) {
-    popup.opener = null;
-    return;
-  }
-  window.location.assign(url);
-}
-
-async function openAlbertHeijnExport(recipeUrl, recipeTitle) {
-  openExternalStore(ALBERT_HEIJN_FAVORITES_URL);
-
-  let ingredients = [];
-  try {
-    const data = await fetchRecipeIngredients(recipeUrl);
-    ingredients = Array.isArray(data.ingredients) ? data.ingredients.filter(Boolean) : [];
-  } catch (err) {
-    console.error(err);
-  }
-
-  const copied = await copyTextToClipboard(
-    buildAlbertHeijnExportText(recipeTitle || 'Recept', recipeUrl, ingredients)
-  );
-
-  if (typeof showRecipeAddedToast === 'function') {
-    showRecipeAddedToast(
-      copied
-        ? 'Albert Heijn geopend. Receptlink gekopieerd.'
-        : 'Albert Heijn geopend. Kies daar "Extern recept".'
-    );
-  }
-}
-
-async function openJumboExport(recipeUrl, recipeTitle) {
-  openExternalStore(JUMBO_PRODUCTS_URL);
-
-  try {
-    const data = await fetchRecipeIngredients(recipeUrl);
-    const ingredients = Array.isArray(data.ingredients) ? data.ingredients.filter(Boolean) : [];
-    const exportText = buildShoppingListText(
-      recipeTitle || 'Recept',
-      ingredients.length ? ingredients : ['Er konden geen ingrediënten automatisch worden opgehaald.']
-    );
-    const copied = await copyTextToClipboard(exportText);
-
-    if (typeof showRecipeAddedToast === 'function') {
-      showRecipeAddedToast(
-        copied
-          ? 'Jumbo geopend. Boodschappenlijst gekopieerd.'
-          : 'Jumbo geopend.'
-      );
-    }
-  } catch (err) {
-    console.error(err);
-    if (typeof showRecipeAddedToast === 'function') {
-      showRecipeAddedToast('Jumbo geopend. Ingrediënten ophalen lukte niet.');
-    }
   }
 }
 
@@ -1246,22 +1158,6 @@ resultDiv?.addEventListener('click', e => {
     const recipeUrl = decodeURIComponent(notesBtn.dataset.recipeUrl || '');
     closeAllRecipeExportMenus();
     openNotesExport(recipeUrl, notesBtn.dataset.recipeTitle || 'Recept');
-    return;
-  }
-
-  const ahBtn = e.target.closest('.ah-export-option');
-  if (ahBtn) {
-    const recipeUrl = decodeURIComponent(ahBtn.dataset.recipeUrl || '');
-    closeAllRecipeExportMenus();
-    openAlbertHeijnExport(recipeUrl, ahBtn.dataset.recipeTitle || 'Recept');
-    return;
-  }
-
-  const jumboBtn = e.target.closest('.jumbo-export-option');
-  if (jumboBtn) {
-    const recipeUrl = decodeURIComponent(jumboBtn.dataset.recipeUrl || '');
-    closeAllRecipeExportMenus();
-    openJumboExport(recipeUrl, jumboBtn.dataset.recipeTitle || 'Recept');
     return;
   }
 
@@ -1697,14 +1593,6 @@ function renderPlannerSearchResults() {
                 <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
                 <span>Notities</span>
               </button>
-              <button type="button" class="recipe-export-option ah-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                <span class="ah-button-mark" aria-hidden="true">AH</span>
-                <span>Albert Heijn</span>
-              </button>
-              <button type="button" class="recipe-export-option jumbo-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                <span class="jumbo-button-mark" aria-hidden="true">J</span>
-                <span>Jumbo</span>
-              </button>
             </div>
           </div>
         </div>
@@ -1898,22 +1786,6 @@ async function initWeekPlanner() {
       const recipeUrl = decodeURIComponent(notesBtn.dataset.recipeUrl || '');
       closeAllRecipeExportMenus();
       openNotesExport(recipeUrl, notesBtn.dataset.recipeTitle || 'Recept');
-      return;
-    }
-
-    const ahBtn = e.target.closest('.ah-export-option');
-    if (ahBtn) {
-      const recipeUrl = decodeURIComponent(ahBtn.dataset.recipeUrl || '');
-      closeAllRecipeExportMenus();
-      openAlbertHeijnExport(recipeUrl, ahBtn.dataset.recipeTitle || 'Recept');
-      return;
-    }
-
-    const jumboBtn = e.target.closest('.jumbo-export-option');
-    if (jumboBtn) {
-      const recipeUrl = decodeURIComponent(jumboBtn.dataset.recipeUrl || '');
-      closeAllRecipeExportMenus();
-      openJumboExport(recipeUrl, jumboBtn.dataset.recipeTitle || 'Recept');
       return;
     }
 
