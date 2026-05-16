@@ -539,7 +539,8 @@ button {
 }
 
 #addRecipeForm input,
-#addRecipeForm select {
+#addRecipeForm select,
+#addRecipeForm textarea {
   width: 100%;
   padding: 11px 13px;
   border: 1.5px solid #d5e3d9;
@@ -551,10 +552,18 @@ button {
 }
 
 #addRecipeForm input:focus,
-#addRecipeForm select:focus {
+#addRecipeForm select:focus,
+#addRecipeForm textarea:focus {
   outline: none;
   border-color: #63D671;
   box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
+}
+
+#addRecipeForm textarea {
+  min-height: 116px;
+  resize: vertical;
+  line-height: 1.45;
+  font-family: inherit;
 }
 
 #addRecipeForm .field-missing {
@@ -581,6 +590,25 @@ button {
   color: #5f6b63;
   font-size: 12px;
   line-height: 1.35;
+}
+
+#addRecipeForm .add-recipe-note-block {
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #e3ece5;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fbfdfb 0%, #f6fbf7 100%);
+}
+
+#addRecipeForm .add-recipe-note-block > label {
+  font-size: 14px;
+}
+
+.add-recipe-note-help {
+  margin: -2px 0 2px;
+  color: #617066;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 #addRecipeForm button[type="submit"] {

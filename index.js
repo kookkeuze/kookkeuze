@@ -2437,10 +2437,12 @@ if (homeLogo) {
   });
 }
 
-addRecipeForm.addEventListener('submit', e => {
+addRecipeForm.addEventListener('submit', async e => {
   e.preventDefault();
   if (!ensureLoggedInOrNotify(addMessageDiv)) return;
   const cal = document.getElementById('caloriesNew').value.trim();
+  const recipeNoteNew = document.getElementById('recipeNoteNew');
+  const noteText = recipeNoteNew?.value.trim() || '';
   const bodyData = {
     title:         document.getElementById('title').value,
     url:           document.getElementById('url').value,
@@ -2451,25 +2453,39 @@ addRecipeForm.addEventListener('submit', e => {
     calories:      cal ? parseInt(cal, 10) : null
   };
 
-  fetch(`${API_BASE}/api/recipes`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify(withActiveDatabaseBody(bodyData))
-  })
-    .then(r => r.json())
-    .then(d => {
-      if (d.error) {
-        addMessageDiv.innerHTML = `<p style="color:red;">${d.error}</p>`;
-        return;
-      }
+  try {
+    const res = await fetch(`${API_BASE}/api/recipes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(withActiveDatabaseBody(bodyData))
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok || d.error) {
+      addMessageDiv.innerHTML = `<p style="color:red;">${d.error || 'Er ging iets mis bij het opslaan van het recept.'}</p>`;
+      return;
+    }
 
-      addMessageDiv.innerHTML = '';
-      showRecipeAddedToast('Recept toegevoegd!');
-      addRecipeForm.reset();
-      ['dishTypeNew', 'mealCategoryNew', 'mealTypeNew', 'timeRequiredNew']
-        .forEach(id => document.getElementById(id)?._multiSelectApi?.clear());
-    })
-    .catch(console.error);
+    let toastMessage = 'Recept toegevoegd!';
+    let inlineMessage = '';
+    if (noteText && d.id) {
+      try {
+        await saveRecipeNote(d.id, bodyData.url, noteText);
+        toastMessage = 'Recept en notitie toegevoegd!';
+      } catch (noteErr) {
+        console.error(noteErr);
+        inlineMessage = '<p style="color:#8a6d3b;">Recept toegevoegd, maar de notitie kon niet meteen worden opgeslagen. Je kunt die later alsnog toevoegen.</p>';
+      }
+    }
+
+    addMessageDiv.innerHTML = inlineMessage;
+    showRecipeAddedToast(toastMessage);
+    addRecipeForm.reset();
+    ['dishTypeNew', 'mealCategoryNew', 'mealTypeNew', 'timeRequiredNew']
+      .forEach(id => document.getElementById(id)?._multiSelectApi?.clear());
+  } catch (err) {
+    console.error(err);
+    addMessageDiv.innerHTML = '<p style="color:red;">Server niet bereikbaar.</p>';
+  }
 });
 
 /* ========= OVERZICHT RECEPTEN (TAB 3) ========= */
