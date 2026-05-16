@@ -1556,19 +1556,19 @@ select:focus {
 
   .recipe-cards-container .result-image-cell {
     width: 100%;
-    height: 100%;
+    height: 340px;
     min-height: 340px;
-    max-height: none;
-    align-self: stretch;
+    max-height: 340px;
+    align-self: start;
     border-radius: 12px 0 0 12px;
   }
 
   .recipe-cards-container .recipe-card-image,
   .recipe-cards-container .recipe-card-image-skeleton,
   .recipe-cards-container .recipe-card-image-fallback {
-    height: 100%;
+    height: 340px;
     min-height: 340px;
-    max-height: none;
+    max-height: 340px;
   }
 
   .recipe-card-content {
@@ -2247,14 +2247,6 @@ select:focus {
   color: #235b2a;
 }
 
-.recipe-card-actions .plan-recipe-btn {
-  width: 100%;
-  min-height: 34px;
-  padding: 6px 10px;
-  font-size: 11px;
-  justify-content: center;
-}
-
 .recipe-card-actions .import-transfer-btn {
   width: 100%;
   min-height: 34px;
@@ -2276,6 +2268,11 @@ select:focus {
   min-height: 36px;
   padding: 7px 12px;
   font-size: 11px;
+}
+
+.recipe-export-dropdown .plan-recipe-btn,
+.recipe-export-dropdown .weekmenu-assign-btn {
+  justify-content: flex-start;
 }
 
 .weekmenu-search-item .plan-weekmenu-btn.weekmenu-import-btn {
