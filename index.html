@@ -477,6 +477,26 @@
       </div>
     </div>
 
+    <div id="recipeNoteModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content recipe-note-modal-content">
+        <button id="closeRecipeNoteModal" class="modal-close" aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="recipe-note-modal-header">
+          <p class="recipe-note-modal-kicker">Eigen twist</p>
+          <h3 class="assign-modal-title">Notitie bij recept</h3>
+          <p id="recipeNoteModalRecipeTitle" class="assign-modal-sub"></p>
+        </div>
+        <label for="recipeNoteTextarea" class="recipe-note-label">Notitie</label>
+        <textarea id="recipeNoteTextarea" class="recipe-note-textarea" placeholder="Bijvoorbeeld: kip toevoegen, extra knoflook, meer chili..." maxlength="500"></textarea>
+        <p class="recipe-note-help">Voeg hier je eigen aanpassing of extra ingrediënt toe voor dit recept.</p>
+        <div class="recipe-note-actions">
+          <button id="recipeNoteDeleteBtn" type="button" class="overview-view-btn hidden">Verwijder notitie</button>
+          <button id="recipeNoteSaveBtn" type="button" class="green-btn">Opslaan</button>
+        </div>
+      </div>
+    </div>
+
     <div id="databaseModal" class="modal hidden" aria-hidden="true">
       <div class="modal-content database-modal-content">
         <button id="closeDatabaseModal" class="modal-close" aria-label="Sluiten">

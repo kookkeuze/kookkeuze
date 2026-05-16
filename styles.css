@@ -1281,6 +1281,13 @@ select:focus {
   min-width: 0;
 }
 
+.recipe-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+
 .recipe-card h3 {
   margin: 0;
   color: #3a3a3a;
@@ -1542,6 +1549,51 @@ select:focus {
   align-items: center;
   justify-content: center;
   flex: 0 0 20px;
+  font-size: 10px;
+}
+
+.recipe-note-btn {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #d9e6dd;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #6f7d75;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+  box-shadow: none;
+}
+
+.recipe-note-btn:hover {
+  border-color: #c3d7ca;
+  background: #f7fbf8;
+  color: #35533d;
+  transform: none;
+}
+
+.recipe-note-btn.has-note {
+  border-color: #63D671;
+  background: #eef9f0;
+  color: #2e7b3f;
+}
+
+.recipe-note-btn--card {
+  margin-top: 2px;
+}
+
+.recipe-note-btn--inline {
+  margin-right: 4px;
+}
+
+.recipe-note-btn--slot {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
   font-size: 10px;
 }
 
@@ -1969,6 +2021,7 @@ select:focus {
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-start;
+  align-items: center;
 }
 
 .weekmenu-cell-actions-empty {
@@ -2105,6 +2158,68 @@ select:focus {
   margin-top: 8px;
   color: #2f3a35;
   font-size: 1.45rem;
+}
+
+.modal-content.recipe-note-modal-content {
+  width: min(520px, 96vw);
+  max-width: min(520px, 96vw);
+  padding: 28px 24px 22px;
+}
+
+.recipe-note-modal-header {
+  margin-bottom: 14px;
+  padding-right: 28px;
+}
+
+.recipe-note-modal-kicker {
+  margin: 0 0 6px;
+  color: #6f7d75;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.recipe-note-label {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #30403a;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.recipe-note-textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: 12px 14px;
+  border: 1px solid #dbe7de;
+  border-radius: 14px;
+  resize: vertical;
+  font: inherit;
+  line-height: 1.5;
+  color: #2f3a35;
+  background: #ffffff;
+}
+
+.recipe-note-textarea:focus {
+  outline: none;
+  border-color: #63D671;
+  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.14);
+}
+
+.recipe-note-help {
+  margin: 10px 0 0;
+  color: #6e7b74;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.recipe-note-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .assign-modal-sub {

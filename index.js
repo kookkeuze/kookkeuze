@@ -12,6 +12,7 @@ function resolveApiBase() {
 }
 
 const API_BASE = resolveApiBase();
+const RECIPE_NOTE_STORAGE_KEY = 'kookkeuze_recipe_notes_v1';
 
 const authHeaders = () => {
   const t = getValidToken();
@@ -114,6 +115,78 @@ function escapeHtml(value) {
 
 function escapeAttr(value) {
   return escapeHtml(value).replace(/`/g, '&#96;');
+}
+
+function normalizeRecipeNoteUrl(url) {
+  return String(url || '').trim().replace(/\/+$/, '');
+}
+
+function getRecipeNotesStore() {
+  try {
+    const raw = localStorage.getItem(RECIPE_NOTE_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (_err) {
+    return {};
+  }
+}
+
+function saveRecipeNotesStore(store) {
+  try {
+    localStorage.setItem(RECIPE_NOTE_STORAGE_KEY, JSON.stringify(store));
+  } catch (_err) {
+    // negeer opslagfouten stilletjes
+  }
+}
+
+function getRecipeNoteKey(recipeId, recipeUrl) {
+  const userId = getCurrentUserId() || 'guest';
+  const dbOwnerId = getActiveDatabaseOwnerId() || 'default';
+  const safeId = Number(recipeId) > 0 ? `id:${Number(recipeId)}` : '';
+  const safeUrl = normalizeRecipeNoteUrl(recipeUrl);
+  const identity = safeId || `url:${safeUrl}`;
+  return `u:${userId}|db:${dbOwnerId}|${identity}`;
+}
+
+function getRecipeNote(recipeId, recipeUrl) {
+  const store = getRecipeNotesStore();
+  const key = getRecipeNoteKey(recipeId, recipeUrl);
+  return String(store[key] || '').trim();
+}
+
+function setRecipeNote(recipeId, recipeUrl, text) {
+  const store = getRecipeNotesStore();
+  const key = getRecipeNoteKey(recipeId, recipeUrl);
+  const cleaned = String(text || '').trim();
+  if (cleaned) {
+    store[key] = cleaned;
+  } else {
+    delete store[key];
+  }
+  saveRecipeNotesStore(store);
+}
+
+function renderRecipeNoteButton(recipeId, recipeUrl, recipeTitle, extraClass = '') {
+  const hasNote = !!getRecipeNote(recipeId, recipeUrl);
+  const safeId = Number(recipeId) > 0 ? String(Number(recipeId)) : '';
+  const safeUrl = escapeAttr(encodeURIComponent(recipeUrl || ''));
+  const safeTitle = escapeAttr(recipeTitle || 'Recept');
+  const label = hasNote ? `Bewerk notitie voor ${safeTitle}` : `Voeg notitie toe aan ${safeTitle}`;
+  return `
+    <button
+      type="button"
+      class="recipe-note-btn${hasNote ? ' has-note' : ''}${extraClass ? ` ${extraClass}` : ''}"
+      data-recipe-note-btn
+      data-recipe-id="${safeId}"
+      data-recipe-url="${safeUrl}"
+      data-recipe-title="${safeTitle}"
+      aria-label="${label}"
+      title="${label}"
+    >
+      <i class="fas fa-plus" aria-hidden="true"></i>
+    </button>
+  `;
 }
 
 /* ========= RECEPT AFBEELDINGEN ========= */
@@ -989,6 +1062,7 @@ function showRecipes(arr) {
     : 'Importeer naar gedeelde database';
   let html = `<div class="recipe-cards-container search-results${singleClass}">`;
   arr.forEach(r => {
+    const recipeId = Number(r.id) > 0 ? Number(r.id) : '';
     const safeUrl = encodeURIComponent(r.url || '');
     const safeHref = escapeAttr(r.url || '');
     const safeTitle = escapeAttr(r.title || 'Recept');
@@ -999,7 +1073,10 @@ function showRecipes(arr) {
           <div class="recipe-card-image-skeleton"></div>
         </div>
         <div class="recipe-card-content">
-          <h3>${displayTitle}</h3>
+          <div class="recipe-card-head">
+            <h3>${displayTitle}</h3>
+            ${renderRecipeNoteButton(recipeId, r.url || '', r.title || 'Recept', 'recipe-note-btn--card')}
+          </div>
           <div class="recipe-card-actions">
             <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
@@ -1062,6 +1139,79 @@ function buildShoppingListText(title, items) {
   const safeTitle = title || 'Recept';
   return [`Boodschappenlijst voor ${safeTitle}`, '', ...items.map(item => `- ${item}`)].join('\n');
 }
+
+const recipeNoteModal = document.getElementById('recipeNoteModal');
+const closeRecipeNoteModal = document.getElementById('closeRecipeNoteModal');
+const recipeNoteModalRecipeTitle = document.getElementById('recipeNoteModalRecipeTitle');
+const recipeNoteTextarea = document.getElementById('recipeNoteTextarea');
+const recipeNoteSaveBtn = document.getElementById('recipeNoteSaveBtn');
+const recipeNoteDeleteBtn = document.getElementById('recipeNoteDeleteBtn');
+let recipeNoteModalState = {
+  recipeId: '',
+  recipeUrl: '',
+  recipeTitle: 'Recept'
+};
+
+function refreshRecipeNoteButtons() {
+  document.querySelectorAll('[data-recipe-note-btn]').forEach(btn => {
+    const recipeId = btn.dataset.recipeId || '';
+    const recipeUrl = decodeURIComponent(btn.dataset.recipeUrl || '');
+    const recipeTitle = btn.dataset.recipeTitle || 'Recept';
+    const hasNote = !!getRecipeNote(recipeId, recipeUrl);
+    btn.classList.toggle('has-note', hasNote);
+    const label = hasNote ? `Bewerk notitie voor ${recipeTitle}` : `Voeg notitie toe aan ${recipeTitle}`;
+    btn.setAttribute('aria-label', label);
+    btn.setAttribute('title', label);
+  });
+}
+
+function closeRecipeNoteModalPanel() {
+  recipeNoteModal?.classList.add('hidden');
+  recipeNoteModal?.setAttribute('aria-hidden', 'true');
+}
+
+function openRecipeNoteModal(recipeId, recipeUrl, recipeTitle) {
+  recipeNoteModalState = {
+    recipeId: recipeId || '',
+    recipeUrl: recipeUrl || '',
+    recipeTitle: recipeTitle || 'Recept'
+  };
+  if (recipeNoteModalRecipeTitle) {
+    recipeNoteModalRecipeTitle.textContent = recipeNoteModalState.recipeTitle;
+  }
+  const currentNote = getRecipeNote(recipeNoteModalState.recipeId, recipeNoteModalState.recipeUrl);
+  if (recipeNoteTextarea) {
+    recipeNoteTextarea.value = currentNote;
+  }
+  recipeNoteDeleteBtn?.classList.toggle('hidden', !currentNote);
+  recipeNoteModal?.classList.remove('hidden');
+  recipeNoteModal?.setAttribute('aria-hidden', 'false');
+  requestAnimationFrame(() => recipeNoteTextarea?.focus());
+}
+
+closeRecipeNoteModal?.addEventListener('click', closeRecipeNoteModalPanel);
+recipeNoteModal?.addEventListener('click', e => {
+  if (e.target === recipeNoteModal) closeRecipeNoteModalPanel();
+});
+recipeNoteSaveBtn?.addEventListener('click', () => {
+  setRecipeNote(recipeNoteModalState.recipeId, recipeNoteModalState.recipeUrl, recipeNoteTextarea?.value || '');
+  refreshRecipeNoteButtons();
+  recipeNoteDeleteBtn?.classList.toggle('hidden', !getRecipeNote(recipeNoteModalState.recipeId, recipeNoteModalState.recipeUrl));
+  closeRecipeNoteModalPanel();
+  if (typeof showRecipeAddedToast === 'function') {
+    showRecipeAddedToast('Notitie opgeslagen.');
+  }
+});
+recipeNoteDeleteBtn?.addEventListener('click', () => {
+  setRecipeNote(recipeNoteModalState.recipeId, recipeNoteModalState.recipeUrl, '');
+  if (recipeNoteTextarea) recipeNoteTextarea.value = '';
+  refreshRecipeNoteButtons();
+  recipeNoteDeleteBtn?.classList.add('hidden');
+  closeRecipeNoteModalPanel();
+  if (typeof showRecipeAddedToast === 'function') {
+    showRecipeAddedToast('Notitie verwijderd.');
+  }
+});
 
 async function copyTextToClipboard(text) {
   if (navigator.clipboard && window.isSecureContext) {
@@ -1143,6 +1293,13 @@ document.addEventListener('click', e => {
 });
 
 resultDiv?.addEventListener('click', e => {
+  const noteBtn = e.target.closest('[data-recipe-note-btn]');
+  if (noteBtn) {
+    const recipeUrl = decodeURIComponent(noteBtn.dataset.recipeUrl || '');
+    openRecipeNoteModal(noteBtn.dataset.recipeId || '', recipeUrl, noteBtn.dataset.recipeTitle || 'Recept');
+    return;
+  }
+
   const exportToggle = e.target.closest('[data-export-toggle]');
   if (exportToggle) {
     const wrapper = exportToggle.closest('.recipe-export-menu');
@@ -1190,6 +1347,13 @@ const assignModalSaveBtn = document.getElementById('assignModalSaveBtn');
 const weekmenuPreviewModal = document.getElementById('weekmenuPreviewModal');
 const closeWeekmenuPreviewModal = document.getElementById('closeWeekmenuPreviewModal');
 const weekmenuPreviewBody = document.getElementById('weekmenuPreviewBody');
+
+weekmenuGrid?.addEventListener('click', e => {
+  const noteBtn = e.target.closest('[data-recipe-note-btn]');
+  if (!noteBtn) return;
+  const recipeUrl = decodeURIComponent(noteBtn.dataset.recipeUrl || '');
+  openRecipeNoteModal(noteBtn.dataset.recipeId || '', recipeUrl, noteBtn.dataset.recipeTitle || 'Recept');
+});
 
 const plannerDays = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
 const WEEKMENU_SEARCH_PAGE_SIZE = 10;
@@ -1413,6 +1577,7 @@ function renderWeekMenuGrid() {
 
     const renderSlot = (slotKey, slotLabel, entry) => {
       if (entry) {
+        const entryRecipeId = Number(entry.recipe_id || entry.id || 0) > 0 ? Number(entry.recipe_id || entry.id || 0) : '';
         const safeUrl = encodeURIComponent(entry.url || '');
         return `
           <div class="weekmenu-slot-item">
@@ -1425,6 +1590,7 @@ function renderWeekMenuGrid() {
               <span class="weekmenu-open-link-icon" aria-hidden="true"><i class="fas fa-external-link-alt"></i></span>
             </a>
             <div class="weekmenu-cell-actions">
+              ${renderRecipeNoteButton(entryRecipeId, entry.url || '', entry.title || 'Recept', 'recipe-note-btn--slot')}
               <button type="button" class="green-btn weekmenu-replace-btn" data-day="${day}" data-slot="${slotKey}">Wijzig</button>
               <button type="button" class="pink-btn weekmenu-clear-btn weekmenu-clear-icon-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Verwijder recept uit ${slotLabel}">
                 <i class="fas fa-times" aria-hidden="true"></i>
@@ -1555,6 +1721,7 @@ function renderPlannerSearchResults() {
 
   let html = '';
   pageRecipes.forEach(recipe => {
+    const recipeId = Number(recipe.id) > 0 ? Number(recipe.id) : '';
     const safeUrl = encodeURIComponent(recipe.url || '');
     const safeTitle = escapeAttr(recipe.title || 'Recept');
     const displayTitle = escapeHtml(recipe.title || 'Recept');
@@ -1567,6 +1734,7 @@ function renderPlannerSearchResults() {
           <button type="button" class="weekmenu-search-title weekmenu-preview-title" data-recipe-id="${recipe.id}">${displayTitle}</button>
         </div>
         <div class="weekmenu-search-actions">
+          ${renderRecipeNoteButton(recipeId, recipe.url || '', recipe.title || 'Recept', 'recipe-note-btn--inline')}
           <div class="recipe-export-menu weekmenu-export-menu">
             <button
               type="button"
@@ -1771,6 +1939,13 @@ async function initWeekPlanner() {
     renderPlannerSearchResults();
   });
   weekmenuSearchResults?.addEventListener('click', e => {
+    const noteBtn = e.target.closest('[data-recipe-note-btn]');
+    if (noteBtn) {
+      const recipeUrl = decodeURIComponent(noteBtn.dataset.recipeUrl || '');
+      openRecipeNoteModal(noteBtn.dataset.recipeId || '', recipeUrl, noteBtn.dataset.recipeTitle || 'Recept');
+      return;
+    }
+
     const exportToggle = e.target.closest('[data-export-toggle]');
     if (exportToggle) {
       const wrapper = exportToggle.closest('.recipe-export-menu');
