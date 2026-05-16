@@ -1964,13 +1964,13 @@ select:focus {
 
 .weekmenu-open-link {
   color: #235b2a;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   text-decoration: none;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 8px;
+  gap: 6px;
   line-height: 1.32;
 }
 
@@ -2024,42 +2024,52 @@ select:focus {
   align-items: center;
 }
 
+.weekmenu-slot-item .weekmenu-cell-actions:not(.weekmenu-cell-actions-empty) {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 30px;
+  gap: 5px;
+  align-items: center;
+}
+
 .weekmenu-cell-actions-empty {
   justify-content: flex-end;
 }
 
 .weekmenu-slot-item .weekmenu-replace-btn {
   min-height: 30px;
-  padding: 5px 10px;
+  padding: 4px 10px;
   border-radius: 999px;
-  min-width: 62px;
+  min-width: 0;
+  width: 100%;
   font-size: 10px;
   border-width: 1px;
-  border-color: #cfe1d2;
-  color: #2f6a37;
-  background: #ffffff;
+  border-color: #d8e4dc;
+  color: #3b5443;
+  background: #fbfdfb;
+  justify-content: center;
 }
 
 .weekmenu-slot-item .weekmenu-replace-btn:hover {
-  border-color: #bdd4c1;
+  border-color: #c9d8ce;
   background: #f4faf5;
-  color: #25572e;
+  color: #2f4a38;
   transform: none;
   box-shadow: none;
 }
 
 .weekmenu-slot-item .weekmenu-clear-icon-btn,
-.weekmenu-slot-item .weekmenu-add-btn {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
+.weekmenu-slot-item .weekmenu-add-btn,
+.weekmenu-slot-item .recipe-note-btn--slot {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
   padding: 0;
   border-radius: 999px;
   border-width: 1px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 11px;
 }
 
 .weekmenu-calendar {
@@ -2096,17 +2106,17 @@ select:focus {
 }
 
 .weekmenu-day-body {
-  padding: 8px;
+  padding: 7px;
   display: grid;
-  gap: 8px;
+  gap: 7px;
 }
 
 .weekmenu-slot-item {
   border: 1px solid #edf3ee;
   border-radius: 10px;
-  padding: 7px;
+  padding: 7px 7px 8px;
   display: grid;
-  gap: 6px;
+  gap: 5px;
   align-content: start;
   background: #fbfdfb;
   min-height: 170px;
@@ -2122,29 +2132,33 @@ select:focus {
 }
 
 .weekmenu-slot-item .weekmenu-add-btn {
-  border-color: #63D671;
-  color: #2f8a44;
-  background: #f4fcf6;
+  border-color: #d4e5d9;
+  color: #597267;
+  background: #ffffff;
+}
+
+.weekmenu-slot-item .recipe-note-btn--slot {
+  margin: 0;
 }
 
 .weekmenu-slot-item .weekmenu-add-btn:hover {
-  border-color: #56c465;
-  color: #2a7c3e;
-  background: #eaf8ed;
+  border-color: #bfd4c6;
+  color: #35533d;
+  background: #f7fbf8;
   transform: none;
   box-shadow: none;
 }
 
 .weekmenu-slot-item .weekmenu-clear-icon-btn {
-  border-color: #efc5c5;
-  color: #c65d5d;
-  background: #fff7f7;
+  border-color: #dfbdbd;
+  color: #bb5c5c;
+  background: #fff4f4;
 }
 
 .weekmenu-slot-item .weekmenu-clear-icon-btn:hover {
-  border-color: #e9abab;
-  color: #b84b4b;
-  background: #ffefef;
+  border-color: #d9aaaa;
+  color: #a94a4a;
+  background: #ffecec;
   transform: none;
   box-shadow: none;
 }
