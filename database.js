@@ -297,6 +297,26 @@ async function initializeDatabase() {
     `);
     console.log('✅ Shared database tables created/verified');
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS recipe_notes (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        database_id INTEGER NOT NULL REFERENCES recipe_databases(id) ON DELETE CASCADE,
+        recipe_id INTEGER REFERENCES recipes(id) ON DELETE CASCADE,
+        recipe_url TEXT,
+        recipe_key TEXT NOT NULL,
+        note_text TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (user_id, database_id, recipe_key)
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_recipe_notes_lookup
+      ON recipe_notes (user_id, database_id, updated_at DESC)
+    `);
+    console.log('✅ Recipe notes table created/verified');
+
     // Check if tables have data
     const userCount = await pool.query('SELECT COUNT(*) FROM users');
     const recipeCount = await pool.query('SELECT COUNT(*) FROM recipes');
@@ -366,6 +386,19 @@ function toDisplayValue(rawValue) {
     .map(v => v.trim())
     .filter(Boolean)
     .join(', ');
+}
+
+function normalizeRecipeNoteUrl(url) {
+  return String(url || '').trim().replace(/\/+$/, '');
+}
+
+function buildRecipeNoteKey(recipeId, recipeUrl) {
+  const safeId = Number(recipeId);
+  if (Number.isInteger(safeId) && safeId > 0) {
+    return `id:${safeId}`;
+  }
+  const safeUrl = normalizeRecipeNoteUrl(recipeUrl);
+  return safeUrl ? `url:${safeUrl}` : '';
 }
 
 function getRecipes(filters, callback) {
@@ -699,6 +732,87 @@ function deleteMealPlanEntry(entry, callback) {
       return callback(err);
     }
     callback(null);
+  });
+}
+
+function listRecipeNotesForDatabase(entry, callback) {
+  const { user_id, database_id } = entry;
+  const query = `
+    SELECT recipe_id, recipe_url, recipe_key, note_text
+    FROM recipe_notes
+    WHERE user_id = $1
+      AND database_id = $2
+    ORDER BY updated_at DESC
+  `;
+  pool.query(query, [user_id, database_id], (err, result) => {
+    if (err) {
+      console.error('Fout bij ophalen receptnotities:', err);
+      return callback(err);
+    }
+    callback(null, result.rows || []);
+  });
+}
+
+function upsertRecipeNote(entry, callback) {
+  const { user_id, database_id, recipe_id, recipe_url, note_text } = entry;
+  const recipeKey = buildRecipeNoteKey(recipe_id, recipe_url);
+  const normalizedUrl = normalizeRecipeNoteUrl(recipe_url);
+  const recipeIdNum = Number(recipe_id);
+  const cleanedNote = String(note_text || '').trim();
+
+  if (!recipeKey) return callback(new Error('Receptidentiteit ontbreekt.'));
+  if (!cleanedNote) return callback(new Error('Notitietekst ontbreekt.'));
+
+  const query = `
+    INSERT INTO recipe_notes (user_id, database_id, recipe_id, recipe_url, recipe_key, note_text, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, NOW())
+    ON CONFLICT (user_id, database_id, recipe_key)
+    DO UPDATE SET
+      recipe_id = EXCLUDED.recipe_id,
+      recipe_url = EXCLUDED.recipe_url,
+      note_text = EXCLUDED.note_text,
+      updated_at = NOW()
+    RETURNING id, recipe_id, recipe_url, recipe_key, note_text
+  `;
+
+  pool.query(
+    query,
+    [
+      user_id,
+      database_id,
+      Number.isInteger(recipeIdNum) && recipeIdNum > 0 ? recipeIdNum : null,
+      normalizedUrl || null,
+      recipeKey,
+      cleanedNote
+    ],
+    (err, result) => {
+      if (err) {
+        console.error('Fout bij opslaan receptnotitie:', err);
+        return callback(err);
+      }
+      callback(null, result.rows[0] || null);
+    }
+  );
+}
+
+function deleteRecipeNote(entry, callback) {
+  const { user_id, database_id, recipe_id, recipe_url } = entry;
+  const recipeKey = buildRecipeNoteKey(recipe_id, recipe_url);
+  if (!recipeKey) return callback(new Error('Receptidentiteit ontbreekt.'));
+
+  const query = `
+    DELETE FROM recipe_notes
+    WHERE user_id = $1
+      AND database_id = $2
+      AND recipe_key = $3
+    RETURNING id
+  `;
+  pool.query(query, [user_id, database_id, recipeKey], (err, result) => {
+    if (err) {
+      console.error('Fout bij verwijderen receptnotitie:', err);
+      return callback(err);
+    }
+    callback(null, { deleted: !!result.rows[0] });
   });
 }
 
@@ -1202,6 +1316,9 @@ module.exports = {
   getMealPlanForWeek,
   upsertMealPlanEntry,
   deleteMealPlanEntry,
+  listRecipeNotesForDatabase,
+  upsertRecipeNote,
+  deleteRecipeNote,
   listAccessibleDatabases,
   userHasDatabaseAccess,
   userCanManageDatabase,

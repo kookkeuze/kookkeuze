@@ -13,6 +13,10 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 const RECIPE_NOTE_STORAGE_KEY = 'kookkeuze_recipe_notes_v1';
+let recipeNotesCache = {};
+let recipeNotesLoadedContext = null;
+let recipeNotesLoadPromise = null;
+let recipeNotesLoadingContext = null;
 
 const authHeaders = () => {
   const t = getValidToken();
@@ -121,7 +125,22 @@ function normalizeRecipeNoteUrl(url) {
   return String(url || '').trim().replace(/\/+$/, '');
 }
 
-function getRecipeNotesStore() {
+function getRecipeNoteIdentity(recipeId, recipeUrl) {
+  const safeId = Number(recipeId);
+  if (Number.isInteger(safeId) && safeId > 0) {
+    return `id:${safeId}`;
+  }
+  const safeUrl = normalizeRecipeNoteUrl(recipeUrl);
+  return safeUrl ? `url:${safeUrl}` : '';
+}
+
+function getRecipeNoteContextKey() {
+  const userId = getCurrentUserId() || 'guest';
+  const databaseId = getActiveDatabaseOwnerId() || 'default';
+  return `u:${userId}|db:${databaseId}`;
+}
+
+function getLegacyRecipeNotesStore() {
   try {
     const raw = localStorage.getItem(RECIPE_NOTE_STORAGE_KEY);
     if (!raw) return {};
@@ -132,7 +151,7 @@ function getRecipeNotesStore() {
   }
 }
 
-function saveRecipeNotesStore(store) {
+function saveLegacyRecipeNotesStore(store) {
   try {
     localStorage.setItem(RECIPE_NOTE_STORAGE_KEY, JSON.stringify(store));
   } catch (_err) {
@@ -140,31 +159,212 @@ function saveRecipeNotesStore(store) {
   }
 }
 
-function getRecipeNoteKey(recipeId, recipeUrl) {
-  const userId = getCurrentUserId() || 'guest';
-  const dbOwnerId = getActiveDatabaseOwnerId() || 'default';
-  const safeId = Number(recipeId) > 0 ? `id:${Number(recipeId)}` : '';
-  const safeUrl = normalizeRecipeNoteUrl(recipeUrl);
-  const identity = safeId || `url:${safeUrl}`;
-  return `u:${userId}|db:${dbOwnerId}|${identity}`;
+function getLegacyRecipeNoteKey(recipeId, recipeUrl) {
+  const identity = getRecipeNoteIdentity(recipeId, recipeUrl);
+  return identity ? `${getRecipeNoteContextKey()}|${identity}` : '';
 }
 
-function getRecipeNote(recipeId, recipeUrl) {
-  const store = getRecipeNotesStore();
-  const key = getRecipeNoteKey(recipeId, recipeUrl);
+function getLegacyRecipeNote(recipeId, recipeUrl) {
+  const store = getLegacyRecipeNotesStore();
+  const key = getLegacyRecipeNoteKey(recipeId, recipeUrl);
+  if (!key) return '';
   return String(store[key] || '').trim();
 }
 
-function setRecipeNote(recipeId, recipeUrl, text) {
-  const store = getRecipeNotesStore();
-  const key = getRecipeNoteKey(recipeId, recipeUrl);
+function setLegacyRecipeNote(recipeId, recipeUrl, text) {
+  const store = getLegacyRecipeNotesStore();
+  const key = getLegacyRecipeNoteKey(recipeId, recipeUrl);
+  if (!key) return;
   const cleaned = String(text || '').trim();
   if (cleaned) {
     store[key] = cleaned;
   } else {
     delete store[key];
   }
-  saveRecipeNotesStore(store);
+  saveLegacyRecipeNotesStore(store);
+}
+
+function removeLegacyRecipeNotes(keys) {
+  if (!Array.isArray(keys) || keys.length === 0) return;
+  const store = getLegacyRecipeNotesStore();
+  let changed = false;
+  keys.forEach(key => {
+    if (key && Object.prototype.hasOwnProperty.call(store, key)) {
+      delete store[key];
+      changed = true;
+    }
+  });
+  if (changed) saveLegacyRecipeNotesStore(store);
+}
+
+function clearRecipeNotesCache() {
+  recipeNotesCache = {};
+  recipeNotesLoadedContext = null;
+  recipeNotesLoadPromise = null;
+  recipeNotesLoadingContext = null;
+}
+
+function setRecipeNoteCacheEntry(recipeId, recipeUrl, text) {
+  const identity = getRecipeNoteIdentity(recipeId, recipeUrl);
+  if (!identity) return;
+  const cleaned = String(text || '').trim();
+  if (cleaned) {
+    recipeNotesCache[identity] = cleaned;
+  } else {
+    delete recipeNotesCache[identity];
+  }
+}
+
+function getLegacyRecipeNotesForCurrentContext() {
+  const prefix = `${getRecipeNoteContextKey()}|`;
+  return Object.entries(getLegacyRecipeNotesStore())
+    .filter(([key, value]) => key.startsWith(prefix) && String(value || '').trim())
+    .map(([storageKey, value]) => {
+      const identity = storageKey.slice(prefix.length);
+      const recipeId = identity.startsWith('id:') ? Number(identity.slice(3)) : '';
+      const recipeUrl = identity.startsWith('url:') ? identity.slice(4) : '';
+      return {
+        storageKey,
+        identity,
+        recipeId: Number.isInteger(recipeId) && recipeId > 0 ? recipeId : '',
+        recipeUrl,
+        noteText: String(value || '').trim()
+      };
+    });
+}
+
+async function persistRecipeNoteToServer(recipeId, recipeUrl, text) {
+  const body = withActiveDatabaseBody({
+    recipe_id: Number(recipeId) > 0 ? Number(recipeId) : null,
+    recipe_url: normalizeRecipeNoteUrl(recipeUrl),
+    note_text: String(text || '').trim()
+  });
+  const res = await fetch(`${API_BASE}/api/recipe-notes`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Kon notitie niet opslaan.');
+  }
+  return data;
+}
+
+async function deleteRecipeNoteFromServer(recipeId, recipeUrl) {
+  const body = withActiveDatabaseBody({
+    recipe_id: Number(recipeId) > 0 ? Number(recipeId) : null,
+    recipe_url: normalizeRecipeNoteUrl(recipeUrl)
+  });
+  const res = await fetch(`${API_BASE}/api/recipe-notes`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Kon notitie niet verwijderen.');
+  }
+  return data;
+}
+
+async function migrateLegacyRecipeNotesForCurrentContext() {
+  if (!getValidToken() || !getActiveDatabaseOwnerId()) return;
+  const pendingEntries = getLegacyRecipeNotesForCurrentContext()
+    .filter(entry => entry.noteText && !recipeNotesCache[entry.identity]);
+  if (pendingEntries.length === 0) return;
+
+  const migratedKeys = [];
+  for (const entry of pendingEntries) {
+    try {
+      await persistRecipeNoteToServer(entry.recipeId, entry.recipeUrl, entry.noteText);
+      setRecipeNoteCacheEntry(entry.recipeId, entry.recipeUrl, entry.noteText);
+      migratedKeys.push(entry.storageKey);
+    } catch (err) {
+      console.error('Kon lokale receptnotitie niet migreren:', err);
+    }
+  }
+
+  if (migratedKeys.length) removeLegacyRecipeNotes(migratedKeys);
+}
+
+async function ensureRecipeNotesLoaded(force = false) {
+  const hasServerContext = !!(getValidToken() && getActiveDatabaseOwnerId());
+  const contextKey = getRecipeNoteContextKey();
+
+  if (!hasServerContext) {
+    if (!getValidToken()) clearRecipeNotesCache();
+    refreshRecipeNoteButtons();
+    return recipeNotesCache;
+  }
+
+  if (!force && recipeNotesLoadedContext === contextKey) {
+    return recipeNotesCache;
+  }
+
+  if (!force && recipeNotesLoadPromise && recipeNotesLoadingContext === contextKey) {
+    return recipeNotesLoadPromise;
+  }
+
+  recipeNotesLoadingContext = contextKey;
+  recipeNotesLoadPromise = (async () => {
+    const params = new URLSearchParams();
+    appendActiveDatabaseParam(params);
+    const res = await fetch(`${API_BASE}/api/recipe-notes?${params.toString()}`, {
+      headers: authHeaders()
+    });
+    const rows = await res.json().catch(() => []);
+    if (!res.ok) {
+      throw new Error(rows.error || 'Kon receptnotities niet laden.');
+    }
+
+    const nextCache = {};
+    (Array.isArray(rows) ? rows : []).forEach(row => {
+      const identity = row.recipe_key || getRecipeNoteIdentity(row.recipe_id, row.recipe_url || '');
+      const noteText = String(row.note_text || '').trim();
+      if (identity && noteText) {
+        nextCache[identity] = noteText;
+      }
+    });
+    recipeNotesCache = nextCache;
+    recipeNotesLoadedContext = contextKey;
+
+    await migrateLegacyRecipeNotesForCurrentContext();
+    refreshRecipeNoteButtons();
+    return recipeNotesCache;
+  })().catch(err => {
+    console.error(err);
+    return recipeNotesCache;
+  }).finally(() => {
+    if (recipeNotesLoadingContext === contextKey) {
+      recipeNotesLoadPromise = null;
+      recipeNotesLoadingContext = null;
+    }
+  });
+
+  return recipeNotesLoadPromise;
+}
+
+function getRecipeNote(recipeId, recipeUrl) {
+  const identity = getRecipeNoteIdentity(recipeId, recipeUrl);
+  if (!identity) return '';
+  if (recipeNotesLoadedContext === getRecipeNoteContextKey()) {
+    return String(recipeNotesCache[identity] || '').trim();
+  }
+  return getLegacyRecipeNote(recipeId, recipeUrl);
+}
+
+async function saveRecipeNote(recipeId, recipeUrl, text) {
+  const cleaned = String(text || '').trim();
+  if (getValidToken() && getActiveDatabaseOwnerId()) {
+    if (cleaned) {
+      await persistRecipeNoteToServer(recipeId, recipeUrl, cleaned);
+    } else {
+      await deleteRecipeNoteFromServer(recipeId, recipeUrl);
+    }
+    setRecipeNoteCacheEntry(recipeId, recipeUrl, cleaned);
+  }
+  setLegacyRecipeNote(recipeId, recipeUrl, cleaned);
 }
 
 function renderRecipeNoteButton(recipeId, recipeUrl, recipeTitle, extraClass = '') {
@@ -600,6 +800,7 @@ activeDatabaseSelect?.addEventListener('change', async () => {
   localStorage.setItem('activeDatabaseOwnerId', activeDatabaseSelect.value);
   setSharePanelMessage('');
   await loadSharePanelData();
+  await ensureRecipeNotesLoaded(true);
   fetchAllRecipes();
   renderPlannerSearchResults();
   initWeekPlanner();
@@ -996,8 +1197,9 @@ document.addEventListener('click', e => {
 });
 
 /* — Zoekknop — */
-document.getElementById('searchBtn').addEventListener('click', () => {
+document.getElementById('searchBtn').addEventListener('click', async () => {
   if (!ensureLoggedInOrNotify(resultDiv)) return;
+  await ensureRecipeNotesLoaded();
   const params = new URLSearchParams();
   getSelectedValues(dishTypeSelect).forEach(v => params.append('dish_type', v));
   getSelectedValues(mealCategorySelect).forEach(v => params.append('meal_category', v));
@@ -1019,8 +1221,9 @@ document.getElementById('searchBtn').addEventListener('click', () => {
 });
 
 /* — Random recept — */
-document.getElementById('randomBtn').addEventListener('click', () => {
+document.getElementById('randomBtn').addEventListener('click', async () => {
   if (!ensureLoggedInOrNotify(resultDiv)) return;
+  await ensureRecipeNotesLoaded();
   const params = new URLSearchParams();
   getSelectedValues(dishTypeSelect).forEach(v => params.append('dish_type', v));
   getSelectedValues(mealCategorySelect).forEach(v => params.append('meal_category', v));
@@ -1193,23 +1396,43 @@ closeRecipeNoteModal?.addEventListener('click', closeRecipeNoteModalPanel);
 recipeNoteModal?.addEventListener('click', e => {
   if (e.target === recipeNoteModal) closeRecipeNoteModalPanel();
 });
-recipeNoteSaveBtn?.addEventListener('click', () => {
-  setRecipeNote(recipeNoteModalState.recipeId, recipeNoteModalState.recipeUrl, recipeNoteTextarea?.value || '');
-  refreshRecipeNoteButtons();
-  recipeNoteDeleteBtn?.classList.toggle('hidden', !getRecipeNote(recipeNoteModalState.recipeId, recipeNoteModalState.recipeUrl));
-  closeRecipeNoteModalPanel();
-  if (typeof showRecipeAddedToast === 'function') {
-    showRecipeAddedToast('Notitie opgeslagen.');
+recipeNoteSaveBtn?.addEventListener('click', async () => {
+  if (recipeNoteSaveBtn) recipeNoteSaveBtn.disabled = true;
+  if (recipeNoteDeleteBtn) recipeNoteDeleteBtn.disabled = true;
+  try {
+    await saveRecipeNote(recipeNoteModalState.recipeId, recipeNoteModalState.recipeUrl, recipeNoteTextarea?.value || '');
+    refreshRecipeNoteButtons();
+    recipeNoteDeleteBtn?.classList.toggle('hidden', !getRecipeNote(recipeNoteModalState.recipeId, recipeNoteModalState.recipeUrl));
+    closeRecipeNoteModalPanel();
+    if (typeof showRecipeAddedToast === 'function') {
+      showRecipeAddedToast('Notitie opgeslagen.');
+    }
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Kon notitie niet opslaan.');
+  } finally {
+    if (recipeNoteSaveBtn) recipeNoteSaveBtn.disabled = false;
+    if (recipeNoteDeleteBtn) recipeNoteDeleteBtn.disabled = false;
   }
 });
-recipeNoteDeleteBtn?.addEventListener('click', () => {
-  setRecipeNote(recipeNoteModalState.recipeId, recipeNoteModalState.recipeUrl, '');
-  if (recipeNoteTextarea) recipeNoteTextarea.value = '';
-  refreshRecipeNoteButtons();
-  recipeNoteDeleteBtn?.classList.add('hidden');
-  closeRecipeNoteModalPanel();
-  if (typeof showRecipeAddedToast === 'function') {
-    showRecipeAddedToast('Notitie verwijderd.');
+recipeNoteDeleteBtn?.addEventListener('click', async () => {
+  if (recipeNoteSaveBtn) recipeNoteSaveBtn.disabled = true;
+  if (recipeNoteDeleteBtn) recipeNoteDeleteBtn.disabled = true;
+  try {
+    await saveRecipeNote(recipeNoteModalState.recipeId, recipeNoteModalState.recipeUrl, '');
+    if (recipeNoteTextarea) recipeNoteTextarea.value = '';
+    refreshRecipeNoteButtons();
+    recipeNoteDeleteBtn?.classList.add('hidden');
+    closeRecipeNoteModalPanel();
+    if (typeof showRecipeAddedToast === 'function') {
+      showRecipeAddedToast('Notitie verwijderd.');
+    }
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Kon notitie niet verwijderen.');
+  } finally {
+    if (recipeNoteSaveBtn) recipeNoteSaveBtn.disabled = false;
+    if (recipeNoteDeleteBtn) recipeNoteDeleteBtn.disabled = false;
   }
 });
 
@@ -1292,10 +1515,11 @@ document.addEventListener('click', e => {
   closeAllRecipeExportMenus();
 });
 
-resultDiv?.addEventListener('click', e => {
+resultDiv?.addEventListener('click', async e => {
   const noteBtn = e.target.closest('[data-recipe-note-btn]');
   if (noteBtn) {
     const recipeUrl = decodeURIComponent(noteBtn.dataset.recipeUrl || '');
+    await ensureRecipeNotesLoaded();
     openRecipeNoteModal(noteBtn.dataset.recipeId || '', recipeUrl, noteBtn.dataset.recipeTitle || 'Recept');
     return;
   }
@@ -1348,10 +1572,11 @@ const weekmenuPreviewModal = document.getElementById('weekmenuPreviewModal');
 const closeWeekmenuPreviewModal = document.getElementById('closeWeekmenuPreviewModal');
 const weekmenuPreviewBody = document.getElementById('weekmenuPreviewBody');
 
-weekmenuGrid?.addEventListener('click', e => {
+weekmenuGrid?.addEventListener('click', async e => {
   const noteBtn = e.target.closest('[data-recipe-note-btn]');
   if (!noteBtn) return;
   const recipeUrl = decodeURIComponent(noteBtn.dataset.recipeUrl || '');
+  await ensureRecipeNotesLoaded();
   openRecipeNoteModal(noteBtn.dataset.recipeId || '', recipeUrl, noteBtn.dataset.recipeTitle || 'Recept');
 });
 
@@ -1591,7 +1816,6 @@ function renderWeekMenuGrid() {
             </a>
             <div class="weekmenu-cell-actions">
               ${renderRecipeNoteButton(entryRecipeId, entry.url || '', entry.title || 'Recept', 'recipe-note-btn--slot')}
-              <button type="button" class="green-btn weekmenu-replace-btn" data-day="${day}" data-slot="${slotKey}">Wijzig</button>
               <button type="button" class="pink-btn weekmenu-clear-btn weekmenu-clear-icon-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Verwijder recept uit ${slotLabel}">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
@@ -1603,7 +1827,7 @@ function renderWeekMenuGrid() {
           <p class="weekmenu-slot-name">${slotLabel}</p>
           <p class="weekmenu-empty">Nog niets gepland</p>
           <div class="weekmenu-cell-actions weekmenu-cell-actions-empty">
-            <button type="button" class="green-btn weekmenu-replace-btn weekmenu-add-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Kies recept voor ${slotLabel}">
+            <button type="button" class="green-btn weekmenu-add-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Kies recept voor ${slotLabel}">
               <i class="fas fa-plus" aria-hidden="true"></i>
             </button>
           </div>
@@ -1679,7 +1903,7 @@ function renderWeekMenuGrid() {
     });
   });
 
-  weekmenuGrid.querySelectorAll('.weekmenu-replace-btn').forEach(btn => {
+  weekmenuGrid.querySelectorAll('.weekmenu-add-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       plannerSuggestedDay = Number(btn.dataset.day || '1');
       plannerSuggestedSlot = btn.dataset.slot || 'dinner';
@@ -1923,6 +2147,7 @@ async function initWeekPlanner() {
   if (weekLabel) weekLabel.textContent = formatWeekLabel(plannerWeekStart);
 
   try {
+    await ensureRecipeNotesLoaded();
     await loadPlannerRecipes();
     renderPlannerSearchResults();
     await loadWeekMenu();
@@ -1938,10 +2163,11 @@ async function initWeekPlanner() {
     plannerSearchCurrentPage = 1;
     renderPlannerSearchResults();
   });
-  weekmenuSearchResults?.addEventListener('click', e => {
+  weekmenuSearchResults?.addEventListener('click', async e => {
     const noteBtn = e.target.closest('[data-recipe-note-btn]');
     if (noteBtn) {
       const recipeUrl = decodeURIComponent(noteBtn.dataset.recipeUrl || '');
+      await ensureRecipeNotesLoaded();
       openRecipeNoteModal(noteBtn.dataset.recipeId || '', recipeUrl, noteBtn.dataset.recipeTitle || 'Recept');
       return;
     }
@@ -2521,10 +2747,14 @@ function updateAuthUI(){
 
   if (loggedIn){
     loadAccessibleDatabases()
-      .then(() => maybeStartRecipePackOnboarding())
+      .then(async () => {
+        await ensureRecipeNotesLoaded(true);
+        return maybeStartRecipePackOnboarding();
+      })
       .catch(() => {});
     setAuthPane(loggedInPane);
   } else {
+    clearRecipeNotesCache();
     recipePackOnboardingCheckedForUserId = null;
     recipePackOnboardingMarkedDone = false;
     recipePackModal?.classList.add('hidden');

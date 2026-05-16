@@ -462,6 +462,9 @@ const {
   getMealPlanForWeek,
   upsertMealPlanEntry,
   deleteMealPlanEntry,
+  listRecipeNotesForDatabase,
+  upsertRecipeNote,
+  deleteRecipeNote,
   getRecipeByIdForOwner,
   importRecipeToUserDatabase,
   listAccessibleDatabases,
@@ -1588,7 +1591,80 @@ app.delete('/api/meal-plan', async (req, res) => {
   }
 });
 
-// 10. Beschikbare databases (eigen + gedeeld)
+// 10. Receptnotities ophalen
+app.get('/api/recipe-notes', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om notities te zien.' });
+  }
+
+  try {
+    const databaseId = await resolveDatabaseOwnerId(req);
+    const rows = await dbCall(listRecipeNotesForDatabase, {
+      user_id: req.user.id,
+      database_id: databaseId
+    });
+    return res.json(rows);
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Kon receptnotities niet ophalen.' });
+  }
+});
+
+// 11. Receptnotitie opslaan
+app.put('/api/recipe-notes', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om notities op te slaan.' });
+  }
+
+  const { recipe_id, recipe_url, note_text } = req.body || {};
+  const cleanedNote = String(note_text || '').trim();
+  if (!cleanedNote) {
+    return res.status(400).json({ error: 'Notitietekst ontbreekt.' });
+  }
+  if (cleanedNote.length > 500) {
+    return res.status(400).json({ error: 'Notitie mag maximaal 500 tekens bevatten.' });
+  }
+
+  try {
+    const databaseId = await resolveDatabaseOwnerId(req);
+    const saved = await dbCall(upsertRecipeNote, {
+      user_id: req.user.id,
+      database_id: databaseId,
+      recipe_id,
+      recipe_url,
+      note_text: cleanedNote
+    });
+    return res.json(saved || { success: true });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(400).json({ error: err.message || 'Opslaan van notitie mislukt.' });
+  }
+});
+
+// 12. Receptnotitie verwijderen
+app.delete('/api/recipe-notes', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om notities te verwijderen.' });
+  }
+
+  const { recipe_id, recipe_url } = req.body || {};
+
+  try {
+    const databaseId = await resolveDatabaseOwnerId(req);
+    await dbCall(deleteRecipeNote, {
+      user_id: req.user.id,
+      database_id: databaseId,
+      recipe_id,
+      recipe_url
+    });
+    return res.json({ message: 'Notitie verwijderd.' });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(400).json({ error: err.message || 'Verwijderen van notitie mislukt.' });
+  }
+});
+
+// 13. Beschikbare databases (eigen + gedeeld)
 app.get('/api/databases', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
   try {
@@ -1599,7 +1675,7 @@ app.get('/api/databases', async (req, res) => {
   }
 });
 
-// 11. Deelinstellingen van eigen database
+// 14. Deelinstellingen van eigen database
 app.get('/api/databases/shares', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
   try {
@@ -1616,7 +1692,7 @@ app.get('/api/databases/shares', async (req, res) => {
   }
 });
 
-// 12. Nodig gebruiker uit via e-mail
+// 15. Nodig gebruiker uit via e-mail
 app.post('/api/databases/invite', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
   const email = String(req.body?.email || '').trim().toLowerCase();
@@ -1639,7 +1715,7 @@ app.post('/api/databases/invite', async (req, res) => {
   }
 });
 
-// 13. Toegang lid intrekken
+// 16. Toegang lid intrekken
 app.delete('/api/databases/members/:memberUserId', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
   const memberUserId = Number(req.params.memberUserId);
@@ -1657,7 +1733,7 @@ app.delete('/api/databases/members/:memberUserId', async (req, res) => {
   }
 });
 
-// 14. Openstaande uitnodiging intrekken
+// 17. Openstaande uitnodiging intrekken
 app.delete('/api/databases/invites/:inviteId', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
   const inviteId = Number(req.params.inviteId);

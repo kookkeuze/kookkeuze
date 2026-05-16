@@ -2025,36 +2025,14 @@ select:focus {
 }
 
 .weekmenu-slot-item .weekmenu-cell-actions:not(.weekmenu-cell-actions-empty) {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 30px;
+  display: flex;
   gap: 5px;
   align-items: center;
+  flex-wrap: nowrap;
 }
 
 .weekmenu-cell-actions-empty {
   justify-content: flex-end;
-}
-
-.weekmenu-slot-item .weekmenu-replace-btn {
-  min-height: 30px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  min-width: 0;
-  width: 100%;
-  font-size: 10px;
-  border-width: 1px;
-  border-color: #d8e4dc;
-  color: #3b5443;
-  background: #fbfdfb;
-  justify-content: center;
-}
-
-.weekmenu-slot-item .weekmenu-replace-btn:hover {
-  border-color: #c9d8ce;
-  background: #f4faf5;
-  color: #2f4a38;
-  transform: none;
-  box-shadow: none;
 }
 
 .weekmenu-slot-item .weekmenu-clear-icon-btn,
