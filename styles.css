@@ -1546,8 +1546,16 @@ select:focus {
 }
 
 @media (min-width: 980px) {
+  .recipe-cards-container {
+    --recipe-card-desktop-height: 390px;
+    --recipe-card-title-height: calc(1.2em * 3);
+  }
+
   .recipe-card {
     flex: 1 1 900px;
+    height: var(--recipe-card-desktop-height);
+    min-height: var(--recipe-card-desktop-height);
+    max-height: var(--recipe-card-desktop-height);
     display: grid;
     grid-template-columns: minmax(0, 55%) minmax(320px, 45%);
     align-items: stretch;
@@ -1556,29 +1564,36 @@ select:focus {
 
   .recipe-cards-container .result-image-cell {
     width: 100%;
-    height: 340px;
-    min-height: 340px;
-    max-height: 340px;
-    align-self: start;
+    height: var(--recipe-card-desktop-height);
+    min-height: var(--recipe-card-desktop-height);
+    max-height: var(--recipe-card-desktop-height);
+    align-self: stretch;
     border-radius: 12px 0 0 12px;
   }
 
   .recipe-cards-container .recipe-card-image,
   .recipe-cards-container .recipe-card-image-skeleton,
   .recipe-cards-container .recipe-card-image-fallback {
-    height: 340px;
-    min-height: 340px;
-    max-height: 340px;
+    height: var(--recipe-card-desktop-height);
+    min-height: var(--recipe-card-desktop-height);
+    max-height: var(--recipe-card-desktop-height);
   }
 
   .recipe-card-content {
     width: 100%;
+    height: 100%;
+    box-sizing: border-box;
     padding: 26px 28px;
     align-content: start;
   }
 
   .recipe-cards-container .recipe-card h3 {
-    min-height: calc(1.2em * 3);
+    min-height: var(--recipe-card-title-height);
+    max-height: var(--recipe-card-title-height);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
   }
 
   .recipe-secondary-actions {
