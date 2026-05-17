@@ -1991,7 +1991,7 @@ select:focus {
 }
 
 .weekmenu-open-link {
-  color: #235b2a;
+  color: #151515;
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
@@ -2072,7 +2072,7 @@ select:focus {
 .weekmenu-day-card {
   border: 1px solid #dde8df;
   border-radius: 12px;
-  background: #fff;
+  background: #f5faf6;
   display: grid;
   grid-template-rows: auto 1fr;
   overflow: hidden;
@@ -2080,7 +2080,7 @@ select:focus {
 
 .weekmenu-day-header {
   padding: 10px;
-  background: #f5faf6;
+  background: transparent;
   border-bottom: 1px solid #e6efe8;
 }
 
@@ -2109,7 +2109,7 @@ select:focus {
   display: grid;
   gap: 8px;
   align-content: start;
-  background: #fbfdfb;
+  background: #ffffff;
   min-height: 0;
 }
 
@@ -2138,7 +2138,7 @@ select:focus {
 
 .weekmenu-slot-item .weekmenu-preview-btn {
   border: 1px solid #d3e4d7;
-  color: #476a50;
+  color: #63D671;
   background: #ffffff;
 }
 
@@ -2152,8 +2152,8 @@ select:focus {
 
 .weekmenu-slot-item .weekmenu-preview-btn:hover {
   border-color: #bfd4c6;
-  color: #2f4f38;
-  background: #f7fbf8;
+  color: #4ac858;
+  background: #f4fff5;
   transform: none;
   box-shadow: none;
 }
