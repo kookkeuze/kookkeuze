@@ -2130,6 +2130,8 @@ select:focus {
 
 .weekmenu-slot-item-filled .weekmenu-cell-actions {
   margin-top: 2px;
+  justify-content: flex-start;
+  gap: 12px;
 }
 
 .weekmenu-slot-item-empty .weekmenu-cell-actions {
@@ -2137,9 +2139,15 @@ select:focus {
 }
 
 .weekmenu-slot-item .weekmenu-preview-btn {
-  border: 1px solid #d3e4d7;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
   color: #63D671;
-  background: #ffffff;
+  background: transparent;
+  font-size: 15px;
 }
 
 .weekmenu-slot-item .weekmenu-add-btn:hover {
@@ -2151,23 +2159,27 @@ select:focus {
 }
 
 .weekmenu-slot-item .weekmenu-preview-btn:hover {
-  border-color: #bfd4c6;
   color: #4ac858;
-  background: #f4fff5;
+  background: transparent;
   transform: none;
   box-shadow: none;
 }
 
 .weekmenu-slot-item .weekmenu-clear-icon-btn {
-  border-color: #dfbdbd;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
   color: #bb5c5c;
-  background: #fff4f4;
+  background: transparent;
+  font-size: 15px;
 }
 
 .weekmenu-slot-item .weekmenu-clear-icon-btn:hover {
-  border-color: #d9aaaa;
   color: #a94a4a;
-  background: #ffecec;
+  background: transparent;
   transform: none;
   box-shadow: none;
 }
