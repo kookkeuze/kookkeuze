@@ -1572,12 +1572,13 @@ const weekmenuPreviewModal = document.getElementById('weekmenuPreviewModal');
 const closeWeekmenuPreviewModal = document.getElementById('closeWeekmenuPreviewModal');
 const weekmenuPreviewBody = document.getElementById('weekmenuPreviewBody');
 
-weekmenuGrid?.addEventListener('click', async e => {
-  const noteBtn = e.target.closest('[data-recipe-note-btn]');
-  if (!noteBtn) return;
-  const recipeUrl = decodeURIComponent(noteBtn.dataset.recipeUrl || '');
-  await ensureRecipeNotesLoaded();
-  openRecipeNoteModal(noteBtn.dataset.recipeId || '', recipeUrl, noteBtn.dataset.recipeTitle || 'Recept');
+weekmenuGrid?.addEventListener('click', e => {
+  const previewBtn = e.target.closest('.weekmenu-preview-btn');
+  if (!previewBtn) return;
+  openWeekmenuPreviewModal(previewBtn.dataset.recipeId, {
+    url: decodeURIComponent(previewBtn.dataset.recipeUrl || ''),
+    title: previewBtn.dataset.recipeTitle || 'Recept'
+  });
 });
 
 const plannerDays = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
@@ -1803,19 +1804,32 @@ function renderWeekMenuGrid() {
     const renderSlot = (slotKey, slotLabel, entry) => {
       if (entry) {
         const entryRecipeId = Number(entry.recipe_id || entry.id || 0) > 0 ? Number(entry.recipe_id || entry.id || 0) : '';
-        const safeUrl = encodeURIComponent(entry.url || '');
+        const safeUrl = escapeAttr(encodeURIComponent(entry.url || ''));
+        const safeHref = escapeAttr(entry.url || '#');
+        const safeTitle = escapeHtml(entry.title || 'Recept');
+        const safeTitleAttr = escapeAttr(entry.title || 'Recept');
+        const titleMarkup = entry.url
+          ? `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="weekmenu-open-link" title="${safeTitleAttr}">
+              <span class="weekmenu-open-link-title">${safeTitle}</span>
+            </a>`
+          : `<span class="weekmenu-open-link weekmenu-open-link--disabled" title="${safeTitleAttr}">
+              <span class="weekmenu-open-link-title">${safeTitle}</span>
+            </span>`;
         return `
-          <div class="weekmenu-slot-item">
+          <div class="weekmenu-slot-item weekmenu-slot-item-filled">
             <p class="weekmenu-slot-name">${slotLabel}</p>
-            <div class="weekmenu-slot-thumb-wrap" data-url="${safeUrl}">
-              <div class="weekmenu-slot-thumb-skeleton"></div>
-            </div>
-            <a href="${entry.url}" target="_blank" rel="noopener noreferrer" class="weekmenu-open-link">
-              <span class="weekmenu-open-link-title">${entry.title}</span>
-              <span class="weekmenu-open-link-icon" aria-hidden="true"><i class="fas fa-external-link-alt"></i></span>
-            </a>
+            ${titleMarkup}
             <div class="weekmenu-cell-actions">
-              ${renderRecipeNoteButton(entryRecipeId, entry.url || '', entry.title || 'Recept', 'recipe-note-btn--slot')}
+              <button
+                type="button"
+                class="weekmenu-preview-btn"
+                data-recipe-id="${entryRecipeId}"
+                data-recipe-url="${safeUrl}"
+                data-recipe-title="${safeTitleAttr}"
+                aria-label="Bekijk voorbeeld van ${safeTitleAttr}"
+              >
+                <i class="fas fa-eye" aria-hidden="true"></i>
+              </button>
               <button type="button" class="pink-btn weekmenu-clear-btn weekmenu-clear-icon-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Verwijder recept uit ${slotLabel}">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
@@ -1823,7 +1837,7 @@ function renderWeekMenuGrid() {
           </div>`;
       }
       return `
-        <div class="weekmenu-slot-item">
+        <div class="weekmenu-slot-item weekmenu-slot-item-empty">
           <p class="weekmenu-slot-name">${slotLabel}</p>
           <p class="weekmenu-empty">Nog niets gepland</p>
           <div class="weekmenu-cell-actions weekmenu-cell-actions-empty">
@@ -1853,7 +1867,6 @@ function renderWeekMenuGrid() {
     </div>
   `;
   weekmenuGrid.innerHTML = html;
-  hydrateWeekmenuImages();
 
   const calendar = weekmenuGrid.querySelector('.weekmenu-calendar');
   const cards = Array.from(weekmenuGrid.querySelectorAll('.weekmenu-day-card'));
@@ -2007,11 +2020,17 @@ function renderPlannerSearchResults() {
   }
 }
 
-function openWeekmenuPreviewModal(recipeId) {
-  const recipe = plannerRecipes.find(r => Number(r.id) === Number(recipeId));
+function openWeekmenuPreviewModal(recipeId, fallbackRecipe = null) {
+  const normalizedFallbackUrl = normalizeRecipeNoteUrl(fallbackRecipe?.url || '');
+  const recipe = plannerRecipes.find(r =>
+    Number(r.id) === Number(recipeId)
+    || (normalizedFallbackUrl && normalizeRecipeNoteUrl(r.url || '') === normalizedFallbackUrl)
+  ) || fallbackRecipe;
   if (!recipe || !weekmenuPreviewBody) return;
-  const safeUrl = encodeURIComponent(recipe.url || '');
-  const safeTitle = (recipe.title || 'Recept').replace(/"/g, '&quot;');
+  const safeUrl = escapeAttr(encodeURIComponent(recipe.url || ''));
+  const safeTitle = escapeAttr(recipe.title || 'Recept');
+  const displayTitle = escapeHtml(recipe.title || 'Recept');
+  const safeHref = escapeAttr(recipe.url || '#');
   weekmenuPreviewBody.innerHTML = `
     <div class="recipe-cards-container search-results single-result weekmenu-preview-cards">
       <div class="recipe-card">
@@ -2019,17 +2038,17 @@ function openWeekmenuPreviewModal(recipeId) {
           <div class="recipe-card-image-skeleton"></div>
         </div>
         <div class="recipe-card-content">
-          <h3>${recipe.title || 'Recept'}</h3>
-          <p class="recipe-link"><a href="${recipe.url}" target="_blank" rel="noopener noreferrer" class="ext-link">
+          <h3>${displayTitle}</h3>
+          <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
             Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
           <div class="recipe-meta-row">
-            <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${recipe.time_required || '-'}</span>
-            <span class="recipe-meta-pill"><i class="fas fa-fire"></i> ${recipe.calories ?? '-'} kcal</span>
+            <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${escapeHtml(recipe.time_required || '-')}</span>
+            <span class="recipe-meta-pill"><i class="fas fa-fire"></i> ${escapeHtml(recipe.calories ?? '-')} kcal</span>
           </div>
           <ul>
-            <li><i class="fas fa-utensils"></i> <strong>Soort:</strong> ${recipe.dish_type || '-'}</li>
-            <li><i class="fas fa-layer-group"></i> <strong>Menugang:</strong> ${recipe.meal_category || '-'}</li>
-            <li><i class="fas fa-bullseye"></i> <strong>Doel gerecht:</strong> ${recipe.meal_type || '-'}</li>
+            <li><i class="fas fa-utensils"></i> <strong>Soort:</strong> ${escapeHtml(recipe.dish_type || '-')}</li>
+            <li><i class="fas fa-layer-group"></i> <strong>Menugang:</strong> ${escapeHtml(recipe.meal_category || '-')}</li>
+            <li><i class="fas fa-bullseye"></i> <strong>Doel gerecht:</strong> ${escapeHtml(recipe.meal_type || '-')}</li>
           </ul>
         </div>
       </div>
