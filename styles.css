@@ -2122,6 +2122,17 @@ select:focus {
   font-weight: 700;
 }
 
+.weekmenu-slot-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.weekmenu-slot-head .weekmenu-slot-name {
+  flex: 1 1 auto;
+}
+
 .weekmenu-slot-item .weekmenu-add-btn {
   border-color: #d4e5d9;
   color: #597267;
@@ -2175,6 +2186,7 @@ select:focus {
   color: #bb5c5c;
   background: transparent;
   font-size: 15px;
+  flex: 0 0 auto;
 }
 
 .weekmenu-slot-item .weekmenu-clear-icon-btn:hover {
