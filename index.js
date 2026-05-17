@@ -1817,7 +1817,12 @@ function renderWeekMenuGrid() {
             </span>`;
         return `
           <div class="weekmenu-slot-item weekmenu-slot-item-filled">
-            <p class="weekmenu-slot-name">${slotLabel}</p>
+            <div class="weekmenu-slot-head">
+              <p class="weekmenu-slot-name">${slotLabel}</p>
+              <button type="button" class="pink-btn weekmenu-clear-btn weekmenu-clear-icon-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Verwijder recept uit ${slotLabel}">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </div>
             ${titleMarkup}
             <div class="weekmenu-cell-actions">
               <button
@@ -1829,9 +1834,6 @@ function renderWeekMenuGrid() {
                 aria-label="Bekijk voorbeeld van ${safeTitleAttr}"
               >
                 <i class="fas fa-eye" aria-hidden="true"></i>
-              </button>
-              <button type="button" class="pink-btn weekmenu-clear-btn weekmenu-clear-icon-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Verwijder recept uit ${slotLabel}">
-                <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
           </div>`;

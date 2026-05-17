@@ -511,12 +511,12 @@ button {
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 14px;
-  border: 1px solid #d9e8dc;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #fbfffc 0%, #f6faf7 100%);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 #addRecipeForm > div {
@@ -1072,8 +1072,8 @@ select:focus {
   }
 
   #addRecipeForm {
-    padding: 12px;
-    border-radius: 12px;
+    padding: 0;
+    border-radius: 0;
   }
 
   #addRecipeForm button[type="submit"] {
@@ -1133,8 +1133,8 @@ select:focus {
   }
 
   #addRecipeForm {
-    padding: 10px;
-    border-radius: 12px;
+    padding: 0;
+    border-radius: 0;
   }
 
   #addRecipeForm > div {
