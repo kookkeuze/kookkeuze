@@ -315,7 +315,12 @@
 
     <!-- TAB 2: VOEG EEN RECEPT TOE -->
     <div id="voegReceptToe" class="tab-content">
-      <h2>Nieuw recept toevoegen</h2>
+      <div class="add-recipe-header">
+        <h2>Nieuw recept toevoegen</h2>
+        <button id="openRecipePacksBtn" type="button" class="overview-view-btn recipe-packs-btn">
+          <i class="fas fa-box-open"></i> Recept pakketten
+        </button>
+      </div>
       <form id="addRecipeForm">
         <div>
           <label for="url">URL:</label>
@@ -406,9 +411,6 @@
       <h2>Overzicht van alle recepten</h2>
       <div class="overview-toolbar">
         <a id="refreshBtn" href="#" class="refresh-link">Vernieuw het overzicht</a>
-        <button id="openRecipePacksBtn" type="button" class="overview-view-btn recipe-packs-btn">
-          <i class="fas fa-box-open"></i> Recept pakketten
-        </button>
         <div class="overview-view-switch" role="group" aria-label="Weergave kiezen">
           <button id="overviewListBtn" type="button" class="overview-view-btn active"><i class="fas fa-list"></i> Lijst</button>
           <button id="overviewGridBtn" type="button" class="overview-view-btn"><i class="fas fa-th-large"></i> Raster</button>
