@@ -975,6 +975,10 @@ function addRecipePackToDatabase(databaseId, userId, recipes, callback) {
   );
 }
 
+async function closeDatabasePool() {
+  await pool.end();
+}
+
 // ----- Email verification helpers -----
 async function setVerificationToken(email, token, expires) {
   const q = `
@@ -1328,5 +1332,6 @@ module.exports = {
   listDatabaseInvites,
   revokeDatabaseMember,
   revokeDatabaseInvite,
-  acceptPendingInvitesForUser
+  acceptPendingInvitesForUser,
+  closeDatabasePool
 };

@@ -476,7 +476,8 @@ const {
   listDatabaseInvites,
   revokeDatabaseMember,
   revokeDatabaseInvite,
-  acceptPendingInvitesForUser
+  acceptPendingInvitesForUser,
+  closeDatabasePool
 } = require('./database');
 
 app.use(bodyParser.json());
@@ -493,6 +494,13 @@ app.use(express.static(path.join(__dirname), {
 // Serve index.html for root route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/health', (_req, res) => {
+  res.status(200).json({
+    ok: true,
+    date: new Date().toISOString()
+  });
 });
 
 // Receptinfo ophalen via JSON-LD (recipe schema)
@@ -1693,6 +1701,41 @@ app.delete('/api/databases/invites/:inviteId', async (req, res) => {
 });
 // ===========================================================================
 
-app.listen(PORT, () => {
-  console.log(`Server draait op http://localhost:${PORT}`);
+const server = app.listen(PORT, () => {
+  console.log(`Server draait op poort ${PORT}`);
 });
+
+let isShuttingDown = false;
+
+function shutdown(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  console.log(`🛑 ${signal} ontvangen, server wordt netjes afgesloten...`);
+
+  const forceCloseTimer = setTimeout(() => {
+    console.error('⏱️ Geforceerd afsluiten na timeout.');
+    process.exit(1);
+  }, 10000);
+
+  server.close(async (serverErr) => {
+    clearTimeout(forceCloseTimer);
+
+    if (serverErr) {
+      console.error('❌ Fout bij sluiten van HTTP-server:', serverErr);
+      process.exit(1);
+      return;
+    }
+
+    try {
+      await closeDatabasePool();
+      console.log('✅ Server netjes afgesloten.');
+      process.exit(0);
+    } catch (dbErr) {
+      console.error('❌ Fout bij sluiten van databasepool:', dbErr);
+      process.exit(1);
+    }
+  });
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
