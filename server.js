@@ -667,6 +667,14 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+app.get('/recept-zoeken', (req, res) => {
+  res.sendFile(path.join(__dirname, 'recept-zoeken.html'));
+});
+
+app.get('/recept-zoeken.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'recept-zoeken.html'));
+});
+
 app.get('/health', (_req, res) => {
   res.status(200).json({
     ok: true,
@@ -1327,6 +1335,127 @@ function getRecipePackSummaries() {
     total_recipes: pack.recipes.length
   }));
 }
+
+function inferRecipeSourceLabel(recipeUrl) {
+  try {
+    const host = new URL(recipeUrl).hostname.replace(/^www\./i, '').toLowerCase();
+    const knownSources = {
+      'leukerecepten.nl': 'LeukeRecepten',
+      'eatertainment.nl': 'Eatertainment',
+      'laurasbakery.nl': "Laura's Bakery",
+      'foodiesmagazine.nl': 'Foodies'
+    };
+
+    if (knownSources[host]) return knownSources[host];
+
+    const root = host.split('.').slice(0, -1).join('.') || host;
+    return root
+      .split(/[-.]/)
+      .filter(Boolean)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  } catch {
+    return 'Receptwebsite';
+  }
+}
+
+function buildInternetRecipePool() {
+  const seen = new Set();
+  const pool = [];
+
+  for (const pack of RECIPE_PACKS) {
+    for (const recipe of pack.recipes) {
+      const recipeUrl = String(recipe.url || '').trim();
+      if (!recipeUrl || seen.has(recipeUrl)) continue;
+      seen.add(recipeUrl);
+      pool.push({
+        title: recipe.title || null,
+        url: recipeUrl,
+        source: inferRecipeSourceLabel(recipeUrl),
+        dish_type: recipe.dish_type || null,
+        meal_category: recipe.meal_category || null,
+        meal_type: recipe.meal_type || null,
+        time_required: recipe.time_required || null,
+        calories: recipe.calories ?? null
+      });
+    }
+  }
+
+  return pool;
+}
+
+function shuffleArray(items) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+const INTERNET_RANDOM_RECIPE_POOL = buildInternetRecipePool();
+const INTERNET_RANDOM_RECIPE_MAX_ATTEMPTS = 12;
+
+async function pickRandomInternetRecipe() {
+  if (!INTERNET_RANDOM_RECIPE_POOL.length) return null;
+
+  const candidates = shuffleArray(INTERNET_RANDOM_RECIPE_POOL);
+  let fallbackCandidate = null;
+
+  for (const candidate of candidates.slice(0, INTERNET_RANDOM_RECIPE_MAX_ATTEMPTS)) {
+    if (!fallbackCandidate) fallbackCandidate = candidate;
+
+    try {
+      const payload = await getRecipeInfoPayload(new URL(candidate.url));
+      if (payload?.error) continue;
+
+      const ingredients = Array.isArray(payload.ingredients)
+        ? payload.ingredients.filter(Boolean).slice(0, 6)
+        : [];
+
+      return {
+        title: payload.title || candidate.title || 'Random recept',
+        url: candidate.url,
+        source: candidate.source,
+        dish_type: payload.dish_type || candidate.dish_type || null,
+        meal_category: payload.meal_category || candidate.meal_category || null,
+        meal_type: payload.meal_type || candidate.meal_type || null,
+        time_required: payload.time_required || candidate.time_required || null,
+        calories: payload.calories ?? candidate.calories ?? null,
+        ingredients_preview: ingredients
+      };
+    } catch (_err) {
+      // probeer volgende kandidaat
+    }
+  }
+
+  if (!fallbackCandidate) return null;
+
+  return {
+    title: fallbackCandidate.title || 'Random recept',
+    url: fallbackCandidate.url,
+    source: fallbackCandidate.source,
+    dish_type: fallbackCandidate.dish_type || null,
+    meal_category: fallbackCandidate.meal_category || null,
+    meal_type: fallbackCandidate.meal_type || null,
+    time_required: fallbackCandidate.time_required || null,
+    calories: fallbackCandidate.calories ?? null,
+    ingredients_preview: []
+  };
+}
+
+app.get('/api/internet-recipe-random', async (_req, res) => {
+  try {
+    const recipe = await pickRandomInternetRecipe();
+    if (!recipe) {
+      return res.status(503).json({ error: 'Er zijn nog geen internetrecepten beschikbaar.' });
+    }
+    return res.json(recipe);
+  } catch (err) {
+    console.error('❌ internet random recipe error:', err);
+    return res.status(500).json({ error: 'Kon geen random internetrecept ophalen.' });
+  }
+});
 
 function dbCall(fn, ...args) {
   return new Promise((resolve, reject) => {

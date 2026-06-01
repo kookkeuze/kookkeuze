@@ -1,7 +1,6 @@
 const randomBtn = document.getElementById('internetRandomBtn');
-const randomAgainBtn = document.getElementById('internetRandomAgainBtn');
 const resultEl = document.getElementById('internetRecipeResult');
-const statusEl = document.getElementById('recipeSearchStatus');
+const API_BASE = window.location.origin;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -15,7 +14,7 @@ function escapeHtml(value) {
 function fetchRecipeImage(url) {
   if (!url) return Promise.resolve(null);
 
-  return fetch(`/api/recipe-image?url=${encodeURIComponent(url)}`)
+  return fetch(`${API_BASE}/api/recipe-image?url=${encodeURIComponent(url)}`, { cache: 'no-store' })
     .then(res => res.json())
     .then(data => data?.imageUrl || null)
     .catch(() => null);
@@ -44,7 +43,7 @@ function setResultCardImage(cell, imageUrl, title) {
 function renderLoadingState() {
   resultEl.innerHTML = `
     <div class="recipe-cards-container recipe-search-card-grid">
-      <article class="recipe-card recipe-search-result-card is-loading">
+      <article class="recipe-card">
         <div class="result-image-cell">
           <div class="recipe-card-image-skeleton"></div>
         </div>
@@ -63,11 +62,7 @@ function renderLoadingState() {
 
 function renderErrorState(message) {
   resultEl.innerHTML = `
-    <div class="recipe-search-empty-state recipe-search-empty-state--error">
-      <div class="recipe-search-empty-icon" aria-hidden="true">
-        <i class="fas fa-triangle-exclamation"></i>
-      </div>
-      <h3>Ophalen lukte niet</h3>
+    <div class="recipe-search-error-state">
       <p>${escapeHtml(message)}</p>
     </div>
   `;
@@ -97,17 +92,14 @@ function renderRecipeCard(recipe) {
 
   resultEl.innerHTML = `
     <div class="recipe-cards-container recipe-search-card-grid">
-      <article class="recipe-card recipe-search-result-card">
+      <article class="recipe-card">
         <div class="result-image-cell" data-random-image-cell>
           <div class="recipe-card-image-skeleton"></div>
         </div>
 
         <div class="recipe-card-content">
-          <div class="recipe-card-head recipe-search-card-head">
-            <div class="recipe-search-source-group">
-              <span class="recipe-search-source-chip">${escapeHtml(source)}</span>
-              <span class="recipe-search-source-label">Random van internet</span>
-            </div>
+          <div class="recipe-search-source-group">
+            <span class="recipe-search-source-chip">${escapeHtml(source)}</span>
           </div>
 
           <h3>${escapeHtml(title)}</h3>
@@ -130,7 +122,7 @@ function renderRecipeCard(recipe) {
           </ul>
 
           <div class="recipe-search-ingredients-block">
-            <p class="recipe-search-ingredients-title">Voorbeeld van ingredienten</p>
+            <p class="recipe-search-ingredients-title">Ingredienten</p>
             ${buildIngredientsPreview(recipe?.ingredients_preview)}
           </div>
         </div>
@@ -143,15 +135,13 @@ function renderRecipeCard(recipe) {
 }
 
 async function loadRandomRecipe() {
-  if (!randomBtn || !resultEl || !statusEl) return;
+  if (!randomBtn || !resultEl) return;
 
   randomBtn.disabled = true;
-  randomAgainBtn?.classList.add('hidden');
-  statusEl.textContent = 'We zoeken een lekker random recept voor je...';
   renderLoadingState();
 
   try {
-    const res = await fetch('/api/internet-recipe-random');
+    const res = await fetch(`${API_BASE}/api/internet-recipe-random`, { cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok || data?.error) {
@@ -159,15 +149,11 @@ async function loadRandomRecipe() {
     }
 
     renderRecipeCard(data);
-    statusEl.textContent = `Gevonden op ${data.source || 'een bekende receptenwebsite'}.`;
-    randomAgainBtn?.classList.remove('hidden');
   } catch (err) {
     renderErrorState(err.message || 'Kon geen random recept ophalen.');
-    statusEl.textContent = 'Probeer het nog eens, we konden nu geen recept ophalen.';
   } finally {
     randomBtn.disabled = false;
   }
 }
 
 randomBtn?.addEventListener('click', loadRandomRecipe);
-randomAgainBtn?.addEventListener('click', loadRandomRecipe);
