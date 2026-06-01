@@ -2107,6 +2107,11 @@ select:focus {
   overflow: hidden;
 }
 
+.weekmenu-day-card-current {
+  border-color: rgba(99, 214, 113, 0.58);
+  box-shadow: 0 10px 24px rgba(74, 200, 88, 0.12);
+}
+
 .weekmenu-day-header {
   padding: 10px;
   background: transparent;
@@ -2142,6 +2147,12 @@ select:focus {
   min-height: 0;
 }
 
+.weekmenu-slot-item-primary {
+  border-color: rgba(99, 214, 113, 0.5);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fff8 100%);
+  box-shadow: 0 8px 18px rgba(66, 134, 77, 0.08);
+}
+
 .weekmenu-slot-name {
   margin: 0;
   font-size: 12px;
@@ -2160,6 +2171,12 @@ select:focus {
 
 .weekmenu-slot-head .weekmenu-slot-name {
   flex: 1 1 auto;
+}
+
+.weekmenu-slot-empty-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 
 .weekmenu-slot-item .weekmenu-add-btn {
@@ -2699,6 +2716,10 @@ select:focus {
     scroll-snap-align: start;
   }
 
+  .weekmenu-day-card-has-planned .weekmenu-day-header {
+    background: #eef8f0;
+  }
+
   .weekmenu-mobile-dots {
     display: flex;
     justify-content: center;
@@ -2724,6 +2745,57 @@ select:focus {
 
   .weekmenu-day-body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .weekmenu-day-card-has-planned .weekmenu-day-body {
+    grid-template-columns: 1fr;
+  }
+
+  .weekmenu-slot-item-primary {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .weekmenu-slot-item-primary .weekmenu-slot-name {
+    color: #2f6a37;
+  }
+
+  .weekmenu-slot-item-primary .weekmenu-open-link {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+
+  .weekmenu-slot-item-empty-compact {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 10px;
+    padding: 10px 12px;
+  }
+
+  .weekmenu-slot-item-empty-compact .weekmenu-slot-empty-copy {
+    gap: 2px;
+  }
+
+  .weekmenu-slot-item-empty-compact .weekmenu-slot-name {
+    font-size: 11px;
+  }
+
+  .weekmenu-slot-item-empty-compact .weekmenu-empty {
+    font-size: 12px;
+  }
+
+  .weekmenu-slot-item-empty-compact .weekmenu-cell-actions {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    margin-top: 0;
+    align-self: center;
+  }
+
+  .weekmenu-slot-item-empty-compact .weekmenu-add-btn {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    background: #f3faf4;
   }
 
   .weekmenu-search-item {

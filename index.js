@@ -1669,6 +1669,7 @@ let plannerSuggestedSlot = null;
 let pendingAssignRecipeId = null;
 let assignSelectedDay = 1;
 let assignSelectedSlot = 'dinner';
+let plannerMobileDayIndex = null;
 let plannerUiBound = false;
 
 function getMonday(date) {
@@ -1718,6 +1719,29 @@ function formatDayNumber(weekStartIso, offset) {
   const dt = new Date(`${weekStartIso}T00:00:00`);
   dt.setDate(dt.getDate() + offset);
   return new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'short' }).format(dt);
+}
+
+function getPlannerDayIndexFromDate(date) {
+  const safeDate = new Date(date);
+  return Math.max(0, Math.min(plannerDays.length - 1, (safeDate.getDay() + 6) % 7));
+}
+
+function getPlannerDefaultMobileDayIndex(weekStartIso = plannerWeekStart) {
+  if (!weekStartIso) return 0;
+  const currentWeekStartIso = toIsoDate(getMonday(new Date()));
+  if (weekStartIso === currentWeekStartIso) {
+    return getPlannerDayIndexFromDate(new Date());
+  }
+  return 0;
+}
+
+function getPlannerInitialMobileDayIndex() {
+  if (Number.isInteger(plannerMobileDayIndex) && plannerMobileDayIndex >= 0 && plannerMobileDayIndex < plannerDays.length) {
+    return plannerMobileDayIndex;
+  }
+  const defaultIndex = getPlannerDefaultMobileDayIndex(plannerWeekStart);
+  plannerMobileDayIndex = defaultIndex;
+  return defaultIndex;
 }
 
 function plannerSlotKey(day, slot) {
@@ -1817,7 +1841,8 @@ function openAssignModalForRecipe(recipeId, recipeTitle) {
   if (!plannerWeekStart) plannerWeekStart = toIsoDate(getMonday(new Date()));
   pendingAssignRecipeId = Number(recipeId);
   if (assignModalRecipeTitle) assignModalRecipeTitle.textContent = recipeTitle || 'Recept';
-  assignSelectedDay = Number(plannerSuggestedDay || 1);
+  const fallbackDay = getPlannerInitialMobileDayIndex() + 1;
+  assignSelectedDay = Number(plannerSuggestedDay || fallbackDay || 1);
   assignSelectedSlot = plannerSuggestedSlot || 'dinner';
   renderAssignCalendarPicker();
   assignModal?.classList.remove('hidden');
@@ -1859,6 +1884,8 @@ async function loadWeekMenu() {
 
 function renderWeekMenuGrid() {
   if (!weekmenuGrid) return;
+  const mobileViewport = isMobileViewport();
+  const initialMobileDayIndex = getPlannerInitialMobileDayIndex();
   let html = `
     <div class="weekmenu-mobile-nav" aria-hidden="true">
       <button type="button" class="weekmenu-mobile-arrow prev" data-direction="prev" aria-label="Vorige dag">
@@ -1880,14 +1907,29 @@ function renderWeekMenuGrid() {
   ];
 
   for (let day = 1; day <= 7; day++) {
+    const slotStates = daySlots.map(slot => ({
+      ...slot,
+      entry: plannerEntries.get(plannerSlotKey(day, slot.key))
+    }));
+    const hasPlannedSlots = slotStates.some(slot => !!slot.entry);
+    const orderedSlots = mobileViewport && hasPlannedSlots
+      ? [
+          ...slotStates.filter(slot => !!slot.entry),
+          ...slotStates.filter(slot => !slot.entry)
+        ]
+      : slotStates;
 
-    const renderSlot = (slotKey, slotLabel, entry) => {
+    const renderSlot = (slot, index) => {
+      const slotKey = slot.key;
+      const slotLabel = slot.label;
+      const entry = slot.entry;
       if (entry) {
         const entryRecipeId = Number(entry.recipe_id || entry.id || 0) > 0 ? Number(entry.recipe_id || entry.id || 0) : '';
         const safeUrl = escapeAttr(encodeURIComponent(entry.url || ''));
         const safeHref = escapeAttr(entry.url || '#');
         const safeTitle = escapeHtml(entry.title || 'Recept');
         const safeTitleAttr = escapeAttr(entry.title || 'Recept');
+        const primaryFilledClass = mobileViewport && hasPlannedSlots && index === 0 ? ' weekmenu-slot-item-primary' : '';
         const titleMarkup = entry.url
           ? `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="weekmenu-open-link" title="${safeTitleAttr}">
               <span class="weekmenu-open-link-title">${safeTitle}</span>
@@ -1896,7 +1938,7 @@ function renderWeekMenuGrid() {
               <span class="weekmenu-open-link-title">${safeTitle}</span>
             </span>`;
         return `
-          <div class="weekmenu-slot-item weekmenu-slot-item-filled">
+          <div class="weekmenu-slot-item weekmenu-slot-item-filled${primaryFilledClass}">
             <div class="weekmenu-slot-head">
               <p class="weekmenu-slot-name">${slotLabel}</p>
               <button type="button" class="pink-btn weekmenu-clear-btn weekmenu-clear-icon-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Verwijder recept uit ${slotLabel}">
@@ -1918,10 +1960,14 @@ function renderWeekMenuGrid() {
             </div>
           </div>`;
       }
+      const compactEmptyClass = mobileViewport && hasPlannedSlots ? ' weekmenu-slot-item-empty-compact' : '';
+      const emptyLabel = compactEmptyClass ? 'Nog leeg' : 'Nog niets gepland';
       return `
-        <div class="weekmenu-slot-item weekmenu-slot-item-empty">
-          <p class="weekmenu-slot-name">${slotLabel}</p>
-          <p class="weekmenu-empty">Nog niets gepland</p>
+        <div class="weekmenu-slot-item weekmenu-slot-item-empty${compactEmptyClass}">
+          <div class="weekmenu-slot-empty-copy">
+            <p class="weekmenu-slot-name">${slotLabel}</p>
+            <p class="weekmenu-empty">${emptyLabel}</p>
+          </div>
           <div class="weekmenu-cell-actions weekmenu-cell-actions-empty">
             <button type="button" class="green-btn weekmenu-add-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Kies recept voor ${slotLabel}">
               <i class="fas fa-plus" aria-hidden="true"></i>
@@ -1930,14 +1976,22 @@ function renderWeekMenuGrid() {
         </div>`;
     };
 
+    const dayCardClasses = [
+      'weekmenu-day-card',
+      hasPlannedSlots ? 'weekmenu-day-card-has-planned' : '',
+      plannerWeekStart === toIsoDate(getMonday(new Date())) && day - 1 === getPlannerDayIndexFromDate(new Date())
+        ? 'weekmenu-day-card-current'
+        : ''
+    ].filter(Boolean).join(' ');
+
     html += `
-      <article class="weekmenu-day-card" data-day-index="${day - 1}">
+      <article class="${dayCardClasses}" data-day-index="${day - 1}">
         <header class="weekmenu-day-header">
           <p class="weekmenu-day-name">${plannerDays[day - 1]}</p>
           <p class="weekmenu-day-date">${formatDayNumber(plannerWeekStart, day - 1)}</p>
         </header>
         <div class="weekmenu-day-body">
-          ${daySlots.map(slot => renderSlot(slot.key, slot.label, plannerEntries.get(plannerSlotKey(day, slot.key)))).join('')}
+          ${orderedSlots.map((slot, index) => renderSlot(slot, index)).join('')}
         </div>
       </article>`;
   }
@@ -1945,7 +1999,7 @@ function renderWeekMenuGrid() {
   html += `
     </div>
     <div class="weekmenu-mobile-dots" aria-hidden="true">
-      ${plannerDays.map((_day, idx) => `<span class="weekmenu-mobile-dot${idx === 0 ? ' active' : ''}" data-dot-index="${idx}"></span>`).join('')}
+      ${plannerDays.map((_day, idx) => `<span class="weekmenu-mobile-dot${idx === initialMobileDayIndex ? ' active' : ''}" data-dot-index="${idx}"></span>`).join('')}
     </div>
   `;
   weekmenuGrid.innerHTML = html;
@@ -1953,13 +2007,15 @@ function renderWeekMenuGrid() {
   const calendar = weekmenuGrid.querySelector('.weekmenu-calendar');
   const cards = Array.from(weekmenuGrid.querySelectorAll('.weekmenu-day-card'));
   const dots = Array.from(weekmenuGrid.querySelectorAll('.weekmenu-mobile-dot'));
+  const getCardWidth = () => cards[0]?.getBoundingClientRect().width || cards[0]?.offsetWidth || calendar?.clientWidth || 1;
 
   const updateMobileIndicators = () => {
     if (!calendar || cards.length === 0) return;
     const scrollLeft = calendar.scrollLeft;
-    const cardWidth = cards[0].getBoundingClientRect().width || 1;
+    const cardWidth = getCardWidth();
     const rawIndex = Math.round(scrollLeft / cardWidth);
     const activeIndex = Math.max(0, Math.min(cards.length - 1, rawIndex));
+    plannerMobileDayIndex = activeIndex;
     dots.forEach((dot, idx) => dot.classList.toggle('active', idx === activeIndex));
     const prevBtn = weekmenuGrid.querySelector('.weekmenu-mobile-arrow.prev');
     const nextBtn = weekmenuGrid.querySelector('.weekmenu-mobile-arrow.next');
@@ -1967,15 +2023,28 @@ function renderWeekMenuGrid() {
     if (nextBtn) nextBtn.disabled = activeIndex >= cards.length - 1;
   };
 
+  const jumpToCardIndex = (index, behavior = 'smooth') => {
+    if (!calendar || cards.length === 0) return;
+    const nextIndex = Math.max(0, Math.min(cards.length - 1, Number(index) || 0));
+    const left = nextIndex * getCardWidth();
+    plannerMobileDayIndex = nextIndex;
+    if (behavior === 'auto') {
+      calendar.scrollLeft = left;
+      updateMobileIndicators();
+      return;
+    }
+    calendar.scrollTo({ left, behavior });
+  };
+
   const scrollToCard = direction => {
     if (!calendar || cards.length === 0) return;
-    const scrollLeft = calendar.scrollLeft;
-    const cardWidth = cards[0].getBoundingClientRect().width || 1;
-    const currentIndex = Math.round(scrollLeft / cardWidth);
+    const currentIndex = Number.isInteger(plannerMobileDayIndex)
+      ? plannerMobileDayIndex
+      : Math.round(calendar.scrollLeft / getCardWidth());
     const nextIndex = direction === 'next'
       ? Math.min(cards.length - 1, currentIndex + 1)
       : Math.max(0, currentIndex - 1);
-    calendar.scrollTo({ left: nextIndex * cardWidth, behavior: 'smooth' });
+    jumpToCardIndex(nextIndex);
   };
 
   weekmenuGrid.querySelectorAll('.weekmenu-mobile-arrow').forEach(btn => {
@@ -1983,14 +2052,15 @@ function renderWeekMenuGrid() {
   });
   dots.forEach(dot => {
     dot.addEventListener('click', () => {
-      if (!calendar || cards.length === 0) return;
       const idx = Number(dot.dataset.dotIndex || '0');
-      const cardWidth = cards[0].getBoundingClientRect().width || 1;
-      calendar.scrollTo({ left: idx * cardWidth, behavior: 'smooth' });
+      jumpToCardIndex(idx);
     });
   });
   calendar?.addEventListener('scroll', updateMobileIndicators, { passive: true });
-  requestAnimationFrame(updateMobileIndicators);
+  requestAnimationFrame(() => {
+    jumpToCardIndex(initialMobileDayIndex, 'auto');
+    updateMobileIndicators();
+  });
 
   weekmenuGrid.querySelectorAll('.weekmenu-clear-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
