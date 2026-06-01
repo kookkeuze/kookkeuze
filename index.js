@@ -1966,7 +1966,7 @@ function renderWeekMenuGrid() {
             <p class="weekmenu-slot-name">${slotLabel}</p>
           </div>
           <div class="weekmenu-cell-actions weekmenu-cell-actions-empty">
-            <button type="button" class="green-btn weekmenu-add-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Kies recept voor ${slotLabel}">
+            <button type="button" class="weekmenu-add-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Kies recept voor ${slotLabel}">
               <i class="fas fa-plus" aria-hidden="true"></i>
             </button>
           </div>

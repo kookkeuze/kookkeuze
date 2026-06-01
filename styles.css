@@ -2152,6 +2152,8 @@ select:focus {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
   color: #6b776f;
   font-weight: 700;
 }
@@ -2174,9 +2176,16 @@ select:focus {
 }
 
 .weekmenu-slot-item .weekmenu-add-btn {
-  border-color: #d4e5d9;
-  color: #597267;
-  background: #ffffff;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  color: #63D671;
+  background: transparent;
+  box-shadow: none;
+  font-size: 16px;
 }
 
 .weekmenu-slot-item-filled .weekmenu-cell-actions {
@@ -2186,23 +2195,22 @@ select:focus {
 }
 
 .weekmenu-slot-item-empty {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: start;
+  gap: 8px;
+  padding: 10px 12px 9px;
+  min-height: 76px;
 }
 
 .weekmenu-slot-item-empty .weekmenu-cell-actions {
-  margin-top: 0;
-  justify-content: flex-end;
-  align-self: center;
+  margin-top: auto;
+  justify-content: flex-start;
+  align-self: end;
 }
 
 .weekmenu-slot-item-empty .weekmenu-add-btn {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  background: #f6fbf7;
+  font-size: 17px;
 }
 
 .weekmenu-slot-item .weekmenu-preview-btn {
@@ -2218,9 +2226,8 @@ select:focus {
 }
 
 .weekmenu-slot-item .weekmenu-add-btn:hover {
-  border-color: #bfd4c6;
-  color: #35533d;
-  background: #f7fbf8;
+  color: #4ac858;
+  background: transparent;
   transform: none;
   box-shadow: none;
 }
@@ -2780,7 +2787,8 @@ select:focus {
   }
 
   .weekmenu-slot-item-empty {
-    padding: 9px 11px;
+    padding: 9px 11px 8px;
+    min-height: 68px;
   }
 
   .weekmenu-search-item {
