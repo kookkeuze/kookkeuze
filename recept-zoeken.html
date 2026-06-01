@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" href="Logo/favicon-kookkeuze.png" />
+  <meta name="theme-color" content="#63D671" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="Logo/apple-touch-icon-kookkeuze.png" />
+  <title>Recept Zoeken | Kookkeuze</title>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+  />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="recept-zoeken.css" />
+</head>
+<body class="recipe-search-page">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="/" class="recipe-search-logo-link" aria-label="Ga naar de homepage van Kookkeuze">
+        <img src="Logo/Kookkeuze-logo.svg" alt="Kookkeuze-logo" class="logo-img" />
+      </a>
+
+      <div class="topbar-actions">
+        <a href="/" class="topbar-action-btn recipe-search-topbar-link" aria-label="Terug naar home">
+          <span class="action-icon-shell"><i class="fas fa-arrow-left"></i></span>
+          <span>Home</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="benefits-bar">
+    <div class="benefit">
+      <i class="fas fa-check"></i>
+      <span class="benefit-label"><span class="highlight">Nieuwe</span><span class="benefit-rest">inspiratie</span></span>
+    </div>
+    <div class="benefit">
+      <i class="fas fa-check"></i>
+      <span class="benefit-label"><span class="highlight">Random</span><span class="benefit-rest">van internet</span></span>
+    </div>
+    <div class="benefit">
+      <i class="fas fa-check"></i>
+      <span class="benefit-label"><span class="highlight">Bekende</span><span class="benefit-rest">receptsites</span></span>
+    </div>
+  </div>
+
+  <main class="container recipe-search-container">
+    <section class="recipe-search-hero">
+      <div class="recipe-search-copy">
+        <p class="recipe-search-kicker">Nieuw experiment</p>
+        <h1>Recept zoeken buiten je database</h1>
+        <p class="recipe-search-lead">
+          Op deze pagina kun je alvast random recepten van bekende Nederlandse receptenwebsites ophalen.
+          Later voegen we dit samen met zoeken in je eigen database, maar voor nu is dit de losse internet-versie.
+        </p>
+
+        <div class="recipe-search-actions">
+          <button id="internetRandomBtn" type="button" class="green-btn recipe-search-random-btn">
+            <i class="fas fa-shuffle" aria-hidden="true"></i>
+            Random recept
+          </button>
+          <p id="recipeSearchStatus" class="recipe-search-status">
+            Bekende bronnen in de mix: LeukeRecepten, Eatertainment, Foodies en Laura's Bakery.
+          </p>
+        </div>
+      </div>
+
+      <div class="recipe-search-modes" aria-label="Zoekmodi">
+        <article class="recipe-search-mode-card recipe-search-mode-card--muted">
+          <span class="recipe-search-mode-pill">Later</span>
+          <h2>Zoeken in database</h2>
+          <p>
+            Deze pagina wordt later samengevoegd met je bestaande databasezoeker, zodat je alles op 1 plek hebt.
+          </p>
+        </article>
+
+        <article class="recipe-search-mode-card recipe-search-mode-card--active">
+          <span class="recipe-search-mode-pill">Nu live</span>
+          <h2>Random van internet</h2>
+          <p>
+            1 klik en je krijgt een willekeurig recept van een bekende receptenwebsite, klaar om direct te openen.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="recipe-search-result-section">
+      <div class="recipe-search-section-head">
+        <div>
+          <p class="recipe-search-section-kicker">Resultaat</p>
+          <h2>Jouw random recept</h2>
+        </div>
+        <button id="internetRandomAgainBtn" type="button" class="overview-view-btn hidden">
+          Nog een recept
+        </button>
+      </div>
+
+      <div id="internetRecipeResult" class="recipe-search-empty-state">
+        <div class="recipe-search-empty-icon" aria-hidden="true">
+          <i class="fas fa-utensils"></i>
+        </div>
+        <h3>Klaar voor iets nieuws?</h3>
+        <p>Klik op <strong>Random recept</strong> en Kookkeuze haalt een recept van internet voor je op.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="recept-zoeken.js"></script>
+</body>
+</html>
