@@ -240,15 +240,10 @@ function normalizeIngredientText(value) {
   return String(value).replace(/\s+/g, ' ').trim() || null;
 }
 
-function extractRecipeIngredients(recipe) {
-  const rawIngredients = recipe.recipeIngredient || recipe.ingredients || recipe.ingredient;
-  const ingredients = Array.isArray(rawIngredients)
-    ? rawIngredients
-    : (rawIngredients ? [rawIngredients] : []);
+function dedupeIngredients(items) {
   const seen = new Set();
 
-  return ingredients
-    .map(item => normalizeIngredientText(item))
+  return items
     .filter(Boolean)
     .filter(item => {
       const key = item.toLowerCase();
@@ -257,6 +252,157 @@ function extractRecipeIngredients(recipe) {
       return true;
     })
     .slice(0, 80);
+}
+
+function extractRecipeIngredients(recipe) {
+  const rawIngredients = recipe.recipeIngredient || recipe.ingredients || recipe.ingredient;
+  const ingredients = Array.isArray(rawIngredients)
+    ? rawIngredients
+    : (rawIngredients ? [rawIngredients] : []);
+
+  return dedupeIngredients(ingredients.map(item => normalizeIngredientText(item)));
+}
+
+function decodeHtmlEntities(value) {
+  if (!value) return '';
+
+  const namedEntities = {
+    amp: '&',
+    apos: "'",
+    quot: '"',
+    nbsp: ' ',
+    lt: '<',
+    gt: '>',
+    rsquo: "'",
+    lsquo: "'",
+    rdquo: '"',
+    ldquo: '"',
+    ndash: '-',
+    mdash: '-',
+    hellip: '...',
+    frac14: '1/4',
+    frac12: '1/2',
+    frac34: '3/4'
+  };
+
+  return String(value)
+    .replace(/&#(\d+);/g, (_match, dec) => {
+      const codePoint = Number(dec);
+      return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : '';
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (_match, hex) => {
+      const codePoint = parseInt(hex, 16);
+      return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : '';
+    })
+    .replace(/&([a-z]+);/gi, (match, name) => namedEntities[name.toLowerCase()] ?? match);
+}
+
+function htmlToText(fragment) {
+  if (!fragment) return '';
+  return decodeHtmlEntities(
+    String(fragment)
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(li|p|div|section|article|ul|ol|h1|h2|h3|h4|h5|h6)>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+  )
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function extractMetaContentByAttribute(html, attr, value) {
+  if (!html || !attr || !value) return null;
+  const escapedAttr = attr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const patterns = [
+    new RegExp(`<meta[^>]+${escapedAttr}=["']${escapedValue}["'][^>]*content=["']([^"']+)["'][^>]*>`, 'i'),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]*${escapedAttr}=["']${escapedValue}["'][^>]*>`, 'i')
+  ];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match && match[1]) {
+      return decodeHtmlEntities(match[1]).replace(/\s+/g, ' ').trim() || null;
+    }
+  }
+
+  return null;
+}
+
+function extractRecipeTitleFromHtml(html) {
+  if (!html) return null;
+
+  const h1Match = html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);
+  const h1Title = normalizeIngredientText(htmlToText(h1Match && h1Match[1]));
+  if (h1Title) return h1Title;
+
+  const ogTitle = extractMetaContentByAttribute(html, 'property', 'og:title');
+  if (ogTitle) return ogTitle;
+
+  const twitterTitle = extractMetaContentByAttribute(html, 'name', 'twitter:title');
+  if (twitterTitle) return twitterTitle;
+
+  const titleMatch = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
+  return normalizeIngredientText(htmlToText(titleMatch && titleMatch[1]));
+}
+
+function extractSectionHtmlByHeading(html, headingPatterns) {
+  if (!html) return '';
+
+  const headingRe = /<(h[1-6]|p|strong)\b[^>]*>([\s\S]*?)<\/\1>/gi;
+  let match;
+  while ((match = headingRe.exec(html)) !== null) {
+    const headingText = htmlToText(match[2]).replace(/\s+/g, ' ').trim().toLowerCase();
+    if (!headingText) continue;
+    if (!headingPatterns.some(pattern => pattern.test(headingText))) continue;
+
+    const rest = html.slice(match.index + match[0].length);
+    const nextHeadingMatch = rest.match(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]>/i);
+    return nextHeadingMatch ? rest.slice(0, nextHeadingMatch.index) : rest;
+  }
+
+  return '';
+}
+
+function extractListItemsFromSectionHtml(sectionHtml) {
+  if (!sectionHtml) return [];
+
+  const listItems = [...sectionHtml.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)]
+    .map(match => normalizeIngredientText(htmlToText(match[1])));
+
+  if (listItems.length) {
+    return dedupeIngredients(listItems);
+  }
+
+  const lines = htmlToText(sectionHtml)
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  const fallbackItems = [];
+  for (const line of lines) {
+    const parts = line.split(/\s*[•●▪◦]\s*/).map(part => part.trim()).filter(Boolean);
+    for (const part of (parts.length ? parts : [line])) {
+      const cleaned = normalizeIngredientText(part.replace(/^[*\-–—]+\s*/, '').replace(/^\d+[.)]\s*/, ''));
+      if (!cleaned) continue;
+      fallbackItems.push(cleaned);
+    }
+  }
+
+  return dedupeIngredients(fallbackItems);
+}
+
+function extractRecipeIngredientsFromHtml(html) {
+  const sectionHtml = extractSectionHtmlByHeading(html, [
+    /^ingredients?$/,
+    /^ingredienten?$/,
+    /^what you'll need$/,
+    /^wat heb je nodig$/
+  ]);
+
+  return extractListItemsFromSectionHtml(sectionHtml);
 }
 
 function parseDurationToMinutes(iso) {
@@ -332,24 +478,45 @@ function mapMealType(text) {
   return null;
 }
 
-function buildRecipePayload(recipe) {
+function buildRecipePayload(recipe, html = '') {
+  let fallbackTitle;
+  let fallbackIngredients;
+  const getFallbackTitle = () => {
+    if (fallbackTitle !== undefined) return fallbackTitle;
+    fallbackTitle = extractRecipeTitleFromHtml(html);
+    return fallbackTitle;
+  };
+  const getFallbackIngredients = () => {
+    if (fallbackIngredients !== undefined) return fallbackIngredients;
+    fallbackIngredients = extractRecipeIngredientsFromHtml(html);
+    return fallbackIngredients;
+  };
+
   if (!recipe) {
+    const title = getFallbackTitle();
     return {
-      title: null,
+      title,
       dish_type: null,
       meal_category: null,
       meal_type: null,
       time_required: null,
       calories: null,
-      ingredients: [],
-      missing: ['Titel', 'Soort gerecht', 'Menugang', 'Doel gerecht', 'Tijd', 'Calorieën']
+      ingredients: getFallbackIngredients(),
+      missing: [
+        ...(!title ? ['Titel'] : []),
+        'Soort gerecht',
+        'Menugang',
+        'Doel gerecht',
+        'Tijd',
+        'Calorieën'
+      ]
     };
   }
 
   const text = collectTextFields(recipe);
   const totalMinutes = parseDurationToMinutes(recipe.totalTime || recipe.cookTime || recipe.prepTime);
   const payload = {
-    title: recipe.name || null,
+    title: recipe.name || getFallbackTitle(),
     dish_type: mapDishType(text),
     meal_category: mapMealCategory(text),
     meal_type: mapMealType(text),
@@ -358,6 +525,10 @@ function buildRecipePayload(recipe) {
     ingredients: extractRecipeIngredients(recipe),
     missing: []
   };
+
+  if (!payload.ingredients.length) {
+    payload.ingredients = getFallbackIngredients();
+  }
 
   if (!payload.title) payload.missing.push('Titel');
   if (!payload.dish_type) payload.missing.push('Soort gerecht');
@@ -387,7 +558,7 @@ async function getRecipeInfoPayload(targetUrl) {
     if (recipe) break;
   }
 
-  const payload = buildRecipePayload(recipe);
+  const payload = buildRecipePayload(recipe, html);
   recipeInfoCache.set(cacheKey, {
     payload,
     expiresAt: Date.now() + RECIPE_INFO_TTL_MS
