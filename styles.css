@@ -231,9 +231,16 @@ html {
   background: #fbfdfc;
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.database-bar-settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  gap: 12px;
+  flex: 1 1 520px;
 }
 
 .database-bar-main {
@@ -248,7 +255,15 @@ html {
 }
 
 .database-bar-main select {
-  min-width: 320px;
+  min-width: 0;
+  width: 100%;
+}
+
+.database-setting-hint {
+  margin: 0;
+  color: #6d7a74;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .share-panel {
@@ -2975,6 +2990,10 @@ select:focus {
   .database-bar-main select {
     min-width: 0;
     width: 100%;
+  }
+
+  .database-bar-settings {
+    grid-template-columns: 1fr;
   }
 
   .share-columns {

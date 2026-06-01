@@ -511,9 +511,16 @@
         </button>
         <h3 class="assign-modal-title">Database instellingen</h3>
         <div id="databaseBar" class="database-bar">
-          <div class="database-bar-main">
-            <label for="activeDatabaseSelect">Actieve database</label>
-            <select id="activeDatabaseSelect"></select>
+          <div class="database-bar-settings">
+            <div class="database-bar-main">
+              <label for="activeDatabaseSelect">Actieve database</label>
+              <select id="activeDatabaseSelect"></select>
+            </div>
+            <div class="database-bar-main">
+              <label for="defaultDatabaseSelect">Standaard bij inloggen</label>
+              <select id="defaultDatabaseSelect"></select>
+              <p class="database-setting-hint">Deze database openen we automatisch zodra je inlogt.</p>
+            </div>
           </div>
           <button id="toggleSharePanelBtn" type="button" class="overview-view-btn">Delen beheren</button>
         </div>

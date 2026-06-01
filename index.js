@@ -13,6 +13,7 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 const RECIPE_NOTE_STORAGE_KEY = 'kookkeuze_recipe_notes_v1';
+const DEFAULT_DATABASE_STORAGE_KEY = 'kookkeuze_default_database_owner_ids_v1';
 let recipeNotesCache = {};
 let recipeNotesLoadedContext = null;
 let recipeNotesLoadPromise = null;
@@ -61,6 +62,55 @@ function getCurrentUserPayload() {
 
 function getCurrentUserId() {
   return Number(getCurrentUserPayload()?.id || 0) || null;
+}
+
+function toPositiveInt(value) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function getDefaultDatabaseStore() {
+  try {
+    const raw = localStorage.getItem(DEFAULT_DATABASE_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (_err) {
+    return {};
+  }
+}
+
+function saveDefaultDatabaseStore(store) {
+  try {
+    localStorage.setItem(DEFAULT_DATABASE_STORAGE_KEY, JSON.stringify(store));
+  } catch (_err) {
+    // negeer opslagfouten stilletjes
+  }
+}
+
+function getPreferredDatabaseOwnerId(userId = getCurrentUserId()) {
+  const safeUserId = toPositiveInt(userId);
+  if (!safeUserId) return null;
+  const store = getDefaultDatabaseStore();
+  return toPositiveInt(store[String(safeUserId)]);
+}
+
+function setPreferredDatabaseOwnerId(ownerUserId, userId = getCurrentUserId()) {
+  const safeUserId = toPositiveInt(userId);
+  if (!safeUserId) return;
+  const store = getDefaultDatabaseStore();
+  const safeOwnerId = toPositiveInt(ownerUserId);
+  if (safeOwnerId) {
+    store[String(safeUserId)] = safeOwnerId;
+  } else {
+    delete store[String(safeUserId)];
+  }
+  saveDefaultDatabaseStore(store);
+}
+
+function getFallbackDatabaseOwnerId(databases = accessibleDatabases) {
+  const fallbackDb = databases.find(db => !!db.is_personal) || databases[0];
+  return fallbackDb ? toPositiveInt(fallbackDb.owner_user_id) : null;
 }
 
 function getActiveDatabaseMeta() {
@@ -595,6 +645,7 @@ const databaseModal = document.getElementById('databaseModal');
 const closeDatabaseModal = document.getElementById('closeDatabaseModal');
 const databaseBar = document.getElementById('databaseBar');
 const activeDatabaseSelect = document.getElementById('activeDatabaseSelect');
+const defaultDatabaseSelect = document.getElementById('defaultDatabaseSelect');
 const toggleSharePanelBtn = document.getElementById('toggleSharePanelBtn');
 const sharePanel = document.getElementById('sharePanel');
 const shareInviteEmail = document.getElementById('shareInviteEmail');
@@ -607,7 +658,6 @@ const closeRecipePackModalBtn = document.getElementById('closeRecipePackModal');
 const recipePackModalBody = document.getElementById('recipePackModalBody');
 let deferredInstallPrompt = null;
 let accessibleDatabases = [];
-let activeDatabaseOwnerId = null;
 let recipePackList = [];
 let recipePackIndex = 0;
 let recipePackFromOnboarding = false;
@@ -620,6 +670,15 @@ function closeMobileHeaderMenu() {
   mobileHeaderMenu.classList.add('hidden');
   mobileHeaderMenu.setAttribute('aria-hidden', 'true');
   mobileMenuBtn.setAttribute('aria-expanded', 'false');
+}
+
+function buildDatabaseOptionsMarkup(selectedId) {
+  return accessibleDatabases.map(db => {
+    let label = db.database_name || 'Database';
+    if (db.is_personal) label = `Persoonlijk (${db.owner_email})`;
+    else if (db.owner_email) label = `${label} (${db.owner_email})`;
+    return `<option value="${db.owner_user_id}" ${Number(db.owner_user_id) === Number(selectedId) ? 'selected' : ''}>${label}</option>`;
+  }).join('');
 }
 
 function isMobileViewport() {
@@ -718,18 +777,11 @@ function setSharePanelMessage(text, isError = false) {
 }
 
 function renderDatabaseSelect() {
-  if (!activeDatabaseSelect) return;
-  const selectedId = getActiveDatabaseOwnerId();
-  activeDatabaseSelect.innerHTML = accessibleDatabases.map(db => {
-    let label = db.database_name || 'Database';
-    if (db.is_personal) label = `Persoonlijk (${db.owner_email})`;
-    else if (db.owner_email) label = `${label} (${db.owner_email})`;
-    return `<option value="${db.owner_user_id}" ${Number(db.owner_user_id) === Number(selectedId) ? 'selected' : ''}>${label}</option>`;
-  }).join('');
-  if (selectedId && !accessibleDatabases.some(db => Number(db.owner_user_id) === Number(selectedId))) {
-    const personal = accessibleDatabases.find(db => !!db.is_personal) || accessibleDatabases[0];
-    if (personal) localStorage.setItem('activeDatabaseOwnerId', String(personal.owner_user_id));
-  }
+  const selectedActiveId = getActiveDatabaseOwnerId() || getFallbackDatabaseOwnerId();
+  const selectedDefaultId = getPreferredDatabaseOwnerId() || getFallbackDatabaseOwnerId();
+  const optionsMarkup = buildDatabaseOptionsMarkup(selectedActiveId);
+  if (activeDatabaseSelect) activeDatabaseSelect.innerHTML = optionsMarkup;
+  if (defaultDatabaseSelect) defaultDatabaseSelect.innerHTML = buildDatabaseOptionsMarkup(selectedDefaultId);
 }
 
 async function loadSharePanelData() {
@@ -786,9 +838,24 @@ async function loadAccessibleDatabases() {
   const res = await fetch(`${API_BASE}/api/databases`, { headers: authHeaders() });
   const list = await res.json().catch(() => []);
   accessibleDatabases = Array.isArray(list) ? list : [];
-  if (accessibleDatabases.length && !localStorage.getItem('activeDatabaseOwnerId')) {
-    const personal = accessibleDatabases.find(db => !!db.is_personal) || accessibleDatabases[0];
-    localStorage.setItem('activeDatabaseOwnerId', String(personal.owner_user_id));
+  const hasAccessToDatabase = ownerId => accessibleDatabases.some(db => Number(db.owner_user_id) === Number(ownerId));
+  const fallbackOwnerId = getFallbackDatabaseOwnerId(accessibleDatabases);
+  const preferredOwnerId = getPreferredDatabaseOwnerId();
+  const activeOwnerId = toPositiveInt(localStorage.getItem('activeDatabaseOwnerId'));
+
+  const resolvedPreferredOwnerId = hasAccessToDatabase(preferredOwnerId) ? preferredOwnerId : fallbackOwnerId;
+  if (resolvedPreferredOwnerId) {
+    setPreferredDatabaseOwnerId(resolvedPreferredOwnerId);
+  }
+
+  const resolvedActiveOwnerId = hasAccessToDatabase(activeOwnerId)
+    ? activeOwnerId
+    : (resolvedPreferredOwnerId || fallbackOwnerId);
+
+  if (resolvedActiveOwnerId) {
+    localStorage.setItem('activeDatabaseOwnerId', String(resolvedActiveOwnerId));
+  } else {
+    localStorage.removeItem('activeDatabaseOwnerId');
   }
   if (databaseMenuBtn) databaseMenuBtn.classList.toggle('hidden', accessibleDatabases.length === 0);
   if (mobileDatabaseMenuBtn) mobileDatabaseMenuBtn.classList.toggle('hidden', accessibleDatabases.length === 0);
@@ -796,14 +863,23 @@ async function loadAccessibleDatabases() {
   await loadSharePanelData();
 }
 
+function refreshDatabaseDrivenViews() {
+  fetchAllRecipes();
+  renderPlannerSearchResults();
+  initWeekPlanner();
+}
+
 activeDatabaseSelect?.addEventListener('change', async () => {
   localStorage.setItem('activeDatabaseOwnerId', activeDatabaseSelect.value);
   setSharePanelMessage('');
   await loadSharePanelData();
   await ensureRecipeNotesLoaded(true);
-  fetchAllRecipes();
-  renderPlannerSearchResults();
-  initWeekPlanner();
+  refreshDatabaseDrivenViews();
+});
+
+defaultDatabaseSelect?.addEventListener('change', () => {
+  setPreferredDatabaseOwnerId(defaultDatabaseSelect.value);
+  renderDatabaseSelect();
 });
 
 toggleSharePanelBtn?.addEventListener('click', async () => {
@@ -2810,6 +2886,7 @@ function updateAuthUI(){
     loadAccessibleDatabases()
       .then(async () => {
         await ensureRecipeNotesLoaded(true);
+        refreshDatabaseDrivenViews();
         return maybeStartRecipePackOnboarding();
       })
       .catch(() => {});
@@ -2884,7 +2961,6 @@ document.getElementById('login-form').addEventListener('submit', async e => {
       resetForms();
       updateAuthUI();
       authModal.classList.add('hidden');
-      fetchAllRecipes();
     } else {
       showMsg(data.error || data.message || 'Inloggen mislukt.', false);
     }
