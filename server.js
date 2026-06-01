@@ -882,7 +882,7 @@ app.get('/api/verify', async (req, res) => {
     }
 
     // JWT aanmaken en redirect naar frontend voor auto-login
-    const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '12h' });
+    const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
     return res.redirect(`${FRONTEND_URL}/?token=${jwtToken}`);
   } catch (err) {
     console.error('❌ Verify error:', err);
@@ -910,7 +910,7 @@ app.post('/api/login', (req, res) => {
         return res.status(401).json({ error: 'Combinatie klopt niet.' });
       }
       acceptPendingInvitesForUser(user.id, user.email, () => {});
-      const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '12h' });
+      const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
       res.json({ message: 'Inloggen gelukt!', token });
     });
   });
