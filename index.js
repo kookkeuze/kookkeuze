@@ -1593,6 +1593,7 @@ let plannerSuggestedSlot = null;
 let pendingAssignRecipeId = null;
 let assignSelectedDay = 1;
 let assignSelectedSlot = 'dinner';
+let plannerUiBound = false;
 
 function getMonday(date) {
   const d = new Date(date);
@@ -1736,6 +1737,7 @@ function renderAssignCalendarPicker() {
 
 function openAssignModalForRecipe(recipeId, recipeTitle) {
   if (!ensureLoggedInOrNotify(weekmenuGrid || resultDiv)) return;
+  bindWeekPlannerUi();
   if (!plannerWeekStart) plannerWeekStart = toIsoDate(getMonday(new Date()));
   pendingAssignRecipeId = Number(recipeId);
   if (assignModalRecipeTitle) assignModalRecipeTitle.textContent = recipeTitle || 'Recept';
@@ -1743,11 +1745,13 @@ function openAssignModalForRecipe(recipeId, recipeTitle) {
   assignSelectedSlot = plannerSuggestedSlot || 'dinner';
   renderAssignCalendarPicker();
   assignModal?.classList.remove('hidden');
+  assignModal?.setAttribute('aria-hidden', 'false');
 }
 
 function closeAssignModalPanel() {
   pendingAssignRecipeId = null;
   assignModal?.classList.add('hidden');
+  assignModal?.setAttribute('aria-hidden', 'true');
 }
 
 async function loadPlannerRecipes() {
@@ -2059,6 +2063,7 @@ function openWeekmenuPreviewModal(recipeId, fallbackRecipe = null) {
   const imageCell = weekmenuPreviewBody.querySelector('.result-image-cell');
   fetchRecipeImage(recipe.url || '').then(imageUrl => setResultCardImage(imageCell, imageUrl, recipe.title || 'Recept'));
   weekmenuPreviewModal?.classList.remove('hidden');
+  weekmenuPreviewModal?.setAttribute('aria-hidden', 'false');
 }
 
 async function assignRecipeToPlanner(recipeId, dayOfWeek, slot) {
@@ -2163,22 +2168,14 @@ async function clearPlannerSlot(dayOfWeek, slot) {
   await loadWeekMenu();
 }
 
-async function initWeekPlanner() {
-  if (!plannerWeekStart) plannerWeekStart = toIsoDate(getMonday(new Date()));
-  if (weekLabel) weekLabel.textContent = formatWeekLabel(plannerWeekStart);
+function closeWeekmenuPreviewPanel() {
+  weekmenuPreviewModal?.classList.add('hidden');
+  weekmenuPreviewModal?.setAttribute('aria-hidden', 'true');
+}
 
-  try {
-    await ensureRecipeNotesLoaded();
-    await loadPlannerRecipes();
-    renderPlannerSearchResults();
-    await loadWeekMenu();
-  } catch (err) {
-    console.error(err);
-    if (weekmenuGrid) weekmenuGrid.innerHTML = '<p>Kon weekmenu niet laden.</p>';
-  }
-
-  if (plannerInitialized) return;
-  plannerInitialized = true;
+function bindWeekPlannerUi() {
+  if (plannerUiBound) return;
+  plannerUiBound = true;
 
   weekmenuSearchInput?.addEventListener('input', () => {
     plannerSearchCurrentPage = 1;
@@ -2248,17 +2245,44 @@ async function initWeekPlanner() {
   assignModal?.addEventListener('click', e => {
     if (e.target === assignModal) closeAssignModalPanel();
   });
-  closeWeekmenuPreviewModal?.addEventListener('click', () => {
-    weekmenuPreviewModal?.classList.add('hidden');
-  });
+  closeWeekmenuPreviewModal?.addEventListener('click', closeWeekmenuPreviewPanel);
   weekmenuPreviewModal?.addEventListener('click', e => {
-    if (e.target === weekmenuPreviewModal) weekmenuPreviewModal.classList.add('hidden');
+    if (e.target === weekmenuPreviewModal) closeWeekmenuPreviewPanel();
   });
   assignModalSaveBtn?.addEventListener('click', async () => {
     if (!pendingAssignRecipeId) return;
     await assignRecipeToPlanner(pendingAssignRecipeId, assignSelectedDay, assignSelectedSlot);
     closeAssignModalPanel();
   });
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (assignModal && !assignModal.classList.contains('hidden')) {
+      closeAssignModalPanel();
+    }
+    if (weekmenuPreviewModal && !weekmenuPreviewModal.classList.contains('hidden')) {
+      closeWeekmenuPreviewPanel();
+    }
+  });
+}
+
+async function initWeekPlanner() {
+  bindWeekPlannerUi();
+  if (!plannerWeekStart) plannerWeekStart = toIsoDate(getMonday(new Date()));
+  if (weekLabel) weekLabel.textContent = formatWeekLabel(plannerWeekStart);
+
+  try {
+    await ensureRecipeNotesLoaded();
+    await loadPlannerRecipes();
+    renderPlannerSearchResults();
+    await loadWeekMenu();
+  } catch (err) {
+    console.error(err);
+    if (weekmenuGrid) weekmenuGrid.innerHTML = '<p>Kon weekmenu niet laden.</p>';
+  }
+
+  if (plannerInitialized) return;
+  plannerInitialized = true;
 }
 
 window.addEventListener('beforeinstallprompt', (event) => {
