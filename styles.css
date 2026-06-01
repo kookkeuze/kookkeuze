@@ -2052,12 +2052,6 @@ select:focus {
   pointer-events: none;
 }
 
-.weekmenu-empty {
-  color: #7a8780;
-  font-size: 13px;
-  margin: 0;
-}
-
 .weekmenu-cell-actions {
   display: flex;
   gap: 6px;
@@ -2175,7 +2169,7 @@ select:focus {
 
 .weekmenu-slot-empty-copy {
   display: grid;
-  gap: 4px;
+  gap: 0;
   min-width: 0;
 }
 
@@ -2191,8 +2185,24 @@ select:focus {
   gap: 12px;
 }
 
+.weekmenu-slot-item-empty {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
 .weekmenu-slot-item-empty .weekmenu-cell-actions {
-  margin-top: 2px;
+  margin-top: 0;
+  justify-content: flex-end;
+  align-self: center;
+}
+
+.weekmenu-slot-item-empty .weekmenu-add-btn {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  background: #f6fbf7;
 }
 
 .weekmenu-slot-item .weekmenu-preview-btn {
@@ -2765,37 +2775,12 @@ select:focus {
     line-height: 1.4;
   }
 
-  .weekmenu-slot-item-empty-compact {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 4px 10px;
-    padding: 10px 12px;
-  }
-
-  .weekmenu-slot-item-empty-compact .weekmenu-slot-empty-copy {
-    gap: 2px;
-  }
-
-  .weekmenu-slot-item-empty-compact .weekmenu-slot-name {
+  .weekmenu-slot-item-empty .weekmenu-slot-name {
     font-size: 11px;
   }
 
-  .weekmenu-slot-item-empty-compact .weekmenu-empty {
-    font-size: 12px;
-  }
-
-  .weekmenu-slot-item-empty-compact .weekmenu-cell-actions {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    margin-top: 0;
-    align-self: center;
-  }
-
-  .weekmenu-slot-item-empty-compact .weekmenu-add-btn {
-    width: 32px;
-    min-width: 32px;
-    height: 32px;
-    background: #f3faf4;
+  .weekmenu-slot-item-empty {
+    padding: 9px 11px;
   }
 
   .weekmenu-search-item {

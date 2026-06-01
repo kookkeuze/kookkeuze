@@ -1960,13 +1960,10 @@ function renderWeekMenuGrid() {
             </div>
           </div>`;
       }
-      const compactEmptyClass = mobileViewport && hasPlannedSlots ? ' weekmenu-slot-item-empty-compact' : '';
-      const emptyLabel = compactEmptyClass ? 'Nog leeg' : 'Nog niets gepland';
       return `
-        <div class="weekmenu-slot-item weekmenu-slot-item-empty${compactEmptyClass}">
+        <div class="weekmenu-slot-item weekmenu-slot-item-empty">
           <div class="weekmenu-slot-empty-copy">
             <p class="weekmenu-slot-name">${slotLabel}</p>
-            <p class="weekmenu-empty">${emptyLabel}</p>
           </div>
           <div class="weekmenu-cell-actions weekmenu-cell-actions-empty">
             <button type="button" class="green-btn weekmenu-add-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Kies recept voor ${slotLabel}">
@@ -2123,7 +2120,6 @@ function renderPlannerSearchResults() {
           <button type="button" class="weekmenu-search-title weekmenu-preview-title" data-recipe-id="${recipe.id}">${displayTitle}</button>
         </div>
         <div class="weekmenu-search-actions">
-          ${renderRecipeNoteButton(recipeId, recipe.url || '', recipe.title || 'Recept', 'recipe-note-btn--inline')}
           <div class="recipe-export-menu weekmenu-export-menu">
             <button
               type="button"
