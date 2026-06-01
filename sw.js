@@ -1,10 +1,13 @@
-const CACHE_NAME = 'kookkeuze-static-v5';
+const CACHE_NAME = 'kookkeuze-static-v6';
 const ASSETS = [
   '/',
   '/index.html',
   '/styles.css',
   '/index.js',
   '/Logo/favicon-kookkeuze.png',
+  '/Logo/apple-touch-icon-kookkeuze.png',
+  '/Logo/icon-kookkeuze-192.png',
+  '/Logo/icon-kookkeuze-512.png',
   '/Logo/Kookkeuze-logo.svg'
 ];
 
