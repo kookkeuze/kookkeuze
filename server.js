@@ -1394,61 +1394,198 @@ function shuffleArray(items) {
 }
 
 const INTERNET_RANDOM_RECIPE_POOL = buildInternetRecipePool();
-const INTERNET_RANDOM_RECIPE_MAX_ATTEMPTS = 12;
+const INTERNET_SEARCH_RECIPE_LIMIT = 24;
 
-async function pickRandomInternetRecipe() {
-  if (!INTERNET_RANDOM_RECIPE_POOL.length) return null;
+function normalizeInternetFilterArray(rawValue, placeholder) {
+  const values = Array.isArray(rawValue) ? rawValue : [rawValue];
+  return values
+    .map(value => String(value || '').trim())
+    .filter(value => value && value !== placeholder && value !== 'maak een keuze');
+}
 
-  const candidates = shuffleArray(INTERNET_RANDOM_RECIPE_POOL);
-  let fallbackCandidate = null;
-
-  for (const candidate of candidates.slice(0, INTERNET_RANDOM_RECIPE_MAX_ATTEMPTS)) {
-    if (!fallbackCandidate) fallbackCandidate = candidate;
-
-    try {
-      const payload = await getRecipeInfoPayload(new URL(candidate.url));
-      if (payload?.error) continue;
-
-      const ingredients = Array.isArray(payload.ingredients)
-        ? payload.ingredients.filter(Boolean).slice(0, 6)
-        : [];
-
-      return {
-        title: payload.title || candidate.title || 'Random recept',
-        url: candidate.url,
-        source: candidate.source,
-        dish_type: payload.dish_type || candidate.dish_type || null,
-        meal_category: payload.meal_category || candidate.meal_category || null,
-        meal_type: payload.meal_type || candidate.meal_type || null,
-        time_required: payload.time_required || candidate.time_required || null,
-        calories: payload.calories ?? candidate.calories ?? null,
-        ingredients_preview: ingredients
-      };
-    } catch (_err) {
-      // probeer volgende kandidaat
-    }
-  }
-
-  if (!fallbackCandidate) return null;
-
+function normalizeInternetRecipeFilters(query = {}) {
   return {
-    title: fallbackCandidate.title || 'Random recept',
-    url: fallbackCandidate.url,
-    source: fallbackCandidate.source,
-    dish_type: fallbackCandidate.dish_type || null,
-    meal_category: fallbackCandidate.meal_category || null,
-    meal_type: fallbackCandidate.meal_type || null,
-    time_required: fallbackCandidate.time_required || null,
-    calories: fallbackCandidate.calories ?? null,
-    ingredients_preview: []
+    dish_type: normalizeInternetFilterArray(query.dish_type, 'Soort gerecht'),
+    meal_category: normalizeInternetFilterArray(query.meal_category, 'Menugang'),
+    meal_type: normalizeInternetFilterArray(query.meal_type, 'Doel gerecht'),
+    time_required: normalizeInternetFilterArray(query.time_required, 'Tijd'),
+    calorieRange: normalizeInternetFilterArray(query.calorieRange, 'Calorieën'),
+    search: String(query.search || '').trim().toLowerCase()
   };
 }
 
-app.get('/api/internet-recipe-random', async (_req, res) => {
+function matchesInternetCalorieRange(calories, range) {
+  if (calories == null) return false;
+
+  switch (range) {
+    case 'Onder 100': return calories < 100;
+    case 'Onder 200': return calories < 200;
+    case 'Onder 300': return calories < 300;
+    case 'Onder 400': return calories < 400;
+    case 'Onder 500': return calories < 500;
+    case 'Onder 600': return calories < 600;
+    case 'Onder 700': return calories < 700;
+    case 'Onder 800': return calories < 800;
+    case 'Onder 900': return calories < 900;
+    case 'Onder 1000': return calories < 1000;
+    case 'Boven 1000': return calories > 1000;
+    default: return true;
+  }
+}
+
+function matchesInternetNamedFilter(selectedValues, actualValue, searchBlob) {
+  if (!selectedValues.length) return true;
+
+  const normalizedActualValue = String(actualValue || '').trim().toLowerCase();
+  const normalizedBlob = String(searchBlob || '').toLowerCase();
+
+  return selectedValues.some(value => {
+    const normalizedValue = String(value || '').trim().toLowerCase();
+    if (!normalizedValue) return false;
+    return normalizedActualValue === normalizedValue || normalizedBlob.includes(normalizedValue);
+  });
+}
+
+function buildInternetRecipeResult(candidate, payload = null) {
+  const title = payload?.title || candidate.title || 'Random recept';
+  const ingredients = Array.isArray(payload?.ingredients)
+    ? payload.ingredients.filter(Boolean).slice(0, 6)
+    : [];
+  const fallbackText = [title, candidate.title, candidate.source].filter(Boolean).join(' ').toLowerCase();
+  const searchBlob = [
+    title,
+    candidate.source,
+    payload?.dish_type,
+    payload?.meal_category,
+    payload?.meal_type,
+    candidate.dish_type,
+    candidate.meal_category,
+    candidate.meal_type,
+    ...ingredients
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  return {
+    title,
+    url: candidate.url,
+    source: candidate.source,
+    dish_type: payload?.dish_type || mapDishType(fallbackText) || candidate.dish_type || null,
+    meal_category: payload?.meal_category || mapMealCategory(fallbackText) || candidate.meal_category || null,
+    meal_type: payload?.meal_type || mapMealType(fallbackText) || candidate.meal_type || null,
+    time_required: payload?.time_required || candidate.time_required || null,
+    calories: payload?.calories ?? candidate.calories ?? null,
+    ingredients_preview: ingredients,
+    _search_blob: searchBlob
+  };
+}
+
+function matchesInternetRecipeFilters(recipe, filters) {
+  if (!matchesInternetNamedFilter(filters.dish_type, recipe.dish_type, recipe._search_blob)) return false;
+  if (!matchesInternetNamedFilter(filters.meal_category, recipe.meal_category, recipe._search_blob)) return false;
+  if (!matchesInternetNamedFilter(filters.meal_type, recipe.meal_type, recipe._search_blob)) return false;
+
+  if (filters.time_required.length > 0 && !filters.time_required.includes(recipe.time_required || '')) {
+    return false;
+  }
+
+  if (filters.calorieRange.length > 0 && !filters.calorieRange.some(range => matchesInternetCalorieRange(recipe.calories, range))) {
+    return false;
+  }
+
+  if (filters.search && !recipe._search_blob.includes(filters.search)) {
+    return false;
+  }
+
+  return true;
+}
+
+function candidateCouldMatchInternetFilters(candidate, filters) {
+  const candidateBlob = [
+    candidate.title,
+    candidate.source,
+    candidate.dish_type,
+    candidate.meal_category,
+    candidate.meal_type
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  if (!matchesInternetNamedFilter(filters.dish_type, candidate.dish_type, candidateBlob)) return false;
+  if (!matchesInternetNamedFilter(filters.meal_category, candidate.meal_category, candidateBlob)) return false;
+  if (!matchesInternetNamedFilter(filters.meal_type, candidate.meal_type, candidateBlob)) return false;
+
+  if (filters.time_required.length > 0 && candidate.time_required && !filters.time_required.includes(candidate.time_required)) {
+    return false;
+  }
+
+  if (filters.calorieRange.length > 0 && candidate.calories != null && !filters.calorieRange.some(range => matchesInternetCalorieRange(candidate.calories, range))) {
+    return false;
+  }
+
+  return true;
+}
+
+function serializeInternetRecipe(recipe) {
+  return {
+    title: recipe.title,
+    url: recipe.url,
+    source: recipe.source,
+    dish_type: recipe.dish_type,
+    meal_category: recipe.meal_category,
+    meal_type: recipe.meal_type,
+    time_required: recipe.time_required,
+    calories: recipe.calories,
+    ingredients_preview: recipe.ingredients_preview
+  };
+}
+
+async function collectInternetRecipes(filters, options = {}) {
+  const { randomize = false, limit = null } = options;
+  if (!INTERNET_RANDOM_RECIPE_POOL.length) return [];
+
+  const baseCandidates = INTERNET_RANDOM_RECIPE_POOL.filter(candidate => candidateCouldMatchInternetFilters(candidate, filters));
+  const candidates = randomize ? shuffleArray(baseCandidates) : baseCandidates;
+  const matches = [];
+
+  for (const candidate of candidates) {
+    let payload = null;
+
+    try {
+      const response = await getRecipeInfoPayload(new URL(candidate.url));
+      if (!response?.error) payload = response;
+    } catch (_err) {
+      // val terug op kandidaatdata
+    }
+
+    const recipe = buildInternetRecipeResult(candidate, payload);
+    if (!matchesInternetRecipeFilters(recipe, filters)) continue;
+
+    matches.push(serializeInternetRecipe(recipe));
+    if (limit && matches.length >= limit) break;
+  }
+
+  return matches;
+}
+
+async function pickRandomInternetRecipe(filters) {
+  const matches = await collectInternetRecipes(filters, { randomize: true, limit: 1 });
+  return matches[0] || null;
+}
+
+app.get('/api/internet-recipes', async (req, res) => {
   try {
-    const recipe = await pickRandomInternetRecipe();
+    const filters = normalizeInternetRecipeFilters(req.query);
+    const recipes = await collectInternetRecipes(filters, { limit: INTERNET_SEARCH_RECIPE_LIMIT });
+    return res.json(recipes);
+  } catch (err) {
+    console.error('❌ internet recipe search error:', err);
+    return res.status(500).json({ error: 'Kon internetrecepten niet ophalen.' });
+  }
+});
+
+app.get('/api/internet-recipe-random', async (req, res) => {
+  try {
+    const filters = normalizeInternetRecipeFilters(req.query);
+    const recipe = await pickRandomInternetRecipe(filters);
     if (!recipe) {
-      return res.status(503).json({ error: 'Er zijn nog geen internetrecepten beschikbaar.' });
+      return res.json({ message: 'Geen resultaten gevonden.' });
     }
     return res.json(recipe);
   } catch (err) {

@@ -14,56 +14,47 @@ body.recipe-search-page {
   align-items: center;
 }
 
-.recipe-search-simple-shell {
-  display: grid;
-  gap: 18px;
-}
-
 .recipe-search-random-wrap {
-  margin: 0;
+  margin-top: 0;
 }
 
-.recipe-search-random-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+.recipe-search-result-shell {
+  margin-top: 10px;
 }
 
-.recipe-search-empty-state {
-  min-height: 120px;
-  border-radius: 20px;
-  border: 1px dashed rgba(79, 108, 86, 0.22);
-  background: linear-gradient(135deg, #fffdfb 0%, #f7fdf7 100%);
-  display: grid;
-  place-items: center;
-  text-align: center;
-  padding: 28px;
-}
-
-.recipe-search-empty-state p {
-  margin: 0;
-  color: #506057;
-  font-size: 16px;
-  line-height: 1.6;
-}
-
+.recipe-search-empty-state,
 .recipe-search-error-state {
   min-height: 120px;
   border-radius: 20px;
-  border: 1px solid rgba(217, 122, 69, 0.26);
-  background: linear-gradient(135deg, #fff8f3 0%, #fffefe 100%);
   display: grid;
   place-items: center;
   text-align: center;
   padding: 28px;
 }
 
+.recipe-search-empty-state {
+  border: 1px dashed rgba(79, 108, 86, 0.22);
+  background: linear-gradient(135deg, #fffdfb 0%, #f7fdf7 100%);
+}
+
+.recipe-search-error-state {
+  border: 1px solid rgba(217, 122, 69, 0.26);
+  background: linear-gradient(135deg, #fff8f3 0%, #fffefe 100%);
+}
+
+.recipe-search-empty-state p,
 .recipe-search-error-state p {
   margin: 0;
-  color: #5c4a42;
   font-size: 16px;
   line-height: 1.6;
+}
+
+.recipe-search-empty-state p {
+  color: #506057;
+}
+
+.recipe-search-error-state p {
+  color: #5c4a42;
 }
 
 .recipe-search-loading-copy {
@@ -93,9 +84,5 @@ body.recipe-search-page {
 @media screen and (max-width: 768px) {
   .recipe-search-page .container {
     margin-top: 16px;
-  }
-
-  .recipe-search-random-btn {
-    width: 100%;
   }
 }

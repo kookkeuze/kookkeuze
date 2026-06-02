@@ -25,18 +25,90 @@
   </header>
 
   <main class="container recipe-search-container">
-    <section class="recipe-search-simple-shell">
-      <div class="hero-random recipe-search-random-wrap">
-        <button id="internetRandomBtn" type="button" class="green-btn recipe-search-random-btn">
-          <i class="fas fa-shuffle" aria-hidden="true"></i>
-          Random recept
-        </button>
-      </div>
+    <div class="hero-header">
+      <h1>WAT ETEN WE VANDAAG?</h1>
+      <p>Dezelfde tool als op de homepage, maar hier zoek je tussen recepten van bekende websites op internet.</p>
+    </div>
 
-      <div id="internetRecipeResult" class="recipe-search-empty-state">
-        <p>Klik op de knop om een random recept op te halen.</p>
+    <div class="hero-filters">
+      <select id="dishType">
+        <option>Soort gerecht</option>
+        <option>Kip</option>
+        <option>Rund</option>
+        <option>Varken</option>
+        <option>Brood</option>
+        <option>Hartig</option>
+        <option>Hartige taart</option>
+        <option>Ovenschotel</option>
+        <option>Pasta</option>
+        <option>Rijst</option>
+        <option>Soep</option>
+        <option>Taart &amp; cake</option>
+        <option>Vegetarisch</option>
+        <option>Vis</option>
+        <option>Wraps</option>
+        <option>Zoet</option>
+      </select>
+
+      <select id="mealCategory">
+        <option>Menugang</option>
+        <option>Bakken</option>
+        <option>Dessert</option>
+        <option>Dressings, sauzen & dips</option>
+        <option>Drinken</option>
+        <option>Hoofdgerecht</option>
+        <option>Lunch</option>
+        <option>Ontbijt</option>
+        <option>Salade</option>
+        <option>Snacks</option>
+      </select>
+
+      <select id="mealType">
+        <option>Doel gerecht</option>
+        <option>Sporten</option>
+        <option>Normaal</option>
+        <option>Cheaten</option>
+      </select>
+
+      <select id="timeRequired">
+        <option>Tijd</option>
+        <option>Onder de 30 minuten</option>
+        <option>30 - 45 minuten</option>
+        <option>45 minuten - 1 uur</option>
+        <option>1 - 2 uur</option>
+        <option>langer dan 2 uur</option>
+      </select>
+
+      <select id="calorieRange">
+        <option>Calorieën</option>
+        <option>Onder 100</option>
+        <option>Onder 200</option>
+        <option>Onder 300</option>
+        <option>Onder 400</option>
+        <option>Onder 500</option>
+        <option>Onder 600</option>
+        <option>Onder 700</option>
+        <option>Onder 800</option>
+        <option>Onder 900</option>
+        <option>Onder 1000</option>
+        <option>Boven 1000</option>
+      </select>
+    </div>
+
+    <div class="hero-search">
+      <input type="text" id="searchTerm" placeholder="Zoek bijvoorbeeld op 'kip', 'wraps' of 'pasta'" />
+      <button id="searchBtn" class="pink-btn">ZOEK RECEPTEN</button>
+    </div>
+
+    <div class="hero-random recipe-search-random-wrap">
+      <button id="randomBtn" class="green-btn">RANDOM</button>
+    </div>
+
+    <div id="result" class="recipe-search-result-shell">
+      <div class="recipe-search-empty-state">
+        <p>Kies filters en haal een internetrecept op.</p>
       </div>
-    </section>
+    </div>
   </main>
 
   <script src="recept-zoeken.js"></script>
