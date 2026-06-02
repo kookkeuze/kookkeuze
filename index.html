@@ -226,8 +226,12 @@
 
     <!-- TAB 1: KIES EEN RECEPT -->
     <div id="kiesRecept" class="tab-content active">
+      <div class="recipe-source-switch" role="group" aria-label="Kies waar je recepten zoekt">
+        <button type="button" class="recipe-source-switch-btn active" data-recipe-source-mode="database" aria-pressed="true">In je database</button>
+        <button type="button" class="recipe-source-switch-btn" data-recipe-source-mode="internet" aria-pressed="false">Op internet</button>
+      </div>
       <div class="hero-header">
-        <h1>WAT ETEN WE VANDAAG?</h1>
+        <h1 id="recipeFinderTitle">WAT ETEN WE VANDAAG?</h1>
         <p>Niet meer nadenken over wat je gaat eten, laat hier je keuze aan de tool over!</p>
       </div>
 

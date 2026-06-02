@@ -1109,6 +1109,9 @@ const mealTypeSelect      = document.getElementById('mealType');
 const timeRequiredSelect  = document.getElementById('timeRequired');
 const calorieRangeSelect  = document.getElementById('calorieRange');
 const resultDiv           = document.getElementById('result');
+const recipeFinderTitle   = document.getElementById('recipeFinderTitle');
+const recipeSourceSwitchButtons = Array.from(document.querySelectorAll('[data-recipe-source-mode]'));
+let recipeSourceMode = 'database';
 
 function getSelectedValues(select) {
   if (!select) return [];
@@ -1272,10 +1275,26 @@ document.addEventListener('click', e => {
   });
 });
 
-/* — Zoekknop — */
-document.getElementById('searchBtn').addEventListener('click', async () => {
-  if (!ensureLoggedInOrNotify(resultDiv)) return;
-  await ensureRecipeNotesLoaded();
+function setRecipeSourceMode(mode) {
+  recipeSourceMode = mode === 'internet' ? 'internet' : 'database';
+  if (recipeFinderTitle) {
+    recipeFinderTitle.textContent = recipeSourceMode === 'internet'
+      ? 'WAT ETEN WE VANDAAG VAN INTERNET?'
+      : 'WAT ETEN WE VANDAAG?';
+  }
+
+  recipeSourceSwitchButtons.forEach(btn => {
+    const isActive = btn.dataset.recipeSourceMode === recipeSourceMode;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+
+  resultDiv.innerHTML = recipeSourceMode === 'internet'
+    ? '<p>Kies filters en haal een internetrecept op.</p>'
+    : '';
+}
+
+function buildRecipeToolParams({ includeSearch = true, includeDatabase = false } = {}) {
   const params = new URLSearchParams();
   getSelectedValues(dishTypeSelect).forEach(v => params.append('dish_type', v));
   getSelectedValues(mealCategorySelect).forEach(v => params.append('meal_category', v));
@@ -1283,10 +1302,54 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
   getSelectedValues(timeRequiredSelect).forEach(v => params.append('time_required', v));
   getSelectedValues(calorieRangeSelect).forEach(v => params.append('calorieRange', v));
 
-  const searchTerm = document.getElementById('searchTerm').value.trim();
-  if (searchTerm) params.append('search', searchTerm);
-  appendActiveDatabaseParam(params);
+  if (includeSearch) {
+    const searchTerm = document.getElementById('searchTerm').value.trim();
+    if (searchTerm) params.append('search', searchTerm);
+  }
 
+  if (includeDatabase) {
+    appendActiveDatabaseParam(params);
+  }
+
+  return params;
+}
+
+recipeSourceSwitchButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const nextMode = btn.dataset.recipeSourceMode === 'internet' ? 'internet' : 'database';
+    if (nextMode === recipeSourceMode) return;
+    setRecipeSourceMode(nextMode);
+  });
+});
+
+setRecipeSourceMode(recipeSourceMode);
+
+/* — Zoekknop — */
+document.getElementById('searchBtn').addEventListener('click', async () => {
+  if (recipeSourceMode === 'internet') {
+    const params = buildRecipeToolParams({ includeSearch: true, includeDatabase: false });
+    const qs = params.toString();
+    fetch(`${API_BASE}/api/internet-recipes?` + qs, {
+      cache: 'no-store'
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (!Array.isArray(d) || d.length === 0) {
+          resultDiv.innerHTML = '<p>Geen resultaten gevonden.</p>';
+        } else {
+          showRecipes(d, { mode: 'internet' });
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        resultDiv.innerHTML = '<p>Er ging iets fout bij het ophalen van recepten.</p>';
+      });
+    return;
+  }
+
+  if (!ensureLoggedInOrNotify(resultDiv)) return;
+  await ensureRecipeNotesLoaded();
+  const params = buildRecipeToolParams({ includeSearch: true, includeDatabase: true });
   const qs = params.toString();
   fetch(`${API_BASE}/api/recipes?` + qs, {
     headers: authHeaders() // ✅ JWT meesturen
@@ -1298,16 +1361,30 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
 
 /* — Random recept — */
 document.getElementById('randomBtn').addEventListener('click', async () => {
+  if (recipeSourceMode === 'internet') {
+    const params = buildRecipeToolParams({ includeSearch: false, includeDatabase: false });
+    const qs = params.toString();
+    fetch(`${API_BASE}/api/internet-recipe-random?` + qs, {
+      cache: 'no-store'
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (!d || d.message === 'Geen resultaten gevonden.') {
+          resultDiv.innerHTML = '<p>Geen resultaten gevonden.</p>';
+        } else {
+          showRecipes([d], { mode: 'internet' });
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        resultDiv.innerHTML = '<p>Er ging iets fout bij het ophalen van een random recept.</p>';
+      });
+    return;
+  }
+
   if (!ensureLoggedInOrNotify(resultDiv)) return;
   await ensureRecipeNotesLoaded();
-  const params = new URLSearchParams();
-  getSelectedValues(dishTypeSelect).forEach(v => params.append('dish_type', v));
-  getSelectedValues(mealCategorySelect).forEach(v => params.append('meal_category', v));
-  getSelectedValues(mealTypeSelect).forEach(v => params.append('meal_type', v));
-  getSelectedValues(timeRequiredSelect).forEach(v => params.append('time_required', v));
-  getSelectedValues(calorieRangeSelect).forEach(v => params.append('calorieRange', v));
-  appendActiveDatabaseParam(params);
-
+  const params = buildRecipeToolParams({ includeSearch: false, includeDatabase: true });
   const qs = params.toString();
   fetch(`${API_BASE}/api/recipes/random?` + qs, {
     headers: authHeaders() // ✅ JWT meesturen
@@ -1326,11 +1403,12 @@ document.getElementById('randomBtn').addEventListener('click', async () => {
     });
 });
 
-function showRecipes(arr) {
+function showRecipes(arr, options = {}) {
   if (!arr || arr.length === 0) {
     resultDiv.innerHTML = '<p>Geen resultaten gevonden.</p>';
     return;
   }
+  const isInternetMode = options.mode === 'internet';
   const singleClass = arr.length === 1 ? ' single-result' : '';
   const sharedTargets = getSharedDatabaseTargets();
   const importMode = isSharedDatabaseActive()
@@ -1354,12 +1432,12 @@ function showRecipes(arr) {
         <div class="recipe-card-content">
           <div class="recipe-card-head">
             <h3>${displayTitle}</h3>
-            ${renderRecipeNoteButton(recipeId, r.url || '', r.title || 'Recept', 'recipe-note-btn--card')}
+            ${isInternetMode ? '' : renderRecipeNoteButton(recipeId, r.url || '', r.title || 'Recept', 'recipe-note-btn--card')}
           </div>
           <div class="recipe-card-actions">
             <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
-            <div class="recipe-secondary-actions">
+            ${isInternetMode ? '' : `<div class="recipe-secondary-actions">
               <div class="recipe-export-menu">
                 <button
                   type="button"
@@ -1388,7 +1466,7 @@ function showRecipes(arr) {
                   </button>
                 </div>
               </div>
-            </div>
+            </div>`}
           </div>
           <div class="recipe-meta-row">
             <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>

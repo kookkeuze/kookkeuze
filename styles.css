@@ -381,6 +381,39 @@ html {
 }
 
 /* Hero-stijl (Tab 1) */
+.recipe-source-switch {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+}
+
+.recipe-source-switch-btn {
+  min-height: 42px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid #d7eadb;
+  background: #ffffff;
+  color: #46604f;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recipe-source-switch-btn:hover {
+  border-color: #63D671;
+  color: #2c4435;
+}
+
+.recipe-source-switch-btn.active {
+  background: #63D671;
+  border-color: #63D671;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(99, 214, 113, 0.2);
+}
+
 .hero-header {
   background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
   padding: 48px 32px;

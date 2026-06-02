@@ -1394,7 +1394,7 @@ function shuffleArray(items) {
 }
 
 const INTERNET_RANDOM_RECIPE_POOL = buildInternetRecipePool();
-const INTERNET_SEARCH_RECIPE_LIMIT = 24;
+const INTERNET_SEARCH_RECIPE_LIMIT = 10;
 
 function normalizeInternetFilterArray(rawValue, placeholder) {
   const values = Array.isArray(rawValue) ? rawValue : [rawValue];
