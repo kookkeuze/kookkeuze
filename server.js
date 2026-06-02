@@ -668,14 +668,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/recept-zoeken', (req, res) => {
-  res.sendFile(path.join(__dirname, 'recept-zoeken.html'));
-});
-
-app.get('/recept-zoeken.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'recept-zoeken.html'));
-});
-
 app.get('/health', (_req, res) => {
   res.status(200).json({
     ok: true,

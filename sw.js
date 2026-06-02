@@ -1,11 +1,7 @@
-const CACHE_NAME = 'kookkeuze-static-v14';
+const CACHE_NAME = 'kookkeuze-static-v15';
 const ASSETS = [
   '/',
   '/index.html',
-  '/recept-zoeken',
-  '/recept-zoeken.html',
-  '/recept-zoeken.css',
-  '/recept-zoeken.js',
   '/styles.css',
   '/index.js',
   '/Logo/favicon-kookkeuze.png',
@@ -47,9 +43,6 @@ self.addEventListener('fetch', (event) => {
       if (cached) return cached;
       return fetch(event.request).catch(() => {
         if (event.request.mode === 'navigate') {
-          if (requestUrl.pathname === '/recept-zoeken' || requestUrl.pathname === '/recept-zoeken.html') {
-            return caches.match('/recept-zoeken.html');
-          }
           return caches.match('/index.html');
         }
         return new Response('', { status: 504, statusText: 'Offline' });
