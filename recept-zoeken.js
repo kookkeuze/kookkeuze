@@ -42,7 +42,7 @@ function setResultCardImage(cell, imageUrl, title) {
 
 function renderLoadingState() {
   resultEl.innerHTML = `
-    <div class="recipe-cards-container recipe-search-card-grid">
+    <div class="recipe-cards-container search-results single-result">
       <article class="recipe-card">
         <div class="result-image-cell">
           <div class="recipe-card-image-skeleton"></div>
@@ -68,22 +68,9 @@ function renderErrorState(message) {
   `;
 }
 
-function buildIngredientsPreview(items) {
-  if (!Array.isArray(items) || !items.length) {
-    return '<p class="recipe-search-ingredients-empty">Geen ingredientenvoorbeeld beschikbaar.</p>';
-  }
-
-  return `
-    <div class="recipe-search-ingredient-chips">
-      ${items.map(item => `<span class="recipe-search-ingredient-chip">${escapeHtml(item)}</span>`).join('')}
-    </div>
-  `;
-}
-
 function renderRecipeCard(recipe) {
   const title = recipe?.title || 'Random recept';
   const url = recipe?.url || '#';
-  const source = recipe?.source || 'Receptwebsite';
   const dishType = recipe?.dish_type || '-';
   const mealCategory = recipe?.meal_category || '-';
   const mealType = recipe?.meal_type || '-';
@@ -91,17 +78,13 @@ function renderRecipeCard(recipe) {
   const calories = recipe?.calories ?? '-';
 
   resultEl.innerHTML = `
-    <div class="recipe-cards-container recipe-search-card-grid">
+    <div class="recipe-cards-container search-results single-result">
       <article class="recipe-card">
         <div class="result-image-cell" data-random-image-cell>
           <div class="recipe-card-image-skeleton"></div>
         </div>
 
         <div class="recipe-card-content">
-          <div class="recipe-search-source-group">
-            <span class="recipe-search-source-chip">${escapeHtml(source)}</span>
-          </div>
-
           <h3>${escapeHtml(title)}</h3>
 
           <p class="recipe-link">
@@ -120,11 +103,6 @@ function renderRecipeCard(recipe) {
             <li><i class="fas fa-layer-group" aria-hidden="true"></i> <strong>Menugang:</strong> ${escapeHtml(mealCategory)}</li>
             <li><i class="fas fa-bullseye" aria-hidden="true"></i> <strong>Doel gerecht:</strong> ${escapeHtml(mealType)}</li>
           </ul>
-
-          <div class="recipe-search-ingredients-block">
-            <p class="recipe-search-ingredients-title">Ingredienten</p>
-            ${buildIngredientsPreview(recipe?.ingredients_preview)}
-          </div>
         </div>
       </article>
     </div>
