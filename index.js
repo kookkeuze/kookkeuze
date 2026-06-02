@@ -1110,8 +1110,14 @@ const timeRequiredSelect  = document.getElementById('timeRequired');
 const calorieRangeSelect  = document.getElementById('calorieRange');
 const resultDiv           = document.getElementById('result');
 const recipeFinderTitle   = document.getElementById('recipeFinderTitle');
+const recipeFinderSubtitle = document.getElementById('recipeFinderSubtitle');
+const recipeSourceSwitch  = document.querySelector('.recipe-source-switch');
 const recipeSourceSwitchButtons = Array.from(document.querySelectorAll('[data-recipe-source-mode]'));
 let recipeSourceMode = 'database';
+const recipeFinderSubtitles = {
+  database: 'Laat de tool iets lekkers uit je eigen recepten kiezen, zonder lang te hoeven twijfelen.',
+  internet: 'Laat de tool iets lekkers van bekende receptenwebsites kiezen, zonder lang te hoeven twijfelen.'
+};
 
 function getSelectedValues(select) {
   if (!select) return [];
@@ -1278,9 +1284,14 @@ document.addEventListener('click', e => {
 function setRecipeSourceMode(mode) {
   recipeSourceMode = mode === 'internet' ? 'internet' : 'database';
   if (recipeFinderTitle) {
-    recipeFinderTitle.textContent = recipeSourceMode === 'internet'
-      ? 'WAT ETEN WE VANDAAG VAN INTERNET?'
-      : 'WAT ETEN WE VANDAAG?';
+    recipeFinderTitle.textContent = 'WAT ETEN WE VANDAAG?';
+  }
+  if (recipeFinderSubtitle) {
+    recipeFinderSubtitle.textContent = recipeFinderSubtitles[recipeSourceMode] || recipeFinderSubtitles.database;
+    recipeFinderSubtitle.classList.remove('hidden');
+  }
+  if (recipeSourceSwitch) {
+    recipeSourceSwitch.dataset.activeMode = recipeSourceMode;
   }
 
   recipeSourceSwitchButtons.forEach(btn => {
@@ -1289,9 +1300,8 @@ function setRecipeSourceMode(mode) {
     btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   });
 
-  resultDiv.innerHTML = recipeSourceMode === 'internet'
-    ? '<p>Kies filters en haal een internetrecept op.</p>'
-    : '';
+  closeAllRecipeExportMenus();
+  resultDiv.innerHTML = '';
 }
 
 function buildRecipeToolParams({ includeSearch = true, includeDatabase = false } = {}) {
@@ -1314,6 +1324,51 @@ function buildRecipeToolParams({ includeSearch = true, includeDatabase = false }
   return params;
 }
 
+function getInternetRecipePayloadFromElement(element) {
+  if (!element) return null;
+  const recipeUrl = decodeURIComponent(element.dataset.recipeUrl || '').trim();
+  const recipeTitle = (element.dataset.recipeTitle || 'Recept').trim();
+  if (!recipeUrl || !recipeTitle) return null;
+
+  const rawCalories = String(element.dataset.recipeCalories || '').trim();
+  const parsedCalories = rawCalories === '' ? null : Number(rawCalories);
+
+  return {
+    title: recipeTitle,
+    url: recipeUrl,
+    dish_type: (element.dataset.recipeDishType || '').trim() || null,
+    meal_category: (element.dataset.recipeMealCategory || '').trim() || null,
+    meal_type: (element.dataset.recipeMealType || '').trim() || null,
+    time_required: (element.dataset.recipeTimeRequired || '').trim() || null,
+    calories: Number.isFinite(parsedCalories) ? parsedCalories : null
+  };
+}
+
+async function ensureInternetRecipeSaved(recipe) {
+  if (!recipe) return null;
+  if (!ensureLoggedInOrNotify(resultDiv)) return null;
+
+  const res = await fetch(`${API_BASE}/api/recipes/import-external`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(withActiveDatabaseBody(recipe))
+  });
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    alert(data.error || 'Recept toevoegen mislukt.');
+    return null;
+  }
+
+  if (typeof fetchAllRecipes === 'function') fetchAllRecipes();
+  if (typeof loadPlannerRecipes === 'function') loadPlannerRecipes().catch(() => {});
+
+  return {
+    id: Number(data.id) > 0 ? Number(data.id) : null,
+    alreadyExists: !!data.already_exists
+  };
+}
+
 recipeSourceSwitchButtons.forEach(btn => {
   btn.addEventListener('click', () => {
     const nextMode = btn.dataset.recipeSourceMode === 'internet' ? 'internet' : 'database';
@@ -1327,6 +1382,7 @@ setRecipeSourceMode(recipeSourceMode);
 /* — Zoekknop — */
 document.getElementById('searchBtn').addEventListener('click', async () => {
   if (recipeSourceMode === 'internet') {
+    if (getValidToken()) await ensureRecipeNotesLoaded();
     const params = buildRecipeToolParams({ includeSearch: true, includeDatabase: false });
     const qs = params.toString();
     fetch(`${API_BASE}/api/internet-recipes?` + qs, {
@@ -1362,6 +1418,7 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
 /* — Random recept — */
 document.getElementById('randomBtn').addEventListener('click', async () => {
   if (recipeSourceMode === 'internet') {
+    if (getValidToken()) await ensureRecipeNotesLoaded();
     const params = buildRecipeToolParams({ includeSearch: false, includeDatabase: false });
     const qs = params.toString();
     fetch(`${API_BASE}/api/internet-recipe-random?` + qs, {
@@ -1424,6 +1481,11 @@ function showRecipes(arr, options = {}) {
     const safeHref = escapeAttr(r.url || '');
     const safeTitle = escapeAttr(r.title || 'Recept');
     const displayTitle = escapeHtml(r.title || 'Recept');
+    const safeDishType = escapeAttr(r.dish_type || '');
+    const safeMealCategory = escapeAttr(r.meal_category || '');
+    const safeMealType = escapeAttr(r.meal_type || '');
+    const safeTimeRequired = escapeAttr(r.time_required || '');
+    const safeCalories = r.calories == null ? '' : escapeAttr(String(r.calories));
     html += `
       <div class="recipe-card">
         <div class="result-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
@@ -1432,12 +1494,12 @@ function showRecipes(arr, options = {}) {
         <div class="recipe-card-content">
           <div class="recipe-card-head">
             <h3>${displayTitle}</h3>
-            ${isInternetMode ? '' : renderRecipeNoteButton(recipeId, r.url || '', r.title || 'Recept', 'recipe-note-btn--card')}
+            ${renderRecipeNoteButton(recipeId, r.url || '', r.title || 'Recept', 'recipe-note-btn--card')}
           </div>
           <div class="recipe-card-actions">
             <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
-            ${isInternetMode ? '' : `<div class="recipe-secondary-actions">
+            <div class="recipe-secondary-actions">
               <div class="recipe-export-menu">
                 <button
                   type="button"
@@ -1452,21 +1514,52 @@ function showRecipes(arr, options = {}) {
                   <i class="fas fa-chevron-down export-chevron" aria-hidden="true"></i>
                 </button>
                 <div class="recipe-export-dropdown hidden" data-export-menu>
-                  <button type="button" class="recipe-export-option plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">
-                    <span class="export-option-icon" aria-hidden="true"><i class="fas fa-calendar-plus"></i></span>
-                    <span>Plan in weekmenu</span>
-                  </button>
-                  ${importMode ? `<button type="button" class="recipe-export-option import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">
-                    <span class="export-option-icon" aria-hidden="true"><i class="fas fa-database"></i></span>
-                    <span>${importLabel}</span>
-                  </button>` : ''}
+                  ${isInternetMode ? `
+                    <button
+                      type="button"
+                      class="recipe-export-option plan-internet-recipe-btn"
+                      data-recipe-title="${safeTitle}"
+                      data-recipe-url="${safeUrl}"
+                      data-recipe-dish-type="${safeDishType}"
+                      data-recipe-meal-category="${safeMealCategory}"
+                      data-recipe-meal-type="${safeMealType}"
+                      data-recipe-time-required="${safeTimeRequired}"
+                      data-recipe-calories="${safeCalories}"
+                    >
+                      <span class="export-option-icon" aria-hidden="true"><i class="fas fa-calendar-plus"></i></span>
+                      <span>Plan in weekmenu</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="recipe-export-option save-internet-recipe-btn"
+                      data-recipe-title="${safeTitle}"
+                      data-recipe-url="${safeUrl}"
+                      data-recipe-dish-type="${safeDishType}"
+                      data-recipe-meal-category="${safeMealCategory}"
+                      data-recipe-meal-type="${safeMealType}"
+                      data-recipe-time-required="${safeTimeRequired}"
+                      data-recipe-calories="${safeCalories}"
+                    >
+                      <span class="export-option-icon" aria-hidden="true"><i class="fas fa-database"></i></span>
+                      <span>Voeg toe aan database</span>
+                    </button>
+                  ` : `
+                    <button type="button" class="recipe-export-option plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">
+                      <span class="export-option-icon" aria-hidden="true"><i class="fas fa-calendar-plus"></i></span>
+                      <span>Plan in weekmenu</span>
+                    </button>
+                    ${importMode ? `<button type="button" class="recipe-export-option import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">
+                      <span class="export-option-icon" aria-hidden="true"><i class="fas fa-database"></i></span>
+                      <span>${importLabel}</span>
+                    </button>` : ''}
+                  `}
                   <button type="button" class="recipe-export-option notes-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
                     <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
                     <span>Notities</span>
                   </button>
                 </div>
               </div>
-            </div>`}
+            </div>
           </div>
           <div class="recipe-meta-row">
             <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
@@ -1696,13 +1789,37 @@ resultDiv?.addEventListener('click', async e => {
     return;
   }
 
+  const saveInternetBtn = e.target.closest('.save-internet-recipe-btn');
+  if (saveInternetBtn) {
+    closeAllRecipeExportMenus();
+    const recipe = getInternetRecipePayloadFromElement(saveInternetBtn);
+    const saved = await ensureInternetRecipeSaved(recipe);
+    if (!saved) return;
+    showRecipeAddedToast(saved.alreadyExists ? 'Recept staat al in je database.' : 'Recept toegevoegd aan je database.');
+    return;
+  }
+
+  const planInternetBtn = e.target.closest('.plan-internet-recipe-btn');
+  if (planInternetBtn) {
+    closeAllRecipeExportMenus();
+    const recipe = getInternetRecipePayloadFromElement(planInternetBtn);
+    const saved = await ensureInternetRecipeSaved(recipe);
+    if (!saved?.id) return;
+    plannerSuggestedDay = null;
+    plannerSuggestedSlot = null;
+    openAssignModalForRecipe(saved.id, recipe?.title || 'Recept');
+    return;
+  }
+
   const importBtn = e.target.closest('.import-recipe-btn');
   if (importBtn) {
+    closeAllRecipeExportMenus();
     handleImportRecipe(importBtn.dataset.recipeId, importBtn.dataset.importMode || '');
     return;
   }
   const btn = e.target.closest('.plan-recipe-btn');
   if (!btn) return;
+  closeAllRecipeExportMenus();
   plannerSuggestedDay = null;
   plannerSuggestedSlot = null;
   openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);

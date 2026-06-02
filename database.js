@@ -547,6 +547,47 @@ function addRecipe(recipe, callback) {
   );
 }
 
+function upsertExternalRecipeToDatabase(recipe, callback) {
+  const {
+    title,
+    url,
+    dish_type,
+    meal_type,
+    time_required,
+    meal_category,
+    calories,
+    user_id,
+    database_id
+  } = recipe;
+
+  const query = `
+    WITH existing AS (
+      SELECT id
+      FROM recipes
+      WHERE database_id = $9
+        AND LOWER(REGEXP_REPLACE(COALESCE(url, ''), '/+$', '')) = LOWER(REGEXP_REPLACE(COALESCE($2, ''), '/+$', ''))
+      LIMIT 1
+    ),
+    inserted AS (
+      INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id)
+      SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9
+      WHERE NOT EXISTS (SELECT 1 FROM existing)
+      RETURNING id
+    )
+    SELECT
+      COALESCE((SELECT id FROM inserted), (SELECT id FROM existing)) AS id,
+      EXISTS (SELECT 1 FROM existing) AS already_exists
+  `;
+
+  pool.query(query, [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id], (err, result) => {
+    if (err) {
+      console.error('Fout bij upserten extern recept:', err);
+      return callback(err);
+    }
+    callback(null, result.rows[0] || null);
+  });
+}
+
 function updateRecipe(id, updatedData, callback) {
   const {
     title,
@@ -1301,6 +1342,7 @@ module.exports = {
   getRecipes,
   getRandomRecipe,
   addRecipe,
+  upsertExternalRecipeToDatabase,
   updateRecipe,
   deleteRecipe,
   getRecipeByIdForOwner,

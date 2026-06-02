@@ -638,6 +638,7 @@ const {
   deleteRecipeNote,
   getRecipeByIdForOwner,
   importRecipeToUserDatabase,
+  upsertExternalRecipeToDatabase,
   listAccessibleDatabases,
   userHasDatabaseAccess,
   userCanManageDatabase,
@@ -1782,6 +1783,47 @@ app.post('/api/recipes', async (req, res) => {
       database_id: ownerUserId
     });
     res.json({ message: 'Recept toegevoegd!', id: result.id });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Er ging iets mis bij het opslaan van het recept.' });
+  }
+});
+
+app.post('/api/recipes/import-external', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om recepten toe te voegen.' });
+  }
+
+  const { title, url, dish_type, meal_category, meal_type, time_required, calories } = req.body || {};
+  if (!title || !url) {
+    return res.status(400).json({ error: 'Titel en URL zijn verplicht.' });
+  }
+
+  try {
+    const ownerUserId = await resolveDatabaseOwnerId(req);
+    const savedRecipe = await dbCall(upsertExternalRecipeToDatabase, {
+      title,
+      url,
+      dish_type: normalizeRecipeField(dish_type),
+      meal_category: normalizeRecipeField(meal_category),
+      meal_type: normalizeRecipeField(meal_type),
+      time_required: normalizeRecipeField(time_required),
+      calories,
+      user_id: req.user.id,
+      database_id: ownerUserId
+    });
+
+    if (!savedRecipe?.id) {
+      return res.status(500).json({ error: 'Kon recept niet opslaan.' });
+    }
+
+    return res.json({
+      message: savedRecipe.already_exists
+        ? 'Recept stond al in je database.'
+        : 'Recept toegevoegd aan je database.',
+      id: savedRecipe.id,
+      already_exists: !!savedRecipe.already_exists
+    });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
     return res.status(500).json({ error: 'Er ging iets mis bij het opslaan van het recept.' });
