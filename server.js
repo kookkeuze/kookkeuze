@@ -4,6 +4,12 @@ const bodyParser = require('body-parser');
 const cors       = require('cors');
 const path       = require('path');
 const crypto     = require('crypto');
+const {
+  crawlInternetRecipeIndex,
+  loadInternetRecipeIndexSync,
+  getEmptyCrawlerIndex,
+  INDEX_FILE: INTERNET_CRAWLER_INDEX_FILE
+} = require('./internet-crawler');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -1197,6 +1203,7 @@ function packRecipe(title, url, recipeMeta) {
   return {
     title,
     url,
+    source: recipeMeta.source || null,
     dish_type: recipeMeta.dish_type || null,
     meal_category: recipeMeta.meal_category || null,
     meal_type: recipeMeta.meal_type || null,
@@ -1318,6 +1325,135 @@ const RECIPE_PACKS = [
   }
 ];
 
+const INTERNET_ADDITIONAL_SOURCE_SEEDS = [
+  packRecipe('Bulgur met gehakt, pistache en frisse komkommersalade', 'https://www.eiwitchef.nl/bulgur-met-gehakt-pistache-en-frisse-komkommersalade/', {
+    source: 'Eiwitchef',
+    dish_type: 'Hartig',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Sporten',
+    time_required: '30 - 45 minuten'
+  }),
+  packRecipe('Pasta pesto met kip', 'https://www.lekkerensimpel.com/pasta-pesto-met-kip/', {
+    source: 'Lekker en Simpel',
+    dish_type: 'Pasta',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Chicken parmesan pasta', 'https://www.24kitchen.nl/recepten/chicken-parmesan-pasta', {
+    source: '24Kitchen',
+    dish_type: 'Pasta',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Kip in een pannetje', 'https://www.jumbo.com/recepten/kip-in-een-pannetje-1405714-7', {
+    source: 'Smulweb',
+    dish_type: 'Kip',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: '45 minuten - 1 uur'
+  }),
+  packRecipe('Hete kip', 'https://uitpaulineskeuken.nl/recept/hete-kip', {
+    source: 'Uit Paulines Keuken',
+    dish_type: 'Kip',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Kip-avocado salade', 'https://chickslovefood.com/recept/kip-avocado-salade/', {
+    source: 'Chickslovefood',
+    dish_type: 'Kip',
+    meal_category: 'Salade',
+    meal_type: 'Normaal',
+    time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Pasta alla vodka', 'https://www.culy.nl/recepten/pasta-alla-vodka/', {
+    source: 'Culy',
+    dish_type: 'Pasta',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: '30 - 45 minuten'
+  }),
+  packRecipe('Appeltaartkoeken', 'https://rutgerbakt.nl/koek-recepten/appeltaartkoeken-recept/', {
+    source: 'Rutger Bakt',
+    dish_type: 'Taart & cake',
+    meal_category: 'Bakken',
+    meal_type: 'Cheaten',
+    time_required: '30 - 45 minuten'
+  }),
+  packRecipe('Kip pasta pesto', 'https://brendakookt.nl/recepten/kip-pasta-pesto/', {
+    source: 'Brenda Kookt',
+    dish_type: 'Pasta',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Romige gnocchi uit de oven met geroosterde rozemarijnkip', 'https://www.francescakookt.nl/recept/romige-gnocchi-uit-de-oven-met-geroosterde-rozemarijnkip/', {
+    source: 'Francesca Kookt',
+    dish_type: 'Kip',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: '45 minuten - 1 uur'
+  }),
+  packRecipe('Pasta met zalm en spinazie', 'https://miljuschka.nl/pasta-met-zalm-en-spinazie-recept/', {
+    source: 'Miljuschka',
+    dish_type: 'Pasta',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Pesto pasta met kip en verse spinazie', 'https://www.keukenliefde.nl/pesto-pasta-met-kip-en-verse-spinazie/', {
+    source: 'Keukenliefde',
+    dish_type: 'Pasta',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Romige pasta met kip en Parmezaan', 'https://www.eefkooktzo.nl/romige-pasta-met-kip-en-parmezaan/', {
+    source: 'Eef Kookt Zo',
+    dish_type: 'Pasta',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Pasta roomsaus met kip', 'https://familieoverdekook.nl/pasta-roomsaus-met-kip/', {
+    source: 'Familie over de Kook',
+    dish_type: 'Pasta',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Gevulde kip met pasta', 'https://kookmutsjes.com/recept/gevulde-kip-met-pasta/', {
+    source: 'Kookmutsjes',
+    dish_type: 'Pasta',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: '45 minuten - 1 uur'
+  }),
+  packRecipe('Pasta met zalm', 'https://www.libelle-lekker.be/bekijk-recept/85034/pasta-met-zalm', {
+    source: 'Libelle Lekker',
+    dish_type: 'Pasta',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: '30 - 45 minuten'
+  }),
+  packRecipe('Pasta met romige kip, doperwten en chorizo', 'https://www.jumbo.com/recepten/pasta-met-romige-kip-doperwten-en-chorizo-31505', {
+    source: 'Jumbo Recepten',
+    dish_type: 'Pasta',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Paella met chorizo, garnalen en kip', 'https://www.plus.nl/recept/paella-met-chorizo-garnalen-en-kip', {
+    source: 'Plus',
+    dish_type: 'Rijst',
+    meal_category: 'Hoofdgerecht',
+    meal_type: 'Normaal',
+    time_required: '45 minuten - 1 uur'
+  })
+];
+
 function getRecipePackSummaries() {
   return RECIPE_PACKS.map(pack => ({
     key: pack.key,
@@ -1334,7 +1470,24 @@ function inferRecipeSourceLabel(recipeUrl) {
     const host = new URL(recipeUrl).hostname.replace(/^www\./i, '').toLowerCase();
     const knownSources = {
       'leukerecepten.nl': 'LeukeRecepten',
+      'eiwitchef.nl': 'Eiwitchef',
+      'lekkerensimpel.com': 'Lekker en Simpel',
+      '24kitchen.nl': '24Kitchen',
       'eatertainment.nl': 'Eatertainment',
+      'uitpaulineskeuken.nl': 'Uit Paulines Keuken',
+      'chickslovefood.com': 'Chickslovefood',
+      'culy.nl': 'Culy',
+      'rutgerbakt.nl': 'Rutger Bakt',
+      'brendakookt.nl': 'Brenda Kookt',
+      'francescakookt.nl': 'Francesca Kookt',
+      'miljuschka.nl': 'Miljuschka',
+      'keukenliefde.nl': 'Keukenliefde',
+      'eefkooktzo.nl': 'Eef Kookt Zo',
+      'familieoverdekook.nl': 'Familie over de Kook',
+      'kookmutsjes.com': 'Kookmutsjes',
+      'libelle-lekker.be': 'Libelle Lekker',
+      'jumbo.com': 'Jumbo Recepten',
+      'plus.nl': 'Plus',
       'laurasbakery.nl': "Laura's Bakery",
       'foodiesmagazine.nl': 'Foodies'
     };
@@ -1356,23 +1509,29 @@ function buildInternetRecipePool() {
   const seen = new Set();
   const pool = [];
 
+  function appendRecipeCandidate(recipe) {
+    const recipeUrl = String(recipe?.url || '').trim();
+    if (!recipeUrl || seen.has(recipeUrl)) return;
+    seen.add(recipeUrl);
+    pool.push({
+      title: recipe.title || null,
+      url: recipeUrl,
+      source: recipe.source || inferRecipeSourceLabel(recipeUrl),
+      dish_type: recipe.dish_type || null,
+      meal_category: recipe.meal_category || null,
+      meal_type: recipe.meal_type || null,
+      time_required: recipe.time_required || null,
+      calories: recipe.calories ?? null
+    });
+  }
+
   for (const pack of RECIPE_PACKS) {
     for (const recipe of pack.recipes) {
-      const recipeUrl = String(recipe.url || '').trim();
-      if (!recipeUrl || seen.has(recipeUrl)) continue;
-      seen.add(recipeUrl);
-      pool.push({
-        title: recipe.title || null,
-        url: recipeUrl,
-        source: inferRecipeSourceLabel(recipeUrl),
-        dish_type: recipe.dish_type || null,
-        meal_category: recipe.meal_category || null,
-        meal_type: recipe.meal_type || null,
-        time_required: recipe.time_required || null,
-        calories: recipe.calories ?? null
-      });
+      appendRecipeCandidate(recipe);
     }
   }
+
+  INTERNET_ADDITIONAL_SOURCE_SEEDS.forEach(appendRecipeCandidate);
 
   return pool;
 }
@@ -1388,6 +1547,7 @@ function shuffleArray(items) {
 
 const INTERNET_RANDOM_RECIPE_POOL = buildInternetRecipePool();
 const INTERNET_SEARCH_RECIPE_LIMIT = 10;
+let internetCrawlerIndexState = loadInternetRecipeIndexSync();
 
 function normalizeInternetFilterArray(rawValue, placeholder) {
   const values = Array.isArray(rawValue) ? rawValue : [rawValue];
@@ -1437,6 +1597,42 @@ function matchesInternetNamedFilter(selectedValues, actualValue, searchBlob) {
     if (!normalizedValue) return false;
     return normalizedActualValue === normalizedValue || normalizedBlob.includes(normalizedValue);
   });
+}
+
+function buildInternetSearchBlob(recipeLike) {
+  return [
+    recipeLike?.title,
+    recipeLike?.source,
+    recipeLike?.dish_type,
+    recipeLike?.meal_category,
+    recipeLike?.meal_type,
+    ...(Array.isArray(recipeLike?.ingredients_preview) ? recipeLike.ingredients_preview : [])
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+function buildIndexedInternetRecipeResult(candidate) {
+  const searchBlob = buildInternetSearchBlob(candidate);
+  return {
+    title: candidate.title || 'Random recept',
+    url: candidate.url,
+    source: candidate.source || inferRecipeSourceLabel(candidate.url),
+    dish_type: candidate.dish_type || mapDishType(searchBlob) || null,
+    meal_category: candidate.meal_category || mapMealCategory(searchBlob) || null,
+    meal_type: candidate.meal_type || mapMealType(searchBlob) || null,
+    time_required: candidate.time_required || null,
+    calories: candidate.calories ?? null,
+    ingredients_preview: Array.isArray(candidate.ingredients_preview)
+      ? candidate.ingredients_preview.filter(Boolean).slice(0, 6)
+      : [],
+    _search_blob: searchBlob
+  };
+}
+
+function getCurrentInternetRecipePool() {
+  const indexedRecipes = Array.isArray(internetCrawlerIndexState?.recipes)
+    ? internetCrawlerIndexState.recipes.filter(entry => entry && entry.url)
+    : [];
+  return indexedRecipes.length ? indexedRecipes : INTERNET_RANDOM_RECIPE_POOL;
 }
 
 function buildInternetRecipeResult(candidate, payload = null) {
@@ -1531,23 +1727,29 @@ function serializeInternetRecipe(recipe) {
 
 async function collectInternetRecipes(filters, options = {}) {
   const { randomize = false, limit = null } = options;
-  if (!INTERNET_RANDOM_RECIPE_POOL.length) return [];
+  const activePool = getCurrentInternetRecipePool();
+  if (!activePool.length) return [];
 
-  const baseCandidates = INTERNET_RANDOM_RECIPE_POOL.filter(candidate => candidateCouldMatchInternetFilters(candidate, filters));
+  const baseCandidates = activePool.filter(candidate => candidateCouldMatchInternetFilters(candidate, filters));
   const candidates = randomize ? shuffleArray(baseCandidates) : baseCandidates;
   const matches = [];
 
   for (const candidate of candidates) {
-    let payload = null;
+    let recipe;
 
-    try {
-      const response = await getRecipeInfoPayload(new URL(candidate.url));
-      if (!response?.error) payload = response;
-    } catch (_err) {
-      // val terug op kandidaatdata
+    if (candidate.crawler_site_key) {
+      recipe = buildIndexedInternetRecipeResult(candidate);
+    } else {
+      let payload = null;
+      try {
+        const response = await getRecipeInfoPayload(new URL(candidate.url));
+        if (!response?.error) payload = response;
+      } catch (_err) {
+        // val terug op kandidaatdata
+      }
+      recipe = buildInternetRecipeResult(candidate, payload);
     }
 
-    const recipe = buildInternetRecipeResult(candidate, payload);
     if (!matchesInternetRecipeFilters(recipe, filters)) continue;
 
     matches.push(serializeInternetRecipe(recipe));
@@ -1561,6 +1763,17 @@ async function pickRandomInternetRecipe(filters) {
   const matches = await collectInternetRecipes(filters, { randomize: true, limit: 1 });
   return matches[0] || null;
 }
+
+app.get('/api/internet-crawl/status', (_req, res) => {
+  const safeState = internetCrawlerIndexState || getEmptyCrawlerIndex();
+  return res.json({
+    ready: Array.isArray(safeState.recipes) && safeState.recipes.length > 0,
+    generatedAt: safeState.generatedAt || null,
+    totalRecipes: Array.isArray(safeState.recipes) ? safeState.recipes.length : 0,
+    indexFile: INTERNET_CRAWLER_INDEX_FILE,
+    sites: Array.isArray(safeState.sites) ? safeState.sites : []
+  });
+});
 
 app.get('/api/internet-recipes', async (req, res) => {
   try {
@@ -2172,11 +2385,43 @@ app.delete('/api/databases/invites/:inviteId', async (req, res) => {
 });
 // ===========================================================================
 
-const server = app.listen(PORT, () => {
-  console.log(`Server draait op poort ${PORT}`);
-});
-
+let server = null;
 let isShuttingDown = false;
+
+async function runInternetCrawler() {
+  console.log('🕷️ Start internet crawler...');
+  const index = await crawlInternetRecipeIndex({
+    fetchRecipePayload: async targetUrl => getRecipeInfoPayload(targetUrl),
+    log: message => console.log(`🕸️ ${message}`)
+  });
+  internetCrawlerIndexState = index;
+  console.log(`✅ Internet crawler klaar: ${index.totalRecipes} recepten geïndexeerd.`);
+  return index;
+}
+
+async function startApp() {
+  if (process.argv.includes('--crawl-internet')) {
+    try {
+      await runInternetCrawler();
+      await closeDatabasePool();
+      process.exit(0);
+      return;
+    } catch (err) {
+      console.error('❌ Internet crawler mislukt:', err);
+      try {
+        await closeDatabasePool();
+      } catch (_err) {
+        // negeer afsluitfouten tijdens crawler-exit
+      }
+      process.exit(1);
+      return;
+    }
+  }
+
+  server = app.listen(PORT, () => {
+    console.log(`Server draait op poort ${PORT}`);
+  });
+}
 
 function shutdown(signal) {
   if (isShuttingDown) return;
@@ -2187,6 +2432,19 @@ function shutdown(signal) {
     console.error('⏱️ Geforceerd afsluiten na timeout.');
     process.exit(1);
   }, 10000);
+
+  if (!server) {
+    closeDatabasePool()
+      .then(() => {
+        console.log('✅ Server netjes afgesloten.');
+        process.exit(0);
+      })
+      .catch((dbErr) => {
+        console.error('❌ Fout bij sluiten van databasepool:', dbErr);
+        process.exit(1);
+      });
+    return;
+  }
 
   server.close(async (serverErr) => {
     clearTimeout(forceCloseTimer);
@@ -2210,3 +2468,7 @@ function shutdown(signal) {
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+startApp().catch(err => {
+  console.error('❌ Opstarten mislukt:', err);
+  process.exit(1);
+});

@@ -4,7 +4,8 @@
     "description": "Eenvoudige recepten-tool met filters en random-knop",
     "main": "server.js",
     "scripts": {
-        "start": "node server.js"
+        "start": "node server.js",
+        "crawl:internet": "node server.js --crawl-internet"
     },
     "engines": {
         "node": ">=18"

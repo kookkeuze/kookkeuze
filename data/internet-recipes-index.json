@@ -1,0 +1,228 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-08T06:04:36.856Z",
+  "totalRecipes": 0,
+  "sites": [
+    {
+      "key": "eiwitchef",
+      "source": "Eiwitchef",
+      "baseUrl": "https://www.eiwitchef.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 6,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "lekkerensimpel",
+      "source": "Lekker en Simpel",
+      "baseUrl": "https://www.lekkerensimpel.com",
+      "sitemapCount": 0,
+      "listingPagesVisited": 7,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "leukerecepten",
+      "source": "LeukeRecepten",
+      "baseUrl": "https://www.leukerecepten.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 7,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "24kitchen",
+      "source": "24Kitchen",
+      "baseUrl": "https://www.24kitchen.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 7,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "smulweb",
+      "source": "Smulweb",
+      "baseUrl": "https://www.smulweb.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 7,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "uitpaulineskeuken",
+      "source": "Uit Paulines Keuken",
+      "baseUrl": "https://uitpaulineskeuken.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 5,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "chickslovefood",
+      "source": "Chickslovefood",
+      "baseUrl": "https://chickslovefood.com",
+      "sitemapCount": 0,
+      "listingPagesVisited": 6,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "foodblog",
+      "source": "Foodblog.nl",
+      "baseUrl": "https://www.foodblog.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 7,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "culy",
+      "source": "Culy",
+      "baseUrl": "https://www.culy.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 6,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "rutgerbakt",
+      "source": "Rutger Bakt",
+      "baseUrl": "https://rutgerbakt.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 7,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "brendakookt",
+      "source": "Brenda Kookt",
+      "baseUrl": "https://brendakookt.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 6,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "francescakookt",
+      "source": "Francesca Kookt",
+      "baseUrl": "https://www.francescakookt.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 5,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "miljuschka",
+      "source": "Miljuschka",
+      "baseUrl": "https://miljuschka.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 6,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "keukenliefde",
+      "source": "Keukenliefde",
+      "baseUrl": "https://www.keukenliefde.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 6,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "eefkooktzo",
+      "source": "Eef Kookt Zo",
+      "baseUrl": "https://www.eefkooktzo.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 6,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "familieoverdekook",
+      "source": "Familie over de Kook",
+      "baseUrl": "https://familieoverdekook.nl",
+      "sitemapCount": 0,
+      "listingPagesVisited": 6,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "kookmutsjes",
+      "source": "Kookmutsjes",
+      "baseUrl": "https://kookmutsjes.com",
+      "sitemapCount": 0,
+      "listingPagesVisited": 6,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "libellelekker",
+      "source": "Libelle Lekker",
+      "baseUrl": "https://www.libelle-lekker.be",
+      "sitemapCount": 0,
+      "listingPagesVisited": 6,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "jumbo",
+      "source": "Jumbo Recepten",
+      "baseUrl": "https://www.jumbo.com/recepten",
+      "sitemapCount": 0,
+      "listingPagesVisited": 5,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    },
+    {
+      "key": "plus",
+      "source": "Plus",
+      "baseUrl": "https://www.plus.nl/recepten",
+      "sitemapCount": 0,
+      "listingPagesVisited": 5,
+      "discoveredRecipeUrls": 0,
+      "indexedRecipes": 0,
+      "failedRecipes": 0,
+      "errors": []
+    }
+  ],
+  "recipes": []
+}
