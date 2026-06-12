@@ -2654,11 +2654,13 @@ function bindWeekPlannerUi() {
   });
   weekPrevBtn?.addEventListener('click', async () => {
     plannerWeekStart = isoPlusDays(plannerWeekStart, -7);
+    plannerMobileDayIndex = null;
     if (weekLabel) weekLabel.textContent = formatWeekLabel(plannerWeekStart);
     await loadWeekMenu();
   });
   weekNextBtn?.addEventListener('click', async () => {
     plannerWeekStart = isoPlusDays(plannerWeekStart, 7);
+    plannerMobileDayIndex = null;
     if (weekLabel) weekLabel.textContent = formatWeekLabel(plannerWeekStart);
     await loadWeekMenu();
   });
@@ -2691,6 +2693,8 @@ function bindWeekPlannerUi() {
 async function initWeekPlanner() {
   bindWeekPlannerUi();
   if (!plannerWeekStart) plannerWeekStart = toIsoDate(getMonday(new Date()));
+  // Reset naar vandaag als de huidige week wordt geladen
+  if (plannerWeekStart === toIsoDate(getMonday(new Date()))) plannerMobileDayIndex = null;
   if (weekLabel) weekLabel.textContent = formatWeekLabel(plannerWeekStart);
 
   try {
