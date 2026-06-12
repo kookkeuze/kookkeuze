@@ -2921,10 +2921,16 @@ if (overviewListBtn && overviewGridBtn) {
 }
 
 function applyOverviewViewMode() {
+  // Sluit open multi-select menus zodat ze niet overlappen bij wisselen
+  document.querySelectorAll('.multi-select.open').forEach(ms => ms.classList.remove('open'));
+
   const isList = overviewViewMode === 'list';
   if (overviewListBtn) overviewListBtn.classList.toggle('active', isList);
   if (overviewGridBtn) overviewGridBtn.classList.toggle('active', !isList);
-  if (overviewListContainer) overviewListContainer.style.display = isList ? 'block' : 'none';
+  if (overviewListContainer) {
+    overviewListContainer.style.display = isList ? '' : 'none';
+    overviewListContainer.style.visibility = isList ? '' : 'hidden';
+  }
   if (overviewGridContainer) overviewGridContainer.classList.toggle('active', !isList);
 }
 
