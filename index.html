@@ -50,16 +50,24 @@
     </div>
 
     <div id="mobileHeaderMenu" class="mobile-header-menu hidden" aria-hidden="true">
-      <button type="button" class="mobile-header-menu-link" data-target="#kiesRecept">Kies een recept</button>
-      <button type="button" class="mobile-header-menu-link" data-target="#voegReceptToe">Voeg een recept toe</button>
-      <button type="button" class="mobile-header-menu-link" data-target="#overzichtRecepten">Overzicht recepten</button>
-      <button type="button" class="mobile-header-menu-link" data-target="#weekmenuPlanner">Weekmenu planner</button>
-      <button id="mobileInstallAppBtn" type="button" class="mobile-header-menu-link mobile-header-install-link">
-        <i class="fas fa-mobile-alt" aria-hidden="true"></i> Installeer app
-      </button>
-      <button id="mobileDatabaseMenuBtn" type="button" class="mobile-header-menu-link mobile-header-database-link hidden">
-        <i class="fas fa-database" aria-hidden="true"></i> Database
-      </button>
+      <div class="mobile-nav-header">
+        <span class="mobile-nav-logo">Kookkeuze</span>
+        <button id="mobileMenuCloseBtn" class="mobile-nav-close" aria-label="Menu sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="mobile-nav-links">
+        <button type="button" class="mobile-header-menu-link" data-target="#kiesRecept">Kies een recept</button>
+        <button type="button" class="mobile-header-menu-link" data-target="#voegReceptToe">Voeg een recept toe</button>
+        <button type="button" class="mobile-header-menu-link" data-target="#overzichtRecepten">Overzicht recepten</button>
+        <button type="button" class="mobile-header-menu-link" data-target="#weekmenuPlanner">Weekmenu planner</button>
+        <button id="mobileInstallAppBtn" type="button" class="mobile-header-menu-link mobile-header-install-link">
+          <i class="fas fa-mobile-alt" aria-hidden="true"></i> Installeer app
+        </button>
+        <button id="mobileDatabaseMenuBtn" type="button" class="mobile-header-menu-link mobile-header-database-link hidden">
+          <i class="fas fa-database" aria-hidden="true"></i> Database
+        </button>
+      </div>
     </div>
   </div>
 </header>

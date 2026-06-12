@@ -635,6 +635,7 @@ const tabContents  = document.querySelectorAll('.tab-content');
 const installAppBtn = document.getElementById('installAppBtn');
 const installAppText = document.getElementById('installAppText');
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const mobileMenuCloseBtn = document.getElementById('mobileMenuCloseBtn');
 const mobileHeaderMenu = document.getElementById('mobileHeaderMenu');
 const mobileHeaderMenuLinks = document.querySelectorAll('.mobile-header-menu-link[data-target]');
 const mobileInstallAppBtn = document.getElementById('mobileInstallAppBtn');
@@ -670,7 +671,10 @@ function closeMobileHeaderMenu() {
   mobileHeaderMenu.classList.add('hidden');
   mobileHeaderMenu.setAttribute('aria-hidden', 'true');
   mobileMenuBtn.setAttribute('aria-expanded', 'false');
+  document.body.style.overflow = '';
 }
+
+mobileMenuCloseBtn?.addEventListener('click', closeMobileHeaderMenu);
 
 function buildDatabaseOptionsMarkup(selectedId) {
   return accessibleDatabases.map(db => {
@@ -758,6 +762,7 @@ mobileMenuBtn?.addEventListener('click', e => {
     mobileHeaderMenu.classList.remove('hidden');
     mobileHeaderMenu.setAttribute('aria-hidden', 'false');
     mobileMenuBtn.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
     return;
   }
   closeMobileHeaderMenu();

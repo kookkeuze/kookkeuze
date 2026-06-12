@@ -3295,16 +3295,68 @@ select:focus {
 }
 
 .mobile-header-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: min(300px, 92vw);
-  padding: 8px;
-  border: 1px solid #d9e8dc;
-  border-radius: 14px;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
   background: #ffffff;
-  box-shadow: 0 10px 24px rgba(36, 54, 43, 0.15);
-  z-index: 1100;
+  box-shadow: none;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(-100%);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+}
+
+.mobile-header-menu:not(.hidden) {
+  transform: translateY(0);
+}
+
+.mobile-header-menu.hidden {
+  transform: translateY(-100%);
+  pointer-events: none;
+}
+
+.mobile-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #e8f2ea;
+}
+
+.mobile-nav-logo {
+  font-family: 'EatingPasta', Arial, sans-serif;
+  font-size: 1.6rem;
+  color: #63D671;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.mobile-nav-close {
+  width: 38px;
+  height: 38px;
+  border: none;
+  background: #f2f8f3;
+  border-radius: 50%;
+  font-size: 16px;
+  color: #2f3a35;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-nav-links {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 16px;
+  gap: 6px;
+  flex: 1;
 }
 
 .mobile-header-menu-link {
@@ -3313,17 +3365,19 @@ select:focus {
   border: none;
   background: transparent;
   color: #2f3a35;
-  padding: 10px 10px;
-  border-radius: 10px;
+  padding: 16px 18px;
+  border-radius: 14px;
   text-align: left;
-  font-size: 13px;
+  font-size: 1.25rem;
   font-family: 'EatingPasta', Arial, sans-serif;
-  letter-spacing: 0.35px;
+  letter-spacing: 0.4px;
+  cursor: pointer;
 }
 
 .mobile-header-menu-link.active {
   background: #eef8f0;
   color: #235b2a;
+  font-weight: 700;
 }
 
 .mobile-header-menu-link:hover {
@@ -3331,9 +3385,9 @@ select:focus {
 }
 
 .mobile-header-install-link {
-  margin-top: 2px;
+  margin-top: 8px;
   border-top: 1px solid #ebf2ed;
-  padding-top: 12px;
+  padding-top: 20px;
 }
 
 .mobile-header-database-link {
