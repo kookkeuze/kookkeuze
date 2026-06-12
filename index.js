@@ -3022,7 +3022,10 @@ function renderOverviewPage() {
   });
   gridHtml += '</div>';
   allRecipesDiv.innerHTML = html;
-  if (overviewGridContainer) overviewGridContainer.innerHTML = gridHtml;
+  if (overviewGridContainer) {
+    overviewGridContainer.innerHTML = gridHtml;
+    if (overviewPagination) overviewGridContainer.appendChild(overviewPagination);
+  }
 
   hydrateOverviewImages();
   hydrateResultImages();
