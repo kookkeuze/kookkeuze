@@ -2417,7 +2417,7 @@ select:focus {
   color: #3a3a3a;
 }
 
-.save-internet-field-row select,
+.sir-select,
 .save-internet-field-row input {
   width: 100%;
   padding: 9px 12px;
@@ -2428,9 +2428,10 @@ select:focus {
   background: #fff;
   color: #2d3a30;
   box-sizing: border-box;
+  appearance: auto;
 }
 
-.save-internet-field-row select:focus,
+.sir-select:focus,
 .save-internet-field-row input:focus {
   outline: none;
   border-color: #63D671;
