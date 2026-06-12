@@ -1803,23 +1803,46 @@ select:focus {
   }
 
   .overview-grid-cards .recipe-card {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+    display: block;
+    height: auto;
+    min-height: unset;
+    max-height: unset;
+    grid-template-columns: unset;
+    overflow: hidden;
   }
 
   .overview-grid-cards .result-image-cell {
     width: 100%;
+    height: 200px;
+    min-height: 200px;
+    max-height: 200px;
+    display: block;
+    align-self: unset;
+    border-radius: 0;
+  }
+
+  .overview-grid-cards .recipe-card-image,
+  .overview-grid-cards .recipe-card-image-skeleton,
+  .overview-grid-cards .recipe-card-image-fallback {
+    height: 200px;
+    min-height: 200px;
+    max-height: 200px;
+    flex: none;
+    display: block;
   }
 
   .overview-grid-cards .recipe-card-content {
     width: 100%;
-    padding: 20px 18px 18px;
+    height: auto;
+    padding: 16px 18px 18px;
+    display: block;
   }
 
   .overview-grid-cards .recipe-card h3 {
     font-size: 1.55rem;
-    margin-bottom: 12px;
+    min-height: unset;
+    max-height: unset;
+    margin-bottom: 8px;
   }
 }
 
