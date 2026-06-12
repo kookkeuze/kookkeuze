@@ -2394,6 +2394,48 @@ select:focus {
   text-transform: uppercase;
 }
 
+.modal-content.save-internet-recipe-modal-content {
+  width: min(480px, 96vw);
+  max-width: min(480px, 96vw);
+  padding: 28px 24px 22px;
+}
+
+.save-internet-recipe-fields {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0 22px;
+}
+
+.save-internet-field-row {
+  display: grid;
+  gap: 6px;
+}
+
+.save-internet-field-row label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3a3a3a;
+}
+
+.save-internet-field-row select,
+.save-internet-field-row input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid #d0e8d4;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  color: #2d3a30;
+  box-sizing: border-box;
+}
+
+.save-internet-field-row select:focus,
+.save-internet-field-row input:focus {
+  outline: none;
+  border-color: #63D671;
+}
+
 .recipe-note-label {
   display: inline-block;
   margin-bottom: 8px;

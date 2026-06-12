@@ -509,6 +509,62 @@
       </div>
     </div>
 
+    <div id="saveInternetRecipeModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content save-internet-recipe-modal-content">
+        <button id="closeSaveInternetRecipeModal" class="modal-close" aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+        <p class="recipe-note-modal-kicker">Recept opslaan</p>
+        <h3 class="assign-modal-title" id="saveInternetRecipeModalTitle"></h3>
+        <p class="assign-modal-sub">Vul de ontbrekende gegevens aan voordat je opslaat.</p>
+        <div class="save-internet-recipe-fields">
+          <div class="save-internet-field-row">
+            <label>Soort gerecht</label>
+            <select id="sirDishType" class="add-select overview-multi-select" data-placeholder="Kies soort">
+              <option value="">-- Kies soort --</option>
+              <option>Kip</option><option>Rund</option><option>Varken</option><option>Brood</option>
+              <option>Hartig</option><option>Hartige taart</option><option>Ovenschotel</option>
+              <option>Pasta</option><option>Rijst</option><option>Soep</option>
+              <option>Taart &amp; cake</option><option>Vegetarisch</option><option>Vis</option>
+              <option>Wraps</option><option>Zoet</option>
+            </select>
+          </div>
+          <div class="save-internet-field-row">
+            <label>Menugang</label>
+            <select id="sirMealCategory" class="add-select overview-multi-select" data-placeholder="Kies menugang">
+              <option value="">-- Kies menugang --</option>
+              <option>Bakken</option><option>Dessert</option><option>Dressings, sauzen &amp; dips</option>
+              <option>Drinken</option><option>Hoofdgerecht</option><option>Lunch</option>
+              <option>Ontbijt</option><option>Salade</option><option>Snacks</option>
+            </select>
+          </div>
+          <div class="save-internet-field-row">
+            <label>Doel gerecht</label>
+            <select id="sirMealType" class="add-select overview-multi-select" data-placeholder="Kies doel">
+              <option value="">-- Kies doel --</option>
+              <option>Sporten</option><option>Normaal</option><option>Cheaten</option>
+            </select>
+          </div>
+          <div class="save-internet-field-row">
+            <label>Bereidingstijd</label>
+            <select id="sirTimeRequired" class="add-select overview-multi-select" data-placeholder="Kies tijd">
+              <option value="">-- Kies tijd --</option>
+              <option>Onder de 30 minuten</option><option>30 - 45 minuten</option>
+              <option>45 minuten - 1 uur</option><option>1 - 2 uur</option><option>langer dan 2 uur</option>
+            </select>
+          </div>
+          <div class="save-internet-field-row">
+            <label>Calorieën (kcal)</label>
+            <input id="sirCalories" type="number" min="0" placeholder="bijv. 450" class="add-input" />
+          </div>
+        </div>
+        <div class="recipe-note-actions">
+          <button id="closeSaveInternetRecipeModalBtn" type="button" class="overview-view-btn">Annuleer</button>
+          <button id="saveInternetRecipeConfirmBtn" type="button" class="green-btn">Opslaan in database</button>
+        </div>
+      </div>
+    </div>
+
     <div id="databaseModal" class="modal hidden" aria-hidden="true">
       <div class="modal-content database-modal-content">
         <button id="closeDatabaseModal" class="modal-close" aria-label="Sluiten">

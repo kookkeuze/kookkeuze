@@ -1352,6 +1352,61 @@ function getInternetRecipePayloadFromElement(element) {
   };
 }
 
+let _saveInternetRecipePending = null; // { recipe, onConfirm }
+
+function openSaveInternetRecipeModal(recipe, onConfirm) {
+  if (!recipe) return;
+  const modal = document.getElementById('saveInternetRecipeModal');
+  if (!modal) return;
+
+  _saveInternetRecipePending = { recipe, onConfirm };
+
+  document.getElementById('saveInternetRecipeModalTitle').textContent = recipe.title || 'Recept';
+
+  const setSelect = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val || '';
+  };
+  setSelect('sirDishType', recipe.dish_type);
+  setSelect('sirMealCategory', recipe.meal_category);
+  setSelect('sirMealType', recipe.meal_type);
+  setSelect('sirTimeRequired', recipe.time_required);
+  const calEl = document.getElementById('sirCalories');
+  if (calEl) calEl.value = recipe.calories != null ? recipe.calories : '';
+
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeSaveInternetRecipeModal() {
+  const modal = document.getElementById('saveInternetRecipeModal');
+  modal?.classList.add('hidden');
+  modal?.setAttribute('aria-hidden', 'true');
+  _saveInternetRecipePending = null;
+}
+
+document.getElementById('closeSaveInternetRecipeModal')?.addEventListener('click', closeSaveInternetRecipeModal);
+document.getElementById('closeSaveInternetRecipeModalBtn')?.addEventListener('click', closeSaveInternetRecipeModal);
+document.getElementById('saveInternetRecipeModal')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('saveInternetRecipeModal')) closeSaveInternetRecipeModal();
+});
+
+document.getElementById('saveInternetRecipeConfirmBtn')?.addEventListener('click', async () => {
+  if (!_saveInternetRecipePending) return;
+  const { recipe: original, onConfirm } = _saveInternetRecipePending;
+  const calRaw = document.getElementById('sirCalories')?.value;
+  const filledRecipe = {
+    ...original,
+    dish_type: document.getElementById('sirDishType')?.value || null,
+    meal_category: document.getElementById('sirMealCategory')?.value || null,
+    meal_type: document.getElementById('sirMealType')?.value || null,
+    time_required: document.getElementById('sirTimeRequired')?.value || null,
+    calories: calRaw !== '' && calRaw != null ? Number(calRaw) : null
+  };
+  closeSaveInternetRecipeModal();
+  await onConfirm(filledRecipe);
+});
+
 async function ensureInternetRecipeSaved(recipe) {
   if (!recipe) return null;
   if (!ensureLoggedInOrNotify(resultDiv)) return null;
@@ -1814,9 +1869,11 @@ resultDiv?.addEventListener('click', async e => {
   if (saveInternetBtn) {
     closeAllRecipeExportMenus();
     const recipe = getInternetRecipePayloadFromElement(saveInternetBtn);
-    const saved = await ensureInternetRecipeSaved(recipe);
-    if (!saved) return;
-    showRecipeAddedToast(saved.alreadyExists ? 'Recept staat al in je database.' : 'Recept toegevoegd aan je database.');
+    openSaveInternetRecipeModal(recipe, async (filledRecipe) => {
+      const saved = await ensureInternetRecipeSaved(filledRecipe);
+      if (!saved) return;
+      showRecipeAddedToast(saved.alreadyExists ? 'Recept staat al in je database.' : 'Recept toegevoegd aan je database.');
+    });
     return;
   }
 
@@ -1824,11 +1881,13 @@ resultDiv?.addEventListener('click', async e => {
   if (planInternetBtn) {
     closeAllRecipeExportMenus();
     const recipe = getInternetRecipePayloadFromElement(planInternetBtn);
-    const saved = await ensureInternetRecipeSaved(recipe);
-    if (!saved?.id) return;
-    plannerSuggestedDay = null;
-    plannerSuggestedSlot = null;
-    openAssignModalForRecipe(saved.id, recipe?.title || 'Recept');
+    openSaveInternetRecipeModal(recipe, async (filledRecipe) => {
+      const saved = await ensureInternetRecipeSaved(filledRecipe);
+      if (!saved?.id) return;
+      plannerSuggestedDay = null;
+      plannerSuggestedSlot = null;
+      openAssignModalForRecipe(saved.id, filledRecipe?.title || 'Recept');
+    });
     return;
   }
 
