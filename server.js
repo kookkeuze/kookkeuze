@@ -1546,7 +1546,8 @@ function shuffleArray(items) {
 }
 
 const INTERNET_RANDOM_RECIPE_POOL = buildInternetRecipePool();
-const INTERNET_SEARCH_RECIPE_LIMIT = 10;
+const INTERNET_SEARCH_RECIPE_LIMIT = 25;
+const INDEX_MAX_AGE_DAYS = 7;
 let internetCrawlerIndexState = loadInternetRecipeIndexSync();
 
 function normalizeInternetFilterArray(rawValue, placeholder) {
@@ -2399,6 +2400,29 @@ async function runInternetCrawler() {
   return index;
 }
 
+function isIndexStale(indexState) {
+  if (!Array.isArray(indexState?.recipes) || indexState.recipes.length === 0) return true;
+  if (!indexState.generatedAt) return true;
+  const ageMs = Date.now() - new Date(indexState.generatedAt).getTime();
+  return ageMs > INDEX_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+}
+
+let crawlerRunning = false;
+
+async function maybeRunCrawlerInBackground() {
+  if (crawlerRunning) return;
+  if (!isIndexStale(internetCrawlerIndexState)) {
+    const ageDays = Math.floor((Date.now() - new Date(internetCrawlerIndexState.generatedAt).getTime()) / (24 * 60 * 60 * 1000));
+    console.log(`ℹ️ Crawler-index is up-to-date (${internetCrawlerIndexState.recipes.length} recepten, ${ageDays} dag(en) oud) — geen nieuwe crawl nodig.`);
+    return;
+  }
+  crawlerRunning = true;
+  console.log('🕷️ Index is leeg of verouderd — crawler start op de achtergrond...');
+  runInternetCrawler()
+    .catch(err => console.error('❌ Achtergrond-crawl mislukt:', err))
+    .finally(() => { crawlerRunning = false; });
+}
+
 async function startApp() {
   if (process.argv.includes('--crawl-internet')) {
     try {
@@ -2421,6 +2445,12 @@ async function startApp() {
   server = app.listen(PORT, () => {
     console.log(`Server draait op poort ${PORT}`);
   });
+
+  // Crawl bij opstart als index leeg of verouderd is
+  maybeRunCrawlerInBackground();
+
+  // Hercheck elke 24 uur (crawler zelf draait alleen als index echt stale is)
+  setInterval(maybeRunCrawlerInBackground, 24 * 60 * 60 * 1000);
 }
 
 function shutdown(signal) {
