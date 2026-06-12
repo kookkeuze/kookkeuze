@@ -961,11 +961,17 @@ select:focus {
   box-shadow: 0 4px 16px rgba(149, 157, 165, 0.1);
   margin-top: 32px;
   overflow-x: auto;
+  isolation: isolate;
+  position: relative;
+  z-index: 0;
 }
 
 .overview-grid-container {
   margin-top: 22px;
   display: none;
+  isolation: isolate;
+  position: relative;
+  z-index: 1;
 }
 
 .overview-grid-container.active {
@@ -1359,7 +1365,6 @@ select:focus {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   align-items: start;
-  grid-auto-rows: 1fr;
 }
 
 /* Individuele kaart-styling */
