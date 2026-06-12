@@ -1758,6 +1758,9 @@ async function collectInternetRecipes(filters, options = {}) {
 
     if (!matchesInternetRecipeFilters(recipe, filters)) continue;
 
+    // Sla recepten over zonder minimale parameters om filterloos toevoegen te voorkomen
+    if (!recipe.dish_type && !recipe.meal_category && !recipe.meal_type && !recipe.time_required) continue;
+
     matches.push(serializeInternetRecipe(recipe));
     if (limit && matches.length >= limit) break;
   }
