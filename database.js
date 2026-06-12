@@ -317,6 +317,16 @@ async function initializeDatabase() {
     `);
     console.log('✅ Recipe notes table created/verified');
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS crawler_index (
+        id SERIAL PRIMARY KEY,
+        key VARCHAR(50) NOT NULL UNIQUE,
+        data JSONB NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ Crawler index table created/verified');
+
     // Check if tables have data
     const userCount = await pool.query('SELECT COUNT(*) FROM users');
     const recipeCount = await pool.query('SELECT COUNT(*) FROM recipes');
@@ -1338,6 +1348,27 @@ function acceptPendingInvitesForUser(userId, email, callback) {
 }
 
 
+async function loadCrawlerIndexFromDatabase() {
+  try {
+    const result = await pool.query(
+      `SELECT data FROM crawler_index WHERE key = 'internet-recipes' LIMIT 1`
+    );
+    if (!result.rows.length) return null;
+    return result.rows[0].data;
+  } catch (_err) {
+    return null;
+  }
+}
+
+async function saveCrawlerIndexToDatabase(index) {
+  await pool.query(
+    `INSERT INTO crawler_index (key, data, updated_at)
+     VALUES ('internet-recipes', $1, NOW())
+     ON CONFLICT (key) DO UPDATE SET data = $1, updated_at = NOW()`,
+    [JSON.stringify(index)]
+  );
+}
+
 module.exports = {
   getRecipes,
   getRandomRecipe,
@@ -1375,5 +1406,7 @@ module.exports = {
   revokeDatabaseMember,
   revokeDatabaseInvite,
   acceptPendingInvitesForUser,
-  closeDatabasePool
+  closeDatabasePool,
+  loadCrawlerIndexFromDatabase,
+  saveCrawlerIndexToDatabase
 };

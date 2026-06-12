@@ -655,7 +655,9 @@ const {
   revokeDatabaseMember,
   revokeDatabaseInvite,
   acceptPendingInvitesForUser,
-  closeDatabasePool
+  closeDatabasePool,
+  loadCrawlerIndexFromDatabase,
+  saveCrawlerIndexToDatabase
 } = require('./database');
 
 app.use(bodyParser.json());
@@ -1694,7 +1696,8 @@ function candidateCouldMatchInternetFilters(candidate, filters) {
     candidate.source,
     candidate.dish_type,
     candidate.meal_category,
-    candidate.meal_type
+    candidate.meal_type,
+    ...(Array.isArray(candidate.ingredients_preview) ? candidate.ingredients_preview : [])
   ].filter(Boolean).join(' ').toLowerCase();
 
   if (!matchesInternetNamedFilter(filters.dish_type, candidate.dish_type, candidateBlob)) return false;
@@ -1708,6 +1711,8 @@ function candidateCouldMatchInternetFilters(candidate, filters) {
   if (filters.calorieRange.length > 0 && candidate.calories != null && !filters.calorieRange.some(range => matchesInternetCalorieRange(candidate.calories, range))) {
     return false;
   }
+
+  if (filters.search && !candidateBlob.includes(filters.search)) return false;
 
   return true;
 }
@@ -2396,7 +2401,12 @@ async function runInternetCrawler() {
     log: message => console.log(`🕸️ ${message}`)
   });
   internetCrawlerIndexState = index;
-  console.log(`✅ Internet crawler klaar: ${index.totalRecipes} recepten geïndexeerd.`);
+  try {
+    await saveCrawlerIndexToDatabase(index);
+    console.log(`✅ Internet crawler klaar: ${index.totalRecipes} recepten geïndexeerd en opgeslagen in database.`);
+  } catch (dbErr) {
+    console.warn('⚠️ Crawler-index kon niet worden opgeslagen in database, JSON-fallback wordt gebruikt:', dbErr.message);
+  }
   return index;
 }
 
@@ -2445,6 +2455,19 @@ async function startApp() {
   server = app.listen(PORT, () => {
     console.log(`Server draait op poort ${PORT}`);
   });
+
+  // Laad crawler-index uit database (persistenter dan JSON-bestand)
+  try {
+    const dbIndex = await loadCrawlerIndexFromDatabase();
+    if (dbIndex && Array.isArray(dbIndex.recipes) && dbIndex.recipes.length > 0) {
+      internetCrawlerIndexState = dbIndex;
+      console.log(`✅ Crawler-index geladen uit database: ${dbIndex.recipes.length} recepten.`);
+    } else {
+      console.log('ℹ️ Geen crawler-index in database, gebruik JSON-bestand als fallback.');
+    }
+  } catch (dbErr) {
+    console.warn('⚠️ Kon crawler-index niet laden uit database:', dbErr.message);
+  }
 
   // Crawl bij opstart als index leeg of verouderd is
   maybeRunCrawlerInBackground();

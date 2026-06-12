@@ -709,6 +709,14 @@ function activateTab(targetId) {
     mobileActiveTabLabel.textContent = getTabLabel(targetId);
   }
 
+  const tabTitles = {
+    '#kiesRecept': 'Kookkeuze – Kies een recept',
+    '#voegReceptToe': 'Kookkeuze – Voeg recept toe',
+    '#overzichtRecepten': 'Kookkeuze – Overzicht recepten',
+    '#weekmenuPlanner': 'Kookkeuze – Weekmenu planner'
+  };
+  document.title = tabTitles[targetId] || 'Kookkeuze';
+
   if (targetId === '#overzichtRecepten') fetchAllRecipes();
   if (targetId === '#weekmenuPlanner') initWeekPlanner();
   if (isMobileViewport()) {
@@ -1462,7 +1470,20 @@ document.getElementById('randomBtn').addEventListener('click', async () => {
 
 function showRecipes(arr, options = {}) {
   if (!arr || arr.length === 0) {
-    resultDiv.innerHTML = '<p>Geen resultaten gevonden.</p>';
+    const isInternetMode = options.mode === 'internet';
+    if (!isInternetMode && getValidToken()) {
+      resultDiv.innerHTML = `
+        <div class="empty-state">
+          <p class="empty-state-title">Je database is nog leeg</p>
+          <p class="empty-state-sub">Voeg je eerste recept toe en begin met je persoonlijke receptendatabase.</p>
+          <button class="pink-btn empty-state-add-btn">Voeg een recept toe</button>
+        </div>`;
+      resultDiv.querySelector('.empty-state-add-btn').addEventListener('click', () => {
+        activateTab('#voegReceptToe');
+      });
+    } else {
+      resultDiv.innerHTML = '<p>Geen resultaten gevonden.</p>';
+    }
     return;
   }
   const isInternetMode = options.mode === 'internet';
