@@ -4107,34 +4107,132 @@ select:focus {
     letter-spacing: 1px;
   }
 
+/* ===== Hoe werkt het — slider ===== */
+.hiw-slider{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.hiw-viewport{
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hiw-track{
+  display: flex;
+  transition: transform .4s cubic-bezier(.4, 0, .2, 1);
+  will-change: transform;
+}
+
+.hiw-slide{
+  flex: 0 0 100%;
+  min-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 6px 4px;
+}
+
+.hiw-media{
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  justify-content: center;
+}
+.hiw-media img{
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.08);
+}
+
+.hiw-media-icon{
+  height: 200px;
+  align-items: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #eaf9ec 0%, #d6f3da 100%);
+  box-shadow: 0 8px 24px rgba(0,0,0,.06);
+}
+.hiw-media-icon i{
+  font-size: 4.4rem;
+  color: #4ac858;
+}
+
+.hiw-body{
+  text-align: center;
+  max-width: 460px;
+}
+.hiw-body p{
+  font-size: clamp(1.1rem, 1.1vw, 1.3rem);
+  line-height: 1.55;
+  color: #3a3a3a;
+  margin: 0;
+}
+.hiw-body .step-number{
+  margin-bottom: 14px;
+}
+
+.hiw-arrow{
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid #235b2a;
+  background: #fff;
+  color: #235b2a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .95rem;
+  transition: background .15s, transform .15s;
+}
+.hiw-arrow:hover{ background: #eef8f0; }
+.hiw-arrow:disabled{ opacity: .3; cursor: default; }
+
+.hiw-dots{
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+.hiw-dot{
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: none;
+  background: #c8e6cd;
+  cursor: pointer;
+  padding: 0;
+  transition: background .2s, transform .2s;
+}
+.hiw-dot.active{
+  background: #4ac858;
+  transform: scale(1.25);
+}
+
 /* desktop/tablet: foto links, tekst rechts */
-.step{
-  display:flex;
-  align-items:flex-start;
-  gap: clamp(16px, 3vw, 32px);
-  margin-bottom: 56px;
-}
-
-.step-text p{
-    font-size: clamp(1.15rem, 1.1vw, 1.35rem); /* body groter */
-    line-height: 1.55;
-}
-
-.step-img{
-  /* foto schaalt automatisch kleiner tot het niet meer past */
-  flex: 0 1 clamp(200px, 32vw, 420px);
-}
-.step-img img{
-  width:100%;
-  height:auto;
-  display:block;
-  border-radius:16px;
-  box-shadow:0 8px 24px rgba(0,0,0,.08);
-}
-
-.step-content{
-  flex: 1 1 420px;
-  min-width: 260px;
+@media (min-width: 768px){
+  .hiw-slider{ gap: 12px; }
+  .hiw-slide{
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(24px, 4vw, 48px);
+    padding: 12px 8px;
+  }
+  .hiw-media{ flex: 0 0 360px; max-width: 360px; }
+  .hiw-body{ text-align: left; flex: 1 1 420px; }
+  .hiw-media-icon{ height: 260px; }
+  .hiw-media-icon i{ font-size: 5.5rem; }
+  .hiw-arrow{ width: 46px; height: 46px; font-size: 1.05rem; }
 }
 
 .step-number {
@@ -4157,38 +4255,10 @@ select:focus {
   content: "Stap ";
 }
 
-.step-text p{
-  font-size:1.4rem;
-  line-height:1.5;
-  margin:0;
-}
-
-@media (max-width: 860px){
-  .step{
-    flex-direction: column;
-    gap: 14px;             
-    margin-bottom: 80px;   
-  }
-  .step-content { 
-    
-    flex: 1 1 100px;
-    text-align:center;
-  }
-  
-  
-    .step-img{
-    order: 2;
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-  }
-  .step-text p{ margin: 0; }
-}
-
 /* CTA onder het stappenplan */
 .cta-wrap{
-  text-align: left;
-  margin-top: 16px;          /* desktop */
+  text-align: center;
+  margin-top: 32px;
 }
 .start-btn{
   display: inline-block;

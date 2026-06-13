@@ -3458,6 +3458,62 @@ document.querySelectorAll('.ghost-btn').forEach(btn => {
   });
 });
 
+/* ========= HOE WERKT HET — SLIDER ========= */
+function initHowItWorksSlider() {
+  const track = document.getElementById('hiwTrack');
+  const dotsWrap = document.getElementById('hiwDots');
+  const prevBtn = document.getElementById('hiwPrev');
+  const nextBtn = document.getElementById('hiwNext');
+  if (!track || !dotsWrap) return;
+
+  const slides = Array.from(track.children);
+  if (slides.length === 0) return;
+
+  let current = 0;
+
+  // Bouw de dots
+  dotsWrap.innerHTML = '';
+  const dots = slides.map((_, i) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'hiw-dot';
+    dot.setAttribute('aria-label', `Ga naar stap ${i + 1}`);
+    dot.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(dot);
+    return dot;
+  });
+
+  function goTo(index) {
+    current = Math.max(0, Math.min(slides.length - 1, index));
+    track.style.transform = `translateX(-${current * 100}%)`;
+    dots.forEach((dot, i) => dot.classList.toggle('active', i === current));
+    if (prevBtn) prevBtn.disabled = current === 0;
+    if (nextBtn) nextBtn.disabled = current === slides.length - 1;
+  }
+
+  prevBtn?.addEventListener('click', () => goTo(current - 1));
+  nextBtn?.addEventListener('click', () => goTo(current + 1));
+
+  // Swipe-ondersteuning (mobiel)
+  let touchStartX = 0;
+  let touchDeltaX = 0;
+  track.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchDeltaX = 0;
+  }, { passive: true });
+  track.addEventListener('touchmove', e => {
+    touchDeltaX = e.touches[0].clientX - touchStartX;
+  }, { passive: true });
+  track.addEventListener('touchend', () => {
+    if (Math.abs(touchDeltaX) > 45) {
+      goTo(current + (touchDeltaX < 0 ? 1 : -1));
+    }
+  });
+
+  goTo(0);
+}
+initHowItWorksSlider();
+
 /* ========= INIT ========= */
 updateAuthUI();
 if (pendingResetToken && !getValidToken()) {
