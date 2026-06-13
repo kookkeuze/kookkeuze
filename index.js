@@ -1359,19 +1359,12 @@ function getInternetRecipePayloadFromElement(element) {
 
 let _saveInternetRecipePending = null; // { recipe, onConfirm }
 
-function sirGetMultiValues(id) {
-  const el = document.getElementById(id);
-  if (!el) return null;
-  const selected = Array.from(el.selectedOptions).map(o => o.value).filter(Boolean);
-  return selected.length ? selected.join(', ') : null;
-}
 
-function sirSetMultiValues(id, val) {
-  const el = document.getElementById(id);
-  if (!el || !val) return;
-  const vals = val.split(',').map(v => v.trim().toLowerCase());
-  Array.from(el.options).forEach(opt => {
-    opt.selected = vals.includes(opt.value.toLowerCase());
+function initSirMultiSelects() {
+  ['sirDishType', 'sirMealCategory', 'sirMealType'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el || el._multiSelectApi) return;
+    createMultiSelect(el, el.dataset.placeholder || 'Kies...');
   });
 }
 
@@ -1384,9 +1377,12 @@ function openSaveInternetRecipeModal(recipe, onConfirm) {
 
   document.getElementById('saveInternetRecipeModalTitle').textContent = recipe.title || 'Recept';
 
-  sirSetMultiValues('sirDishType', recipe.dish_type);
-  sirSetMultiValues('sirMealCategory', recipe.meal_category);
-  sirSetMultiValues('sirMealType', recipe.meal_type);
+  initSirMultiSelects();
+
+  const toArray = val => val ? val.split(',').map(v => v.trim()).filter(Boolean) : [];
+  document.getElementById('sirDishType')?._multiSelectApi?.setValues(toArray(recipe.dish_type));
+  document.getElementById('sirMealCategory')?._multiSelectApi?.setValues(toArray(recipe.meal_category));
+  document.getElementById('sirMealType')?._multiSelectApi?.setValues(toArray(recipe.meal_type));
 
   const timeEl = document.getElementById('sirTimeRequired');
   if (timeEl) timeEl.value = recipe.time_required || '';
@@ -1414,11 +1410,16 @@ document.getElementById('saveInternetRecipeConfirmBtn')?.addEventListener('click
   if (!_saveInternetRecipePending) return;
   const { recipe: original, onConfirm } = _saveInternetRecipePending;
   const calRaw = document.getElementById('sirCalories')?.value;
+  const getSirValues = id => {
+    const el = document.getElementById(id);
+    const vals = el?._multiSelectApi?.getValues() || [];
+    return vals.length ? vals.join(', ') : null;
+  };
   const filledRecipe = {
     ...original,
-    dish_type: sirGetMultiValues('sirDishType'),
-    meal_category: sirGetMultiValues('sirMealCategory'),
-    meal_type: sirGetMultiValues('sirMealType'),
+    dish_type: getSirValues('sirDishType'),
+    meal_category: getSirValues('sirMealCategory'),
+    meal_type: getSirValues('sirMealType'),
     time_required: document.getElementById('sirTimeRequired')?.value || null,
     calories: calRaw !== '' && calRaw != null ? Number(calRaw) : null
   };

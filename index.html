@@ -527,8 +527,9 @@
         <p class="assign-modal-sub">Vul de ontbrekende gegevens aan voordat je opslaat.</p>
         <div class="save-internet-recipe-fields">
           <div class="save-internet-field-row">
-            <label>Soort gerecht <span class="sir-hint">meerdere mogelijk</span></label>
-            <select id="sirDishType" class="sir-select" multiple size="4">
+            <label>Soort gerecht</label>
+            <select id="sirDishType" class="sir-multi-select" data-placeholder="Kies soort gerecht">
+              <option value="">Soort gerecht</option>
               <option>Kip</option><option>Rund</option><option>Varken</option><option>Brood</option>
               <option>Hartig</option><option>Hartige taart</option><option>Ovenschotel</option>
               <option>Pasta</option><option>Rijst</option><option>Soep</option>
@@ -537,16 +538,18 @@
             </select>
           </div>
           <div class="save-internet-field-row">
-            <label>Menugang <span class="sir-hint">meerdere mogelijk</span></label>
-            <select id="sirMealCategory" class="sir-select" multiple size="4">
+            <label>Menugang</label>
+            <select id="sirMealCategory" class="sir-multi-select" data-placeholder="Kies menugang">
+              <option value="">Menugang</option>
               <option>Bakken</option><option>Dessert</option><option>Dressings, sauzen &amp; dips</option>
               <option>Drinken</option><option>Hoofdgerecht</option><option>Lunch</option>
               <option>Ontbijt</option><option>Salade</option><option>Snacks</option>
             </select>
           </div>
           <div class="save-internet-field-row">
-            <label>Doel gerecht <span class="sir-hint">meerdere mogelijk</span></label>
-            <select id="sirMealType" class="sir-select" multiple size="3">
+            <label>Doel gerecht</label>
+            <select id="sirMealType" class="sir-multi-select" data-placeholder="Kies doel gerecht">
+              <option value="">Doel gerecht</option>
               <option>Sporten</option><option>Normaal</option><option>Cheaten</option>
             </select>
           </div>

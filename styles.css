@@ -2417,10 +2417,9 @@ select:focus {
   color: #3a3a3a;
 }
 
-.sir-select,
 .save-internet-field-row input {
   width: 100%;
-  padding: 6px 8px;
+  padding: 9px 12px;
   border: 1.5px solid #d0e8d4;
   border-radius: 8px;
   font-size: 14px;
@@ -2430,32 +2429,19 @@ select:focus {
   box-sizing: border-box;
 }
 
-.sir-select[multiple] {
-  padding: 4px;
-}
-
-.sir-select[multiple] option {
-  padding: 7px 10px;
-  border-radius: 6px;
-  margin: 1px 0;
-}
-
-.sir-select[multiple] option:checked {
-  background: #63D671;
-  color: #fff;
-}
-
-.sir-select:focus,
 .save-internet-field-row input:focus {
   outline: none;
   border-color: #63D671;
 }
 
-.sir-hint {
-  font-size: 11px;
-  font-weight: 400;
-  color: #8fa897;
-  margin-left: 6px;
+/* Multi-select dropdown past de volledige breedte van het veld */
+.save-internet-field-row .multi-select {
+  width: 100%;
+}
+
+.save-internet-field-row .multi-select-trigger {
+  width: 100%;
+  justify-content: space-between;
 }
 
 .recipe-note-label {
