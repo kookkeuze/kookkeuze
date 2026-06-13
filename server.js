@@ -130,9 +130,15 @@ async function fetchHtmlWithRetries(targetUrl) {
   const attempts = [
     DEFAULT_HTML_HEADERS,
     {
-      ...DEFAULT_HTML_HEADERS,
-      'User-Agent': 'KookkeuzeBot/1.1',
-      'Accept': 'text/html,application/xhtml+xml'
+      'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'nl-NL,nl;q=0.9',
+      'Cache-Control': 'no-cache'
+    },
+    {
+      'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+      'Accept': 'text/html',
+      'Accept-Language': 'nl'
     }
   ];
 
@@ -141,7 +147,7 @@ async function fetchHtmlWithRetries(targetUrl) {
       const response = await fetch(targetUrl, {
         headers,
         redirect: 'follow',
-        signal: AbortSignal.timeout(12000)
+        signal: AbortSignal.timeout(14000)
       });
       if (!response.ok) continue;
       const html = await response.text();
@@ -400,12 +406,64 @@ function extractListItemsFromSectionHtml(sectionHtml) {
   return dedupeIngredients(fallbackItems);
 }
 
+function extractIngredientsFromMicrodata(html) {
+  // itemprop="recipeIngredient" — veel Nederlandse receptensites
+  const items = [];
+  const re = /itemprop=["']recipeIngredient["'][^>]*>([\s\S]*?)<\//gi;
+  let match;
+  while ((match = re.exec(html)) !== null) {
+    const text = normalizeIngredientText(htmlToText(match[1]));
+    if (text) items.push(text);
+  }
+  // Zelfsluitende variant: <meta itemprop="recipeIngredient" content="...">
+  const metaRe = /itemprop=["']recipeIngredient["'][^>]+content=["']([^"']+)["']/gi;
+  while ((match = metaRe.exec(html)) !== null) {
+    const text = normalizeIngredientText(htmlToText(match[1]));
+    if (text) items.push(text);
+  }
+  return dedupeIngredients(items);
+}
+
+function extractIngredientsFromContainers(html) {
+  // Zoek containers met veelgebruikte klassen/attributen voor ingrediënten
+  const containerPatterns = [
+    /class=["'][^"']*\bingredient[s]?\b[^"']*["']/i,
+    /data-module=["']ingredient/i,
+    /data-test=["']ingredient/i,
+    /id=["'][^"']*\bingredient[s]?\b[^"']*["']/i
+  ];
+  const items = [];
+  for (const pattern of containerPatterns) {
+    const containerMatch = html.match(new RegExp(`<(?:ul|ol|div|section)[^>]+${pattern.source}[^>]*>([\\s\\S]*?)<\\/(?:ul|ol|div|section)>`, 'i'));
+    if (!containerMatch) continue;
+    const found = extractListItemsFromSectionHtml(containerMatch[1]);
+    if (found.length) items.push(...found);
+  }
+  return dedupeIngredients(items);
+}
+
 function extractRecipeIngredientsFromHtml(html) {
+  // 1. Probeer microdata (itemprop="recipeIngredient")
+  const microdata = extractIngredientsFromMicrodata(html);
+  if (microdata.length) return microdata;
+
+  // 2. Probeer bekende ingredient-containers op basis van klasse/attribuut
+  const containers = extractIngredientsFromContainers(html);
+  if (containers.length) return containers;
+
+  // 3. Zoek sectie via heading-tekst
   const sectionHtml = extractSectionHtmlByHeading(html, [
-    /^ingredients?$/,
-    /^ingredienten?$/,
-    /^what you'll need$/,
-    /^wat heb je nodig$/
+    /^ingredients?$/i,
+    /^ingredi[eë]nten?$/i,
+    /^what you['']ll need$/i,
+    /^wat heb je nodig\??$/i,
+    /^benodigdheden$/i,
+    /^je hebt nodig$/i,
+    /^wat heb je nodig\??$/i,
+    /^dit heb je nodig$/i,
+    /^dit heb je er voor nodig$/i,
+    /^voor dit recept heb je nodig$/i,
+    /^nodig$/i
   ]);
 
   return extractListItemsFromSectionHtml(sectionHtml);
