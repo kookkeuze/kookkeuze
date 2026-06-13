@@ -2420,7 +2420,7 @@ select:focus {
 .sir-select,
 .save-internet-field-row input {
   width: 100%;
-  padding: 9px 12px;
+  padding: 6px 8px;
   border: 1.5px solid #d0e8d4;
   border-radius: 8px;
   font-size: 14px;
@@ -2428,13 +2428,34 @@ select:focus {
   background: #fff;
   color: #2d3a30;
   box-sizing: border-box;
-  appearance: auto;
+}
+
+.sir-select[multiple] {
+  padding: 4px;
+}
+
+.sir-select[multiple] option {
+  padding: 7px 10px;
+  border-radius: 6px;
+  margin: 1px 0;
+}
+
+.sir-select[multiple] option:checked {
+  background: #63D671;
+  color: #fff;
 }
 
 .sir-select:focus,
 .save-internet-field-row input:focus {
   outline: none;
   border-color: #63D671;
+}
+
+.sir-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: #8fa897;
+  margin-left: 6px;
 }
 
 .recipe-note-label {

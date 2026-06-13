@@ -1359,6 +1359,22 @@ function getInternetRecipePayloadFromElement(element) {
 
 let _saveInternetRecipePending = null; // { recipe, onConfirm }
 
+function sirGetMultiValues(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const selected = Array.from(el.selectedOptions).map(o => o.value).filter(Boolean);
+  return selected.length ? selected.join(', ') : null;
+}
+
+function sirSetMultiValues(id, val) {
+  const el = document.getElementById(id);
+  if (!el || !val) return;
+  const vals = val.split(',').map(v => v.trim().toLowerCase());
+  Array.from(el.options).forEach(opt => {
+    opt.selected = vals.includes(opt.value.toLowerCase());
+  });
+}
+
 function openSaveInternetRecipeModal(recipe, onConfirm) {
   if (!recipe) return;
   const modal = document.getElementById('saveInternetRecipeModal');
@@ -1368,14 +1384,12 @@ function openSaveInternetRecipeModal(recipe, onConfirm) {
 
   document.getElementById('saveInternetRecipeModalTitle').textContent = recipe.title || 'Recept';
 
-  const setSelect = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.value = val || '';
-  };
-  setSelect('sirDishType', recipe.dish_type);
-  setSelect('sirMealCategory', recipe.meal_category);
-  setSelect('sirMealType', recipe.meal_type);
-  setSelect('sirTimeRequired', recipe.time_required);
+  sirSetMultiValues('sirDishType', recipe.dish_type);
+  sirSetMultiValues('sirMealCategory', recipe.meal_category);
+  sirSetMultiValues('sirMealType', recipe.meal_type);
+
+  const timeEl = document.getElementById('sirTimeRequired');
+  if (timeEl) timeEl.value = recipe.time_required || '';
   const calEl = document.getElementById('sirCalories');
   if (calEl) calEl.value = recipe.calories != null ? recipe.calories : '';
 
@@ -1402,9 +1416,9 @@ document.getElementById('saveInternetRecipeConfirmBtn')?.addEventListener('click
   const calRaw = document.getElementById('sirCalories')?.value;
   const filledRecipe = {
     ...original,
-    dish_type: document.getElementById('sirDishType')?.value || null,
-    meal_category: document.getElementById('sirMealCategory')?.value || null,
-    meal_type: document.getElementById('sirMealType')?.value || null,
+    dish_type: sirGetMultiValues('sirDishType'),
+    meal_category: sirGetMultiValues('sirMealCategory'),
+    meal_type: sirGetMultiValues('sirMealType'),
     time_required: document.getElementById('sirTimeRequired')?.value || null,
     calories: calRaw !== '' && calRaw != null ? Number(calRaw) : null
   };
@@ -1827,6 +1841,12 @@ async function openNotesExport(recipeUrl, recipeTitle) {
   }
 }
 
+function findRecipeInDatabase(url) {
+  if (!url) return null;
+  const decoded = decodeURIComponent(url);
+  return (plannerRecipes || []).find(r => r.url === url || r.url === decoded) || null;
+}
+
 function closeAllRecipeExportMenus(exceptMenu = null) {
   document.querySelectorAll('[data-export-menu]').forEach(menu => {
     const shouldKeepOpen = exceptMenu && menu === exceptMenu;
@@ -1874,10 +1894,15 @@ resultDiv?.addEventListener('click', async e => {
   if (saveInternetBtn) {
     closeAllRecipeExportMenus();
     const recipe = getInternetRecipePayloadFromElement(saveInternetBtn);
+    const existing = findRecipeInDatabase(recipe?.url);
+    if (existing) {
+      showRecipeAddedToast('Recept staat al in je database.');
+      return;
+    }
     openSaveInternetRecipeModal(recipe, async (filledRecipe) => {
       const saved = await ensureInternetRecipeSaved(filledRecipe);
       if (!saved) return;
-      showRecipeAddedToast(saved.alreadyExists ? 'Recept staat al in je database.' : 'Recept toegevoegd aan je database.');
+      showRecipeAddedToast('Recept toegevoegd aan je database.');
     });
     return;
   }
@@ -1886,6 +1911,13 @@ resultDiv?.addEventListener('click', async e => {
   if (planInternetBtn) {
     closeAllRecipeExportMenus();
     const recipe = getInternetRecipePayloadFromElement(planInternetBtn);
+    const existing = findRecipeInDatabase(recipe?.url);
+    if (existing) {
+      plannerSuggestedDay = null;
+      plannerSuggestedSlot = null;
+      openAssignModalForRecipe(existing.id, existing.title || recipe?.title || 'Recept');
+      return;
+    }
     openSaveInternetRecipeModal(recipe, async (filledRecipe) => {
       const saved = await ensureInternetRecipeSaved(filledRecipe);
       if (!saved?.id) return;
