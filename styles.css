@@ -4094,6 +4094,7 @@ select:focus {
   padding-inline: clamp(16px,4vw,64px);
   max-width: 1200px;
   margin: 64px auto;
+  overflow-x: hidden;
 }
 .how-works h2{
   text-align:center;
@@ -4112,8 +4113,10 @@ select:focus {
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
   max-width: 640px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .hiw-viewport{
@@ -4148,6 +4151,8 @@ select:focus {
   gap: 10px;
   text-align: left;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .hiw-card-header{
@@ -4177,7 +4182,7 @@ select:focus {
   margin: 0;
   background: transparent;
   box-shadow: none;
-  color: #4ac858;
+  color: #1a1a1a;
   font-size: clamp(1.1rem, 2.5vw, 1.3rem);
   width: auto;
 }
@@ -4230,6 +4235,12 @@ select:focus {
 }
 .hiw-dot.active{
   background: #4ac858;
+}
+
+@media (max-width: 400px){
+  .hiw-arrow{ width: 32px; height: 32px; min-width: 32px; min-height: 32px; font-size: .75rem; }
+  .hiw-slider{ gap: 4px; }
+  .hiw-card{ padding: 18px 14px; }
 }
 
 @media (min-width: 768px){
