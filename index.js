@@ -3466,10 +3466,16 @@ function initHowItWorksSlider() {
   const nextBtn = document.getElementById('hiwNext');
   if (!track || !dotsWrap) return;
 
+  const viewport = track.parentElement;
   const slides = Array.from(track.children);
   if (slides.length === 0) return;
 
   let current = 0;
+
+  function applyWidths() {
+    const w = viewport.offsetWidth;
+    slides.forEach(s => { s.style.width = w + 'px'; s.style.flexShrink = '0'; });
+  }
 
   // Bouw de dots
   dotsWrap.innerHTML = '';
@@ -3485,7 +3491,7 @@ function initHowItWorksSlider() {
 
   function goTo(index) {
     current = Math.max(0, Math.min(slides.length - 1, index));
-    track.style.transform = `translateX(-${current * 100}%)`;
+    track.style.transform = `translateX(${-current * viewport.offsetWidth}px)`;
     dots.forEach((dot, i) => dot.classList.toggle('active', i === current));
     if (prevBtn) prevBtn.disabled = current === 0;
     if (nextBtn) nextBtn.disabled = current === slides.length - 1;
@@ -3493,6 +3499,8 @@ function initHowItWorksSlider() {
 
   prevBtn?.addEventListener('click', () => goTo(current - 1));
   nextBtn?.addEventListener('click', () => goTo(current + 1));
+
+  window.addEventListener('resize', () => { applyWidths(); goTo(current); });
 
   // Swipe-ondersteuning (mobiel)
   let touchStartX = 0;
@@ -3510,6 +3518,7 @@ function initHowItWorksSlider() {
     }
   });
 
+  applyWidths();
   goTo(0);
 }
 initHowItWorksSlider();

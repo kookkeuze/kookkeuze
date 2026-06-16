@@ -155,11 +155,13 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 html {
   scrollbar-gutter: stable;
   overflow-y: scroll;
+  overflow-x: hidden;
 }
 
 /* Container voor de hele pagina */
@@ -4133,7 +4135,7 @@ select:focus {
 }
 
 .hiw-slide{
-  flex: 0 0 100%;
+  flex: 0 0 auto;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
