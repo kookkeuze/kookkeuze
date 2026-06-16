@@ -1653,6 +1653,10 @@ function showRecipes(arr, options = {}) {
                     <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
                     <span>Notities</span>
                   </button>
+                  <button type="button" class="recipe-export-option bring-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
+                    <span class="export-option-icon" aria-hidden="true"><i class="fas fa-basket-shopping"></i></span>
+                    <span>Stuur naar Bring</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1842,6 +1846,36 @@ async function openNotesExport(recipeUrl, recipeTitle) {
   }
 }
 
+function buildBringDeeplink(recipeUrl) {
+  return `https://api.getbring.com/rest/bringrecipes/deeplink?url=${encodeURIComponent(recipeUrl)}&source=web`;
+}
+
+function openBringExport(recipeUrl) {
+  const cleanUrl = (recipeUrl || '').trim();
+  if (!cleanUrl || !/^https?:\/\//i.test(cleanUrl)) {
+    if (typeof showRecipeAddedToast === 'function') {
+      showRecipeAddedToast('Geen geldige recept-URL voor Bring beschikbaar.');
+    }
+    return;
+  }
+
+  const bringUrl = buildBringDeeplink(cleanUrl);
+  // Universal link: opent de Bring-app op mobiel, anders een nieuw tabblad.
+  // Via een tijdelijke <a> i.p.v. window.open zodat popup-blockers niet de
+  // huidige pagina overnemen.
+  const link = document.createElement('a');
+  link.href = bringUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  if (typeof showRecipeAddedToast === 'function') {
+    showRecipeAddedToast('Bring geopend met de ingrediënten.');
+  }
+}
+
 function findRecipeInDatabase(url) {
   if (!url) return null;
   const decoded = decodeURIComponent(url);
@@ -1888,6 +1922,14 @@ resultDiv?.addEventListener('click', async e => {
     const recipeUrl = decodeURIComponent(notesBtn.dataset.recipeUrl || '');
     closeAllRecipeExportMenus();
     openNotesExport(recipeUrl, notesBtn.dataset.recipeTitle || 'Recept');
+    return;
+  }
+
+  const bringBtn = e.target.closest('.bring-export-option');
+  if (bringBtn) {
+    const recipeUrl = decodeURIComponent(bringBtn.dataset.recipeUrl || '');
+    closeAllRecipeExportMenus();
+    openBringExport(recipeUrl);
     return;
   }
 
@@ -2459,6 +2501,10 @@ function renderPlannerSearchResults() {
                 <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
                 <span>Notities</span>
               </button>
+              <button type="button" class="recipe-export-option bring-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
+                <span class="export-option-icon" aria-hidden="true"><i class="fas fa-basket-shopping"></i></span>
+                <span>Stuur naar Bring</span>
+              </button>
             </div>
           </div>
         </div>
@@ -2660,6 +2706,14 @@ function bindWeekPlannerUi() {
       const recipeUrl = decodeURIComponent(notesBtn.dataset.recipeUrl || '');
       closeAllRecipeExportMenus();
       openNotesExport(recipeUrl, notesBtn.dataset.recipeTitle || 'Recept');
+      return;
+    }
+
+    const bringBtn = e.target.closest('.bring-export-option');
+    if (bringBtn) {
+      const recipeUrl = decodeURIComponent(bringBtn.dataset.recipeUrl || '');
+      closeAllRecipeExportMenus();
+      openBringExport(recipeUrl);
       return;
     }
 
