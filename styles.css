@@ -4094,9 +4094,11 @@ select:focus {
 /* === HOE WERKT HET (nieuw) === */
 .how-works{
   padding-inline: clamp(16px,4vw,64px);
-  max-width: 1200px;
+  max-width: min(1200px, 100vw);
+  width: 100%;
+  box-sizing: border-box;
   margin: 64px auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 .how-works h2{
   text-align:center;
@@ -4239,10 +4241,10 @@ select:focus {
   background: #4ac858;
 }
 
-@media (max-width: 400px){
-  .hiw-arrow{ width: 32px; height: 32px; min-width: 32px; min-height: 32px; font-size: .75rem; }
-  .hiw-slider{ gap: 4px; }
-  .hiw-card{ padding: 18px 14px; }
+/* Mobile: pijlen verbergen, swipen volstaat — viewport neemt volledige breedte */
+@media (max-width: 599px){
+  .hiw-arrow{ display: none; }
+  .hiw-slider{ gap: 0; }
 }
 
 @media (min-width: 768px){

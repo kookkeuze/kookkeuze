@@ -3518,8 +3518,7 @@ function initHowItWorksSlider() {
     }
   });
 
-  applyWidths();
-  goTo(0);
+  requestAnimationFrame(() => { applyWidths(); goTo(0); });
 }
 initHowItWorksSlider();
 
