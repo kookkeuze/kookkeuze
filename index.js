@@ -3475,6 +3475,11 @@ function initHowItWorksSlider() {
   function applyWidths() {
     const w = viewport.offsetWidth;
     slides.forEach(s => { s.style.width = w + 'px'; s.style.flexShrink = '0'; });
+    // Gelijke hoogte voor alle kaarten
+    const cards = slides.map(s => s.querySelector('.hiw-card'));
+    cards.forEach(c => { if (c) c.style.height = ''; });
+    const maxH = Math.max(...cards.map(c => c ? c.offsetHeight : 0));
+    if (maxH > 0) cards.forEach(c => { if (c) c.style.height = maxH + 'px'; });
   }
 
   // Bouw de dots
