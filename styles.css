@@ -4118,7 +4118,7 @@ select:focus {
   align-items: center;
   gap: 6px;
   width: 100%;
-  max-width: 640px;
+  max-width: 780px;
   margin: 0 auto;
   box-sizing: border-box;
 }
@@ -4248,10 +4248,12 @@ select:focus {
 }
 
 @media (min-width: 768px){
-  .hiw-slider{ gap: 12px; }
-  .hiw-arrow{ width: 46px; height: 46px; min-width: 46px; min-height: 46px; font-size: 1.05rem; }
+  .hiw-slider{ gap: 28px; }
+  .hiw-arrow{ width: 38px; height: 38px; min-width: 38px; min-height: 38px; font-size: .9rem; }
   .hiw-icon{ font-size: 1.6rem; }
-  .hiw-card{ padding: 26px 24px; }
+  .hiw-card{ padding: 30px 28px; }
+  .hiw-card p{ font-size: 1.05rem; }
+  .hiw-card .step-number{ font-size: 1.3rem; }
 }
 
 .step-number {
