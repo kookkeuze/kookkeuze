@@ -3378,8 +3378,7 @@ document.getElementById('register-form').addEventListener('submit', async e => {
       body: JSON.stringify({ email,password })
     });
     const data = await res.json();
-    const errText = data.error ? (data.detail ? `${data.error} (${data.detail})` : data.error) : null;
-    showMsg(errText || data.message || 'Registratie mislukt.', res.ok && !data.error);
+    showMsg(data.error || data.message || 'Registratie mislukt.', res.ok && !data.error);
   } catch (err) {
     console.error(err);
     showMsg('Server niet bereikbaar.', false);
