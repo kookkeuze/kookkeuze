@@ -4040,6 +4040,29 @@ select:focus {
   margin-top: 14px;
 }
 
+.auth-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px 0 4px;
+  font-size: .88rem;
+  color: #444;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.auth-consent input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  accent-color: #4ac858;
+  cursor: pointer;
+}
+.auth-consent a {
+  color: #235b2a;
+  font-weight: 600;
+}
+
 /* 1. Close-icoon beter uitlijnen */
 .modal-close {
   top: 12px;          /* i.p.v. 16px → iets hoger */

@@ -3364,6 +3364,11 @@ document.getElementById('register-form').addEventListener('submit', async e => {
   e.preventDefault();
   const email    = document.getElementById('register-email').value;
   const password = document.getElementById('register-password').value;
+  const consent  = document.getElementById('register-consent');
+  if (consent && !consent.checked) {
+    showMsg('Je moet akkoord gaan met de privacyvoorwaarden.', false);
+    return;
+  }
   setSubmitLoading('register-form', true, 'Registreren...');
 
   try {
@@ -3373,7 +3378,8 @@ document.getElementById('register-form').addEventListener('submit', async e => {
       body: JSON.stringify({ email,password })
     });
     const data = await res.json();
-    showMsg(data.error || data.message || 'Registratie mislukt.', res.ok && !data.error);
+    const errText = data.error ? (data.detail ? `${data.error} (${data.detail})` : data.error) : null;
+    showMsg(errText || data.message || 'Registratie mislukt.', res.ok && !data.error);
   } catch (err) {
     console.error(err);
     showMsg('Server niet bereikbaar.', false);

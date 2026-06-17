@@ -1091,7 +1091,7 @@ app.post('/api/register', (req, res) => {
           res.json({ message: 'Registratie gelukt! Check je e-mail om te bevestigen.' });
         } catch (e) {
           console.error('❌ Verificatietoken/mail fout:', e);
-          res.status(500).json({ error: 'Kon verificatie-e-mail niet versturen.' });
+          res.status(500).json({ error: 'Kon verificatie-e-mail niet versturen.', detail: String(e && e.message || e) });
         }
       });
     });
@@ -1192,7 +1192,7 @@ app.post('/api/password-reset/request', async (req, res) => {
     return res.json({ message: genericMessage });
   } catch (err) {
     console.error('❌ Password reset request error:', err);
-    return res.status(500).json({ error: 'Kon reset e-mail niet versturen.' });
+    return res.status(500).json({ error: 'Kon reset e-mail niet versturen.', detail: String(err && err.message || err) });
   }
 });
 
