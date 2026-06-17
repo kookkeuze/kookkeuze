@@ -1,4 +1,4 @@
-// server.js – met e-mailverificatie + auto-login redirect
+﻿// server.js – met e-mailverificatie + auto-login redirect
 const express    = require('express');
 const bodyParser = require('body-parser');
 const cors       = require('cors');
@@ -126,7 +126,45 @@ function extractRecipeImageFromJsonLd(html) {
   return null;
 }
 
+// Een opgehaalde pagina is pas bruikbaar als er recept-data in lijkt te staan.
+// Zo voorkomen we dat we blijven hangen op een cookie-/blokkadepagina.
+function looksLikeUsableRecipeHtml(html) {
+  if (!html || html.length < 600) return false;
+  // Alleen écht gestructureerde receptdata telt als "bruikbaar". Zo voorkomen we
+  // dat we blijven hangen op een JS-shell (zonder data) die toevallig het woord
+  // "ingrediënt" bevat — die sturen we juist door naar de reader-proxy.
+  return /"recipeIngredient"/i.test(html) || /itemprop=["']recipeIngredient["']/i.test(html);
+}
+
+// Laatste redmiddel: haal de pagina op via een externe reader-proxy (r.jina.ai).
+// Helpt bij sites die direct ophalen blokkeren of die volledig via JavaScript
+// renderen. We vragen HTML terug zodat eventuele JSON-LD blokken bewaard blijven.
+async function fetchViaReaderProxy(targetUrl) {
+  const proxyUrl = `https://r.jina.ai/${targetUrl}`;
+  try {
+    const response = await fetch(proxyUrl, {
+      headers: {
+        'Accept': 'text/html,*/*;q=0.8',
+        'X-Return-Format': 'html',
+        'X-Locale': 'nl-NL'
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(22000)
+    });
+    if (!response.ok) return null;
+    const html = await response.text();
+    if (html && html.length > 100) return html;
+  } catch (_err) {
+    // proxy faalde ook
+  }
+  return null;
+}
+
 async function fetchHtmlWithRetries(targetUrl) {
+  const origin = (() => {
+    try { return new URL(targetUrl).origin + '/'; } catch { return undefined; }
+  })();
+
   const attempts = [
     DEFAULT_HTML_HEADERS,
     {
@@ -136,11 +174,29 @@ async function fetchHtmlWithRetries(targetUrl) {
       'Cache-Control': 'no-cache'
     },
     {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'nl-NL,nl;q=0.9,en;q=0.8',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Upgrade-Insecure-Requests': '1',
+      ...(origin ? { 'Referer': origin } : {})
+    },
+    {
       'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
       'Accept': 'text/html',
       'Accept-Language': 'nl'
+    },
+    {
+      'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+      'Accept': 'text/html,*/*;q=0.8'
     }
   ];
+
+  // Beste resultaat tot nu toe bewaren: liever HTML met recept-data, maar als we
+  // alleen "iets" krijgen is dat nog altijd beter dan niets.
+  let fallbackHtml = null;
 
   for (const headers of attempts) {
     try {
@@ -151,12 +207,21 @@ async function fetchHtmlWithRetries(targetUrl) {
       });
       if (!response.ok) continue;
       const html = await response.text();
-      if (html && html.length > 100) return html;
+      if (!html || html.length <= 100) continue;
+      if (looksLikeUsableRecipeHtml(html)) return html;
+      if (!fallbackHtml) fallbackHtml = html;
     } catch (_err) {
       // probeer volgende poging
     }
   }
-  return null;
+
+  // Niets bruikbaars via directe pogingen → probeer de reader-proxy.
+  const proxied = await fetchViaReaderProxy(targetUrl);
+  if (proxied && (looksLikeUsableRecipeHtml(proxied) || !fallbackHtml)) {
+    return proxied;
+  }
+
+  return fallbackHtml;
 }
 /* ------------------------------------------------------------ */
 
@@ -164,39 +229,109 @@ async function fetchHtmlWithRetries(targetUrl) {
 const RECIPE_INFO_TTL_MS = 24 * 60 * 60 * 1000;
 const recipeInfoCache = new Map();
 
+// Veel (Nederlandse) receptensites leveren technisch ongeldige JSON-LD:
+// trailing comma's, CDATA-wrappers, losse control-characters of HTML-encoded
+// JSON. We proberen het daarom in meerdere stappen te repareren.
+function tryParseJsonLd(raw) {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    // door naar opschonen
+  }
+
+  const cleaned = trimmed
+    .replace(/^<!\[CDATA\[/, '')
+    .replace(/\]\]>$/, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]+/g, ' ')
+    .replace(/,\s*([}\]])/g, '$1');
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // laatste poging: HTML-entities decoderen
+  }
+
+  try {
+    return JSON.parse(decodeHtmlEntities(cleaned));
+  } catch {
+    return null;
+  }
+}
+
 function parseJsonLdBlocks(html) {
   const blocks = [];
-  const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  const re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
   let match;
   while ((match = re.exec(html)) !== null) {
-    const raw = match[1].trim();
-    if (!raw) continue;
-    try {
-      blocks.push(JSON.parse(raw));
-    } catch {
-      // ignore parse errors
-    }
+    const parsed = tryParseJsonLd(match[1]);
+    if (parsed) blocks.push(parsed);
   }
   return blocks;
 }
 
-function findRecipeObject(data) {
-  if (!data) return null;
-  if (Array.isArray(data)) {
-    for (const item of data) {
-      const found = findRecipeObject(item);
-      if (found) return found;
-    }
-    return null;
-  }
-  if (data['@graph']) return findRecipeObject(data['@graph']);
-
+function isRecipeNode(data) {
+  if (!data || typeof data !== 'object') return false;
   const type = data['@type'];
-  if (type) {
-    const types = Array.isArray(type) ? type : [type];
-    if (types.map(t => String(t).toLowerCase()).includes('recipe')) return data;
+  if (!type) return false;
+  const types = Array.isArray(type) ? type : [type];
+  return types.map(t => String(t).toLowerCase()).includes('recipe');
+}
+
+// Verzamel álle recipe-objecten in een JSON-LD blok (ook genest in @graph,
+// arrays of in een mainEntity), zodat we daarna de meest complete kunnen kiezen.
+function collectRecipeObjects(data, acc = []) {
+  if (!data || typeof data !== 'object') return acc;
+  if (Array.isArray(data)) {
+    data.forEach(item => collectRecipeObjects(item, acc));
+    return acc;
   }
-  return null;
+  if (isRecipeNode(data)) acc.push(data);
+  if (data['@graph']) collectRecipeObjects(data['@graph'], acc);
+  if (data.mainEntity) collectRecipeObjects(data.mainEntity, acc);
+  return acc;
+}
+
+// Hoe meer bruikbare velden, hoe beter het recept-object.
+function scoreRecipe(recipe) {
+  if (!recipe) return 0;
+  let score = 0;
+  const ing = recipe.recipeIngredient || recipe.ingredients || recipe.ingredient;
+  if (Array.isArray(ing)) score += ing.length * 3;
+  else if (ing) score += 3;
+  if (recipe.recipeInstructions) score += 5;
+  if (recipe.name) score += 2;
+  if (recipe.totalTime || recipe.cookTime || recipe.prepTime) score += 2;
+  if (recipe.nutrition && recipe.nutrition.calories) score += 1;
+  if (recipe.recipeCategory) score += 1;
+  if (recipe.recipeCuisine) score += 1;
+  if (recipe.keywords) score += 1;
+  return score;
+}
+
+function findRecipeObject(data) {
+  const recipes = collectRecipeObjects(data);
+  if (!recipes.length) return null;
+  return recipes.reduce((best, cur) => (scoreRecipe(cur) > scoreRecipe(best) ? cur : best), recipes[0]);
+}
+
+// recipeInstructions kan een string, array van strings, array van HowToStep
+// of geneste HowToSection-objecten zijn. We trekken er platte tekst uit.
+function extractInstructionsText(instructions) {
+  const parts = [];
+  const walk = node => {
+    if (!node) return;
+    if (typeof node === 'string') { parts.push(node); return; }
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    if (typeof node === 'object') {
+      if (node.text) parts.push(String(node.text));
+      if (node.name) parts.push(String(node.name));
+      if (node.itemListElement) walk(node.itemListElement);
+    }
+  };
+  walk(instructions);
+  return parts.join(' ');
 }
 
 function collectTextFields(recipe) {
@@ -204,12 +339,40 @@ function collectTextFields(recipe) {
   const push = v => {
     if (!v) return;
     if (Array.isArray(v)) v.forEach(x => push(x));
+    else if (typeof v === 'object') push(v.name || v.text || v['@id']);
     else parts.push(String(v));
   };
   push(recipe.recipeCategory);
   push(recipe.recipeCuisine);
   push(recipe.keywords);
   push(recipe.name);
+  push(recipe.description);
+  push(recipe.suitableForDiet);
+  push(recipe.recipeIngredient || recipe.ingredients);
+  parts.push(extractInstructionsText(recipe.recipeInstructions));
+  return parts.join(' ').toLowerCase();
+}
+
+// Aanvullende trefwoord-tekst uit de pagina zelf (meta keywords/description,
+// og:title) en uit de URL-slug. Helpt enorm wanneer de JSON-LD weinig bevat.
+function buildPageKeywordText(html, url) {
+  const parts = [];
+  if (html) {
+    parts.push(extractMetaContentByAttribute(html, 'name', 'keywords') || '');
+    parts.push(extractMetaContentByAttribute(html, 'name', 'description') || '');
+    parts.push(extractMetaContentByAttribute(html, 'property', 'og:description') || '');
+    parts.push(extractMetaContentByAttribute(html, 'property', 'article:section') || '');
+    const h1Match = html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);
+    if (h1Match) parts.push(htmlToText(h1Match[1]));
+  }
+  if (url) {
+    try {
+      const slug = decodeURIComponent(new URL(url).pathname).replace(/[-/_]+/g, ' ');
+      parts.push(slug);
+    } catch {
+      // ongeldige url negeren
+    }
+  }
   return parts.join(' ').toLowerCase();
 }
 
@@ -232,7 +395,8 @@ function normalizeIngredientText(value) {
   if (!value) return null;
 
   if (typeof value === 'string') {
-    return value.replace(/\s+/g, ' ').trim() || null;
+    // JSON-LD bevat soms HTML-entities (&amp;, &frac12;) — die decoderen we.
+    return decodeHtmlEntities(value).replace(/\s+/g, ' ').trim() || null;
   }
 
   if (Array.isArray(value)) {
@@ -252,11 +416,25 @@ function normalizeIngredientText(value) {
   return String(value).replace(/\s+/g, ' ').trim() || null;
 }
 
+// Filter regels die duidelijk geen ingrediënt zijn: JS/Vue-template-resten,
+// HTML-brokken, knoplabels of regels zonder letters.
+function isPlausibleIngredient(text) {
+  if (!text) return false;
+  if (text.length < 2 || text.length > 140) return false;
+  if (!/[a-zA-Zà-ÿ]/.test(text)) return false;
+  if (/[{}<>]|:class|:key|===|=>|\$\{|\|\||&&|@click|v-if|v-for|function\s*\(|aria-|data-v-/.test(text)) return false;
+  const trimmed = text.trim();
+  if (/^ingredi[eë]nten?\b\s*[:]/i.test(trimmed)) return false;
+  if (/^(ingredi[eë]nten?|porties?|minder porties|meer porties|voor|aantal personen|personen|persoon|stuks?|servings?)$/i.test(trimmed)) return false;
+  return true;
+}
+
 function dedupeIngredients(items) {
   const seen = new Set();
 
   return items
     .filter(Boolean)
+    .filter(isPlausibleIngredient)
     .filter(item => {
       const key = item.toLowerCase();
       if (seen.has(key)) return false;
@@ -470,12 +648,65 @@ function extractRecipeIngredientsFromHtml(html) {
 }
 
 function parseDurationToMinutes(iso) {
-  if (!iso) return null;
-  const match = String(iso).match(/PT(?:(\d+)H)?(?:(\d+)M)?/i);
-  if (!match) return null;
-  const h = parseInt(match[1] || '0', 10);
-  const m = parseInt(match[2] || '0', 10);
-  return h * 60 + m;
+  if (iso == null) return null;
+  if (typeof iso === 'number' && Number.isFinite(iso)) return iso;
+  const value = String(iso).trim();
+  // ISO 8601 duration: P[n]DT[n]H[n]M[n]S
+  const isoMatch = value.match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/i);
+  if (isoMatch && (isoMatch[1] || isoMatch[2] || isoMatch[3] || isoMatch[4])) {
+    const d = parseInt(isoMatch[1] || '0', 10);
+    const h = parseInt(isoMatch[2] || '0', 10);
+    const m = parseInt(isoMatch[3] || '0', 10);
+    const s = parseInt(isoMatch[4] || '0', 10);
+    const total = d * 1440 + h * 60 + m + Math.round(s / 60);
+    if (total > 0) return total;
+  }
+  // Vrije tekst: "1 uur 15 min", "25 minuten", "1,5 uur"
+  let minutes = 0;
+  const hourMatch = value.match(/(\d+(?:[.,]\d+)?)\s*(?:uur|uren|hour|hrs?|h)\b/i);
+  if (hourMatch) minutes += Math.round(parseFloat(hourMatch[1].replace(',', '.')) * 60);
+  const minMatch = value.match(/(\d+)\s*(?:minuten|minuut|min|mins?)\b/i);
+  if (minMatch) minutes += parseInt(minMatch[1], 10);
+  return minutes > 0 ? minutes : null;
+}
+
+// Tijd uit de HTML halen als JSON-LD geen (bruikbare) duur bevat.
+function extractTimeMinutesFromHtml(html) {
+  if (!html) return null;
+  // itemprop="totalTime" / cookTime / prepTime (datetime of content)
+  const itempropRe = /itemprop=["'](?:totalTime|cookTime|prepTime)["'][^>]*?(?:datetime|content)=["']([^"']+)["']/gi;
+  let m;
+  let best = null;
+  while ((m = itempropRe.exec(html)) !== null) {
+    const minutes = parseDurationToMinutes(m[1]);
+    if (minutes && (best == null || minutes > best)) best = minutes;
+  }
+  if (best != null) return best;
+
+  // Tekstlabels zoals "Bereidingstijd: 25 minuten", "Klaar in 1 uur"
+  const text = htmlToText(html);
+  const labelRe = /(?:bereidingstijd|kooktijd|totale?\s*tijd|klaar in|ready in|total time|prep time|cook time)\s*[:\-]?\s*([^\n.,;|]{1,40})/gi;
+  let lm;
+  while ((lm = labelRe.exec(text)) !== null) {
+    const minutes = parseDurationToMinutes(lm[1]);
+    if (minutes) return minutes;
+  }
+  return null;
+}
+
+// Calorieën uit de HTML halen als JSON-LD nutrition ontbreekt.
+function extractCaloriesFromHtml(html) {
+  if (!html) return null;
+  const itempropMatch = html.match(/itemprop=["']calories["'][^>]*>([\s\S]*?)<\//i)
+    || html.match(/itemprop=["']calories["'][^>]+content=["']([^"']+)["']/i);
+  if (itempropMatch) {
+    const cal = parseCalories(htmlToText(itempropMatch[1]));
+    if (cal != null) return cal;
+  }
+  const text = htmlToText(html);
+  const kcalMatch = text.match(/(\d{2,4})\s*(?:kcal|calorie)/i)
+    || text.match(/(?:calorie[ëe]n|energie)\s*[:\-]?\s*(\d{2,4})/i);
+  return kcalMatch ? parseInt(kcalMatch[1], 10) : null;
 }
 
 function mapTimeRequired(totalMinutes) {
@@ -488,23 +719,53 @@ function mapTimeRequired(totalMinutes) {
 }
 
 function mapDishType(text) {
+  // Specifieke/samengestelde sleutels eerst, daarna algemenere.
   const checks = [
     { key: 'hartige taart', value: 'Hartige taart' },
+    { key: 'quiche', value: 'Hartige taart' },
     { key: 'ovenschotel', value: 'Ovenschotel' },
-    { key: 'vegetarisch', value: 'Vegetarisch' },
+    { key: 'ovenschaal', value: 'Ovenschotel' },
+    { key: 'uit de oven', value: 'Ovenschotel' },
     { key: 'wrap', value: 'Wraps' },
+    { key: 'tortilla', value: 'Wraps' },
+    { key: 'lasagne', value: 'Pasta' },
+    { key: 'spaghetti', value: 'Pasta' },
+    { key: 'macaroni', value: 'Pasta' },
+    { key: 'gnocchi', value: 'Pasta' },
     { key: 'pasta', value: 'Pasta' },
+    { key: 'risotto', value: 'Rijst' },
     { key: 'rijst', value: 'Rijst' },
+    { key: 'nasi', value: 'Rijst' },
     { key: 'soep', value: 'Soep' },
+    { key: 'bouillon', value: 'Soep' },
+    { key: 'hartige taart', value: 'Hartige taart' },
     { key: 'taart', value: 'Taart & cake' },
     { key: 'cake', value: 'Taart & cake' },
+    { key: 'gebak', value: 'Taart & cake' },
+    { key: 'muffin', value: 'Taart & cake' },
     { key: 'brood', value: 'Brood' },
+    { key: 'focaccia', value: 'Brood' },
+    { key: 'broodje', value: 'Brood' },
     { key: 'kip', value: 'Kip' },
+    { key: 'kalkoen', value: 'Kip' },
+    { key: 'rundergehakt', value: 'Rund' },
+    { key: 'biefstuk', value: 'Rund' },
+    { key: 'rundvlees', value: 'Rund' },
     { key: 'rund', value: 'Rund' },
+    { key: 'speklap', value: 'Varken' },
     { key: 'varken', value: 'Varken' },
+    { key: 'spek', value: 'Varken' },
+    { key: 'ham', value: 'Varken' },
+    { key: 'zalm', value: 'Vis' },
+    { key: 'tonijn', value: 'Vis' },
+    { key: 'garnaal', value: 'Vis' },
+    { key: 'garnalen', value: 'Vis' },
+    { key: 'kabeljauw', value: 'Vis' },
     { key: 'vis', value: 'Vis' },
-    { key: 'hartig', value: 'Hartig' },
-    { key: 'zoet', value: 'Zoet' }
+    { key: 'vegetarisch', value: 'Vegetarisch' },
+    { key: 'vegan', value: 'Vegetarisch' },
+    { key: 'zoet', value: 'Zoet' },
+    { key: 'hartig', value: 'Hartig' }
   ];
   for (const c of checks) {
     if (text.includes(c.key)) return c.value;
@@ -513,18 +774,30 @@ function mapDishType(text) {
 }
 
 function mapMealCategory(text) {
+  // Expliciete menugang-aanduidingen krijgen voorrang op losse ingrediënt-
+  // achtige woorden (een "pasta pesto" is een hoofdgerecht, geen saus).
   const checks = [
-    { key: 'bakken', value: 'Bakken' },
-    { key: 'dessert', value: 'Dessert' },
-    { key: 'dressing', value: 'Dressings, sauzen & dips' },
-    { key: 'saus', value: 'Dressings, sauzen & dips' },
-    { key: 'dip', value: 'Dressings, sauzen & dips' },
-    { key: 'drinken', value: 'Drinken' },
     { key: 'hoofdgerecht', value: 'Hoofdgerecht' },
-    { key: 'lunch', value: 'Lunch' },
+    { key: 'avondeten', value: 'Hoofdgerecht' },
+    { key: 'diner', value: 'Hoofdgerecht' },
+    { key: 'main course', value: 'Hoofdgerecht' },
     { key: 'ontbijt', value: 'Ontbijt' },
+    { key: 'breakfast', value: 'Ontbijt' },
+    { key: 'lunch', value: 'Lunch' },
     { key: 'salade', value: 'Salade' },
-    { key: 'snack', value: 'Snacks' }
+    { key: 'dessert', value: 'Dessert' },
+    { key: 'toetje', value: 'Dessert' },
+    { key: 'nagerecht', value: 'Dessert' },
+    { key: 'drinken', value: 'Drinken' },
+    { key: 'cocktail', value: 'Drinken' },
+    { key: 'smoothie', value: 'Drinken' },
+    { key: 'borrel', value: 'Snacks' },
+    { key: 'snack', value: 'Snacks' },
+    { key: 'hapje', value: 'Snacks' },
+    { key: 'bakken', value: 'Bakken' },
+    { key: 'dressing', value: 'Dressings, sauzen & dips' },
+    { key: 'dipsaus', value: 'Dressings, sauzen & dips' },
+    { key: ' dip', value: 'Dressings, sauzen & dips' }
   ];
   for (const c of checks) {
     if (text.includes(c.key)) return c.value;
@@ -533,16 +806,20 @@ function mapMealCategory(text) {
 }
 
 function mapMealType(text) {
-  if (text.includes('sport') || text.includes('eiwit') || text.includes('high protein')) {
+  if (text.includes('sport') || text.includes('eiwit') || text.includes('proteïne')
+    || text.includes('proteine') || text.includes('high protein') || text.includes('fit')
+    || text.includes('mager') || text.includes('lijn')) {
     return 'Sporten';
   }
-  if (text.includes('cheat') || text.includes('cheaten')) {
+  if (text.includes('cheat') || text.includes('comfort') || text.includes('guilty')
+    || text.includes('frituur') || text.includes('friet')) {
     return 'Cheaten';
   }
-  return null;
+  // Standaard: de meeste recepten zijn gewoon "Normaal".
+  return 'Normaal';
 }
 
-function buildRecipePayload(recipe, html = '') {
+function buildRecipePayload(recipe, html = '', url = '') {
   let fallbackTitle;
   let fallbackIngredients;
   const getFallbackTitle = () => {
@@ -556,37 +833,29 @@ function buildRecipePayload(recipe, html = '') {
     return fallbackIngredients;
   };
 
-  if (!recipe) {
-    const title = getFallbackTitle();
-    return {
-      title,
-      dish_type: null,
-      meal_category: null,
-      meal_type: null,
-      time_required: null,
-      calories: null,
-      ingredients: getFallbackIngredients(),
-      missing: [
-        ...(!title ? ['Titel'] : []),
-        'Soort gerecht',
-        'Menugang',
-        'Doel gerecht',
-        'Tijd',
-        'Calorieën'
-      ]
-    };
-  }
+  // Combineer trefwoorden uit de JSON-LD én de pagina/URL voor maximale dekking.
+  const recipeText = recipe ? collectTextFields(recipe) : '';
+  const pageText = buildPageKeywordText(html, url);
+  const text = `${recipeText} ${pageText}`.trim();
 
-  const text = collectTextFields(recipe);
-  const totalMinutes = parseDurationToMinutes(recipe.totalTime || recipe.cookTime || recipe.prepTime);
+  // Tijd: eerst uit JSON-LD, anders uit de HTML.
+  const jsonLdMinutes = recipe
+    ? parseDurationToMinutes(recipe.totalTime || recipe.cookTime || recipe.prepTime)
+    : null;
+  const totalMinutes = jsonLdMinutes != null ? jsonLdMinutes : extractTimeMinutesFromHtml(html);
+
+  // Calorieën: eerst uit JSON-LD nutrition, anders uit de HTML.
+  const jsonLdCalories = recipe ? parseCalories(recipe.nutrition && recipe.nutrition.calories) : null;
+  const calories = jsonLdCalories != null ? jsonLdCalories : extractCaloriesFromHtml(html);
+
   const payload = {
-    title: recipe.name || getFallbackTitle(),
+    title: (recipe && normalizeIngredientText(recipe.name)) || getFallbackTitle(),
     dish_type: mapDishType(text),
     meal_category: mapMealCategory(text),
     meal_type: mapMealType(text),
     time_required: mapTimeRequired(totalMinutes),
-    calories: parseCalories(recipe.nutrition && recipe.nutrition.calories),
-    ingredients: extractRecipeIngredients(recipe),
+    calories,
+    ingredients: recipe ? extractRecipeIngredients(recipe) : [],
     missing: []
   };
 
@@ -616,13 +885,12 @@ async function getRecipeInfoPayload(targetUrl) {
   }
 
   const blocks = parseJsonLdBlocks(html);
-  let recipe = null;
-  for (const block of blocks) {
-    recipe = findRecipeObject(block);
-    if (recipe) break;
-  }
+  const allRecipes = blocks.flatMap(block => collectRecipeObjects(block));
+  const recipe = allRecipes.length
+    ? allRecipes.reduce((best, cur) => (scoreRecipe(cur) > scoreRecipe(best) ? cur : best), allRecipes[0])
+    : null;
 
-  const payload = buildRecipePayload(recipe, html);
+  const payload = buildRecipePayload(recipe, html, targetUrl);
   recipeInfoCache.set(cacheKey, {
     payload,
     expiresAt: Date.now() + RECIPE_INFO_TTL_MS
@@ -2582,7 +2850,31 @@ function shutdown(signal) {
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
-startApp().catch(err => {
-  console.error('❌ Opstarten mislukt:', err);
-  process.exit(1);
-});
+
+// Alleen de server starten wanneer dit bestand direct wordt uitgevoerd, zodat
+// de losse functies geïmporteerd kunnen worden (bijv. in tests).
+if (require.main === module) {
+  startApp().catch(err => {
+    console.error('❌ Opstarten mislukt:', err);
+    process.exit(1);
+  });
+}
+
+// Hulpfuncties beschikbaar maken voor tests.
+module.exports = {
+  fetchHtmlWithRetries,
+  tryParseJsonLd,
+  parseJsonLdBlocks,
+  collectRecipeObjects,
+  scoreRecipe,
+  findRecipeObject,
+  parseDurationToMinutes,
+  mapTimeRequired,
+  mapDishType,
+  mapMealCategory,
+  mapMealType,
+  buildPageKeywordText,
+  extractTimeMinutesFromHtml,
+  extractCaloriesFromHtml,
+  buildRecipePayload
+};
