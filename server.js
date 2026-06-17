@@ -245,7 +245,7 @@ function tryParseJsonLd(raw) {
     .replace(/^<!\[CDATA\[/, '')
     .replace(/\]\]>$/, '')
     .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]+/g, ' ')
+    .replace(/[\u0000-\u001F]+/g, ' ')
     .replace(/,\s*([}\]])/g, '$1');
   try {
     return JSON.parse(cleaned);
