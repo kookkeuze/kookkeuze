@@ -728,6 +728,9 @@ function mapDishType(text) {
     { key: 'uit de oven', value: 'Ovenschotel' },
     { key: 'wrap', value: 'Wraps' },
     { key: 'tortilla', value: 'Wraps' },
+    { key: 'burrito', value: 'Wraps' },
+    { key: 'quesadilla', value: 'Wraps' },
+    { key: 'taco', value: 'Wraps' },
     { key: 'lasagne', value: 'Pasta' },
     { key: 'spaghetti', value: 'Pasta' },
     { key: 'macaroni', value: 'Pasta' },
@@ -748,21 +751,32 @@ function mapDishType(text) {
     { key: 'broodje', value: 'Brood' },
     { key: 'kip', value: 'Kip' },
     { key: 'kalkoen', value: 'Kip' },
+    { key: 'chicken', value: 'Kip' },
+    { key: 'turkey', value: 'Kip' },
     { key: 'rundergehakt', value: 'Rund' },
     { key: 'biefstuk', value: 'Rund' },
     { key: 'rundvlees', value: 'Rund' },
     { key: 'rund', value: 'Rund' },
+    { key: 'beef', value: 'Rund' },
+    { key: 'steak', value: 'Rund' },
     { key: 'speklap', value: 'Varken' },
     { key: 'varken', value: 'Varken' },
     { key: 'spek', value: 'Varken' },
     { key: 'ham', value: 'Varken' },
+    { key: 'pork', value: 'Varken' },
+    { key: 'bacon', value: 'Varken' },
     { key: 'zalm', value: 'Vis' },
     { key: 'tonijn', value: 'Vis' },
     { key: 'garnaal', value: 'Vis' },
     { key: 'garnalen', value: 'Vis' },
     { key: 'kabeljauw', value: 'Vis' },
+    { key: 'salmon', value: 'Vis' },
+    { key: 'shrimp', value: 'Vis' },
+    { key: 'tuna', value: 'Vis' },
     { key: 'vis', value: 'Vis' },
+    { key: 'fish', value: 'Vis' },
     { key: 'vegetarisch', value: 'Vegetarisch' },
+    { key: 'vegetarian', value: 'Vegetarisch' },
     { key: 'vegan', value: 'Vegetarisch' },
     { key: 'zoet', value: 'Zoet' },
     { key: 'hartig', value: 'Hartig' }
@@ -872,11 +886,180 @@ function buildRecipePayload(recipe, html = '', url = '') {
   return payload;
 }
 
+/* -------------------- Instagram caption scrape -------------------- */
+// Instagram laadt captions client-side; alleen met een "bot"-user-agent
+// (zoals facebookexternalhit) geeft het de caption terug in og:description.
+function isInstagramUrl(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+    return host === 'instagram.com' || host.endsWith('.instagram.com');
+  } catch {
+    return false;
+  }
+}
+
+function extractOgContent(html, prop) {
+  if (!html) return null;
+  const patterns = [
+    new RegExp(`<meta[^>]+property=["']${prop}["'][^>]*content="([^"]*)"`, 'i'),
+    new RegExp(`<meta[^>]+content="([^"]*)"[^>]*property=["']${prop}["']`, 'i')
+  ];
+  for (const p of patterns) {
+    const m = html.match(p);
+    if (m) return decodeHtmlEntities(m[1]).trim() || null;
+  }
+  return null;
+}
+
+// og:description heeft de vorm: «485K likes, 761 comments - user on <datum>: "<caption>"».
+// We halen de echte caption tussen de aanhalingstekens eruit.
+function cleanInstagramCaption(ogDescription) {
+  const s = (ogDescription || '').trim();
+  if (!s) return '';
+  let m = s.match(/comments?\s*[-–—]\s*[^:]*:\s*["“”]([\s\S]+)["“”]\s*\.?\s*$/i);
+  if (m) return m[1].trim();
+  m = s.match(/comments?\s*[-–—]\s*[^:]*:\s*([\s\S]+)$/i);
+  if (m) return m[1].replace(/^["“”]|["“”]\s*\.?\s*$/g, '').trim();
+  return s.replace(/^["“”]|["“”]\s*\.?\s*$/g, '').trim();
+}
+
+async function fetchInstagramCaption(url) {
+  const botUserAgents = [
+    'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+    'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    'Twitterbot/1.0'
+  ];
+  for (const ua of botUserAgents) {
+    try {
+      const response = await fetch(url, {
+        headers: { 'User-Agent': ua, 'Accept': 'text/html,*/*;q=0.8', 'Accept-Language': 'nl-NL,nl;q=0.9,en;q=0.8' },
+        redirect: 'follow',
+        signal: AbortSignal.timeout(14000)
+      });
+      if (!response.ok) continue;
+      const html = await response.text();
+      const caption = cleanInstagramCaption(extractOgContent(html, 'og:description'));
+      if (caption) {
+        return { caption, ogTitle: extractOgContent(html, 'og:title') };
+      }
+    } catch (_err) {
+      // probeer volgende user-agent
+    }
+  }
+  return null;
+}
+
+// Verwijder leidende opsommingstekens én emoji/symbolen van een regel.
+function stripLeadingBullet(line) {
+  return String(line || '')
+    .replace(/^[\s\-•*–·▪◦●○]+/, '')
+    .replace(/^(?:\p{Extended_Pictographic}|[←-➿⬀-⯿️‍])+\s*/u, '')
+    .trim();
+}
+
+function startsWithEmoji(line) {
+  return /^(?:\p{Extended_Pictographic}|[←-➿⬀-⯿])/u.test(String(line || ''));
+}
+
+function looksLikeIngredientLine(line) {
+  const t = (line || '').trim();
+  if (t.length < 2 || t.length > 140) return false;
+  const hadBullet = /^[-•*–·▪◦●○]/.test(t) || startsWithEmoji(t);
+  const core = stripLeadingBullet(t);
+  if (/^[\d¼½¾⅓⅔⅛⅜⅝⅞]/.test(core)) return true;            // begint met hoeveelheid
+  // Korte regel met opsommingsteken zonder getal (bijv. "🧀 geraspte kaas"),
+  // maar geen volzin (instructies eindigen op leesteken / zijn lang).
+  if (hadBullet && /[a-zA-Zà-ÿ]/.test(core) && core.split(/\s+/).length <= 6 && !/[.!?]$/.test(core)) {
+    return true;
+  }
+  return false;
+}
+
+function parseIngredientsFromCaption(caption) {
+  // Vanaf een kopje voor bereiding/voedingswaarde/socials stoppen we volledig;
+  // wat daarna komt zijn geen boodschappen meer.
+  const sectionStopRe = /^(bereiding|bereidingswijze|werkwijze|instructie|instructions?|method|directions?|stappen|stap\b|aanpak|how to|preparation|voorbereiding|nutrition|voedingswaarde|macro|per (serving|portie|burrito)|total per|total\b)/i;
+  // Losse regels die we sowieso overslaan (voedingswaarde-regels, hashtags, calls-to-action).
+  const skipLineRe = /^(#|calorie|protein|eiwit|carb|koolhydr|fats?\b|vet\b|kcal|follow|link in bio|tag\b|save this|comment)/i;
+  const items = [];
+  let stopped = false;
+  for (const rawLine of caption.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (sectionStopRe.test(line)) { stopped = true; continue; }
+    if (stopped || skipLineRe.test(line)) continue;
+    if (!looksLikeIngredientLine(line)) continue;
+    const cleaned = normalizeIngredientText(stripLeadingBullet(line));
+    if (cleaned) items.push(cleaned);
+  }
+  return dedupeIngredients(items);
+}
+
+function parseTitleFromCaption(caption, ogTitle) {
+  const firstLine = caption.split(/\r?\n/).map(l => l.trim()).find(Boolean) || '';
+  let title = firstLine.replace(/^[^\p{L}\p{N}]+/u, '').replace(/[^\p{L}\p{N})]+$/u, '').trim();
+  if (title.length < 3 || /^(follow|link in bio|don'?t forget|comment|tag a|save this|recipe below)/i.test(title)) {
+    title = '';
+  }
+  if (title.length > 90) {
+    title = title.slice(0, 90).replace(/\s+\S*$/, '').trim();
+  }
+  if (!title && ogTitle) {
+    title = ogTitle.split(/\s+on instagram/i)[0].replace(/^[^\p{L}\p{N}]+/u, '').trim();
+  }
+  return normalizeIngredientText(title) || null;
+}
+
+function parseCaloriesFromCaption(caption) {
+  const m = caption.match(/calorie[ëe]?s?\s*[:\-]?\s*(\d{2,4})/i) || caption.match(/(\d{2,4})\s*k?cal\b/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+async function buildInstagramPayload(url) {
+  const data = await fetchInstagramCaption(url);
+  if (!data || !data.caption) {
+    return { error: 'Kon de Instagram-beschrijving niet uitlezen. Het bericht is mogelijk privé, verwijderd of heeft geen tekst.' };
+  }
+
+  const caption = data.caption;
+  const text = caption.toLowerCase();
+  const minutes = parseDurationToMinutes(caption);
+  const payload = {
+    title: parseTitleFromCaption(caption, data.ogTitle),
+    dish_type: mapDishType(text),
+    meal_category: mapMealCategory(text),
+    meal_type: mapMealType(text),
+    time_required: mapTimeRequired(minutes),
+    calories: parseCaloriesFromCaption(caption),
+    ingredients: parseIngredientsFromCaption(caption),
+    source: 'instagram',
+    missing: []
+  };
+
+  if (!payload.title) payload.missing.push('Titel');
+  if (!payload.dish_type) payload.missing.push('Soort gerecht');
+  if (!payload.meal_category) payload.missing.push('Menugang');
+  if (!payload.meal_type) payload.missing.push('Doel gerecht');
+  if (!payload.time_required) payload.missing.push('Tijd');
+  if (payload.calories == null) payload.missing.push('Calorieën');
+  return payload;
+}
+/* ------------------------------------------------------------------ */
+
 async function getRecipeInfoPayload(targetUrl) {
   const cacheKey = targetUrl.toString();
   const cached = recipeInfoCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.payload;
+  }
+
+  // Instagram-links: caption uitlezen i.p.v. schema.org (dat ontbreekt daar).
+  if (isInstagramUrl(cacheKey)) {
+    const igPayload = await buildInstagramPayload(cacheKey);
+    if (!igPayload.error) {
+      recipeInfoCache.set(cacheKey, { payload: igPayload, expiresAt: Date.now() + RECIPE_INFO_TTL_MS });
+    }
+    return igPayload;
   }
 
   const html = await fetchHtmlWithRetries(cacheKey);
@@ -2863,6 +3046,12 @@ if (require.main === module) {
 // Hulpfuncties beschikbaar maken voor tests.
 module.exports = {
   fetchHtmlWithRetries,
+  isInstagramUrl,
+  cleanInstagramCaption,
+  parseIngredientsFromCaption,
+  parseTitleFromCaption,
+  parseCaloriesFromCaption,
+  buildInstagramPayload,
   tryParseJsonLd,
   parseJsonLdBlocks,
   collectRecipeObjects,
