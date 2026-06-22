@@ -4488,6 +4488,11 @@ select:focus {
     display: none;
   }
 
+  /* "Persoonlijke" -> "Persoonlijk" als de rest van de zin weg is */
+  .benefit-e {
+    display: none;
+  }
+
   .benefit-label {
     flex-wrap: nowrap;
     gap: 0;
