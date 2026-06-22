@@ -4480,7 +4480,7 @@ select:focus {
     max-width: 100%;
     font-size: 0.84rem;
     padding: 14px 10px;
-    margin: 10px auto 14px;
+    margin: 15px auto 0px;
   }
 
   /* alleen het oranje kernwoord tonen, de rest weglaten */
