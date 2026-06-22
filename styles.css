@@ -155,7 +155,10 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
+  /* GEEN overflow-x op de body: dat maakt de body een eigen scroll-container
+     waardoor 'position: sticky' op de topbar niet meer werkt (de balk scrolt
+     dan mee). Horizontale overflow wordt al door <html> afgeknipt. */
+  max-width: 100%;
 }
 
 html {
