@@ -4467,31 +4467,36 @@ select:focus {
   font-weight: 600;
 }
 
-/* Responsive: op mobiel onder elkaar i.p.v. afbrekend in 3 kolommen */
+/* Responsive: op mobiel één gecentreerde rij met alleen het kernwoord */
 @media (max-width: 600px) {
   .benefits-bar {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;      /* vinkjes netjes in één kolom */
-    gap: 9px;
-    width: fit-content;
-    max-width: calc(100% - 26px);
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;      /* gecentreerd tussen header en blok */
+    align-items: center;
+    gap: 18px;
+    width: 100%;
+    max-width: 100%;
     font-size: 0.84rem;
-    padding: 10px 14px;
-    margin: 8px auto 14px;        /* blok gecentreerd op de pagina */
+    padding: 14px 10px;
+    margin: 10px auto 14px;
+  }
+
+  /* alleen het oranje kernwoord tonen, de rest weglaten */
+  .benefit-rest {
+    display: none;
   }
 
   .benefit-label {
-    flex-wrap: nowrap;            /* niet meer afbreken */
-    justify-content: flex-start;
-    text-align: left;
-    gap: 0.3em;
+    flex-wrap: nowrap;
+    gap: 0;
   }
 
   .benefit {
     white-space: nowrap;
     min-height: 20px;
-    gap: 8px;
+    gap: 7px;
   }
 
   .benefit i {
