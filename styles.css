@@ -4467,36 +4467,38 @@ select:focus {
   font-weight: 600;
 }
 
-/* Responsive: compacter op mobiel */
+/* Responsive: op mobiel onder elkaar i.p.v. afbrekend in 3 kolommen */
 @media (max-width: 600px) {
   .benefits-bar {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        justify-items: center;
-        gap: 6px 8px;
-        align-items: center;
-        max-width: calc(100% - 26px);
-        font-size: 0.72rem;
-        padding: 8px 8px;
-        margin: 8px 13px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;      /* vinkjes netjes in één kolom */
+    gap: 9px;
+    width: fit-content;
+    max-width: calc(100% - 26px);
+    font-size: 0.84rem;
+    padding: 10px 14px;
+    margin: 8px auto 14px;        /* blok gecentreerd op de pagina */
   }
 
   .benefit-label {
-    justify-content: center;
-    text-align: center;
+    flex-wrap: nowrap;            /* niet meer afbreken */
+    justify-content: flex-start;
+    text-align: left;
     gap: 0.3em;
   }
 
   .benefit {
     white-space: nowrap;
     min-height: 20px;
-    gap: 6px;
+    gap: 8px;
   }
 
   .benefit i {
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
     font-size: 9px;
+    flex-shrink: 0;
   }
 }
 
