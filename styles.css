@@ -1814,9 +1814,17 @@ select:focus {
     justify-self: start;
   }
 
+  /* Alle rasterkaarten even hoog: grid-rijen even hoog maken en de kaart de
+     cel laten vullen. */
+  .overview-grid-cards {
+    align-items: stretch;
+    grid-auto-rows: 1fr;
+  }
+
   .overview-grid-cards .recipe-card {
-    display: block;
-    height: auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     min-height: unset;
     max-height: unset;
     grid-template-columns: unset;
@@ -1850,6 +1858,7 @@ select:focus {
     display: grid;
     gap: 8px;
     align-content: start;
+    flex: 1 1 auto;          /* vult de resterende kaarthoogte */
   }
 
   .overview-grid-cards .recipe-card h3 {
