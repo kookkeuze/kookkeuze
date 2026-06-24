@@ -3576,32 +3576,35 @@ function initHowItWorksSlider() {
 
   window.addEventListener('resize', () => { applyWidths(); goTo(current); });
 
-  // Swipe-ondersteuning (mobiel/tablet)
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchDeltaX = 0;
-  let swiping = false;
-  track.addEventListener('touchstart', e => {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchDeltaX = 0;
-    swiping = true;
-  }, { passive: true });
-  track.addEventListener('touchmove', e => {
-    if (!swiping) return;
-    touchDeltaX = e.touches[0].clientX - touchStartX;
-  }, { passive: true });
-  const endSwipe = () => {
-    if (!swiping) return;
-    swiping = false;
-    if (Math.abs(touchDeltaX) > 40) {
-      goTo(current + (touchDeltaX < 0 ? 1 : -1));
+  // Swipe-ondersteuning via Pointer Events (mobiel/tablet/muis). Robuuster dan
+  // touch-events: elk gebaar her-armt zichzelf op pointerdown, en zowel
+  // pointerup als pointercancel ronden de swipe af.
+  let dragActive = false;
+  let dragPointerId = null;
+  let dragStartX = 0;
+  let dragDeltaX = 0;
+
+  track.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    dragActive = true;
+    dragPointerId = e.pointerId;
+    dragStartX = e.clientX;
+    dragDeltaX = 0;
+  });
+  track.addEventListener('pointermove', e => {
+    if (!dragActive || e.pointerId !== dragPointerId) return;
+    dragDeltaX = e.clientX - dragStartX;
+  });
+  const endDrag = e => {
+    if (!dragActive || (e && e.pointerId !== dragPointerId)) return;
+    dragActive = false;
+    dragPointerId = null;
+    if (Math.abs(dragDeltaX) > 40) {
+      goTo(current + (dragDeltaX < 0 ? 1 : -1));
     }
   };
-  // Zowel touchend als touchcancel afvangen: bij een lichte verticale beweging
-  // kan de browser het gebaar annuleren (touchcancel) i.p.v. afronden.
-  track.addEventListener('touchend', endSwipe);
-  track.addEventListener('touchcancel', endSwipe);
+  track.addEventListener('pointerup', endDrag);
+  track.addEventListener('pointercancel', endDrag);
 
   requestAnimationFrame(() => { applyWidths(); goTo(0); });
 }

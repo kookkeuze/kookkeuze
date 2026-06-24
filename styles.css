@@ -4162,6 +4162,8 @@ select:focus {
   overflow: hidden;
   flex: 1 1 auto;
   min-width: 0;
+  /* Horizontale swipe reserveren voor de slider (verticaal scrollen blijft). */
+  touch-action: pan-y;
 }
 
 .hiw-track{
@@ -4182,6 +4184,7 @@ select:focus {
   justify-content: center;
   align-items: flex-start;
   padding: 14px 10px 22px;
+  touch-action: pan-y;
 }
 
 .hiw-card{
