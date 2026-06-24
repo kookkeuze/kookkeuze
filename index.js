@@ -1846,8 +1846,12 @@ async function openNotesExport(recipeUrl, recipeTitle) {
   }
 }
 
-function buildBringDeeplink(recipeUrl) {
-  return `https://api.getbring.com/rest/bringrecipes/deeplink?url=${encodeURIComponent(recipeUrl)}&source=web`;
+function isInstagramSource(url) {
+  return /^https?:\/\/(www\.)?instagram\.com\//i.test(url || '');
+}
+
+function buildBringDeeplink(targetUrl) {
+  return `https://api.getbring.com/rest/bringrecipes/deeplink?url=${encodeURIComponent(targetUrl)}&source=web`;
 }
 
 function openBringExport(recipeUrl) {
@@ -1859,7 +1863,14 @@ function openBringExport(recipeUrl) {
     return;
   }
 
-  const bringUrl = buildBringDeeplink(cleanUrl);
+  // Instagram heeft geen schema.org-receptdata die Bring kan lezen. Stuur Bring
+  // dan naar onze eigen export-pagina, die de uitgelezen ingrediënten als
+  // schema.org serveert. Andere bronnen gaan rechtstreeks (rijkere data).
+  const targetForBring = isInstagramSource(cleanUrl)
+    ? `${API_BASE}/api/bring-export?url=${encodeURIComponent(cleanUrl)}`
+    : cleanUrl;
+
+  const bringUrl = buildBringDeeplink(targetForBring);
   // Universal link: opent de Bring-app op mobiel, anders een nieuw tabblad.
   // Via een tijdelijke <a> i.p.v. window.open zodat popup-blockers niet de
   // huidige pagina overnemen.

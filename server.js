@@ -1282,6 +1282,71 @@ app.get('/api/recipe-info', async (req, res) => {
   }
 });
 
+// Bring-export: serveert een mini-pagina met schema.org-receptdata op basis van
+// onze eigen extractie. Bring haalt deze URL op en leest de ingrediënten uit
+// de JSON-LD. Bedoeld voor bronnen zonder eigen schema.org (zoals Instagram).
+app.get('/api/bring-export', async (req, res) => {
+  const { url } = req.query;
+  let pageUrl;
+  try {
+    pageUrl = new URL(url);
+  } catch {
+    return res.status(400).send('Ongeldige URL.');
+  }
+  if (!['http:', 'https:'].includes(pageUrl.protocol)) {
+    return res.status(400).send('Ongeldige URL.');
+  }
+
+  try {
+    const payload = await getRecipeInfoPayload(pageUrl);
+    const ingredients = Array.isArray(payload.ingredients) ? payload.ingredients.filter(Boolean) : [];
+    if (payload.error || !ingredients.length) {
+      return res.status(404).send('Geen ingrediënten gevonden om naar Bring te sturen.');
+    }
+
+    const title = payload.title || 'Recept';
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Recipe',
+      name: title,
+      recipeIngredient: ingredients,
+      ...(pageUrl ? { isBasedOn: pageUrl.toString() } : {}),
+      ...(payload.calories
+        ? { nutrition: { '@type': 'NutritionInformation', calories: `${payload.calories} kcal` } }
+        : {})
+    };
+
+    const ingredientHtml = ingredients
+      .map(item => `      <li itemprop="recipeIngredient">${escapeHtml(item)}</li>`)
+      .join('\n');
+
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.set('Cache-Control', 'public, max-age=86400');
+    return res.send(`<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)}</title>
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:type" content="article">
+  <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+</head>
+<body itemscope itemtype="https://schema.org/Recipe">
+  <h1 itemprop="name">${escapeHtml(title)}</h1>
+  <h2>Ingrediënten</h2>
+  <ul>
+${ingredientHtml}
+  </ul>
+  <p>Bron: <a href="${escapeHtml(pageUrl.toString())}">${escapeHtml(pageUrl.toString())}</a></p>
+</body>
+</html>`);
+  } catch (err) {
+    console.error('❌ bring-export error:', err);
+    return res.status(500).send('Fout bij het maken van de Bring-export.');
+  }
+});
+
 // Receptafbeelding ophalen via URL (og:image / twitter:image)
 app.get('/api/recipe-image', async (req, res) => {
   const { url } = req.query;
