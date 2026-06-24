@@ -735,6 +735,7 @@ function mapDishType(text) {
     { key: 'spaghetti', value: 'Pasta' },
     { key: 'macaroni', value: 'Pasta' },
     { key: 'gnocchi', value: 'Pasta' },
+    { key: 'orzo', value: 'Pasta' },
     { key: 'pasta', value: 'Pasta' },
     { key: 'risotto', value: 'Rijst' },
     { key: 'rijst', value: 'Rijst' },
@@ -975,19 +976,48 @@ function looksLikeIngredientLine(line) {
   return false;
 }
 
+// Kopje dat het begin van de ingrediëntenlijst markeert.
+const INGREDIENTS_HEADER_RE = /^(ingredi[eë]nten?|ingredients?|wat (je |heb je )?nodig|what you(?:'?ll)? need|boodschappen|benodigdheden|je hebt nodig|dit heb je nodig)\b/i;
+// Kopje dat het einde markeert (bereiding, voedingswaarde, afsluiting).
+const SECTION_STOP_RE = /^(bereiding|bereidingswijze|werkwijze|instructie|instructions?|method|directions?|stappen|stap\b|aanpak|how to|preparation|voorbereiding|nutrition|voedingswaarde|macro|per (serving|portie|burrito)|total per|total\b|smakelijk|eet smakelijk|enjoy)\b/i;
+// Regels die we binnen de lijst overslaan: hashtags, voedingswaarde, calls-to-action.
+const INGREDIENT_SKIP_RE = /^(#|calorie|protein|eiwit|carb|koolhydr|fats?\b|vet\b|kcal|follow|link in bio|tag\b|save this|comment|sla dit|deel (dit|het)|volg |bewaar)/i;
+
+// Sub-kopje binnen de ingrediënten ("Saus", "Afwerking", "Voor de saus:", "To make ...:").
+// Een regel die op ':' eindigt is altijd een kopje; verder een vaste lijst losse labels.
+function isIngredientSubHeader(line) {
+  const t = line.trim();
+  if (/:\s*$/.test(t)) return true;
+  return /^(saus|sauce|dressing|dressings|afwerking|topping|toppings|garnering|garnish|garneer|marinade|kruiden|voor de\b.*|voor het\b.*|to make\b.*|for the\b.*|extra'?s?|optioneel|optional|serveren|serveer|erbij|dipsaus)\s*$/i.test(t);
+}
+
 function parseIngredientsFromCaption(caption) {
-  // Vanaf een kopje voor bereiding/voedingswaarde/socials stoppen we volledig;
-  // wat daarna komt zijn geen boodschappen meer.
-  const sectionStopRe = /^(bereiding|bereidingswijze|werkwijze|instructie|instructions?|method|directions?|stappen|stap\b|aanpak|how to|preparation|voorbereiding|nutrition|voedingswaarde|macro|per (serving|portie|burrito)|total per|total\b)/i;
-  // Losse regels die we sowieso overslaan (voedingswaarde-regels, hashtags, calls-to-action).
-  const skipLineRe = /^(#|calorie|protein|eiwit|carb|koolhydr|fats?\b|vet\b|kcal|follow|link in bio|tag\b|save this|comment)/i;
+  const lines = caption.split(/\r?\n/).map(l => l.trim());
+  const headerIdx = lines.findIndex(l => INGREDIENTS_HEADER_RE.test(l));
   const items = [];
+
+  // Sectie-modus: er is een expliciet "Ingrediënten"-kopje. Alles tussen dat
+  // kopje en de bereiding telt als ingrediënt, ook regels zonder hoeveelheid
+  // ("Peper en zout"). Sub-kopjes en lege regels slaan we over.
+  if (headerIdx >= 0) {
+    for (let i = headerIdx + 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) continue;
+      if (SECTION_STOP_RE.test(line)) break;
+      if (isIngredientSubHeader(line) || INGREDIENT_SKIP_RE.test(line)) continue;
+      const cleaned = normalizeIngredientText(stripLeadingBullet(line));
+      if (cleaned) items.push(cleaned);
+    }
+    if (items.length) return dedupeIngredients(items);
+  }
+
+  // Fallback: geen kopje. Pak regels die op een opsommingsteken/getal/emoji
+  // beginnen, tot een bereidings-/voedingswaardekopje.
   let stopped = false;
-  for (const rawLine of caption.split(/\r?\n/)) {
-    const line = rawLine.trim();
+  for (const line of lines) {
     if (!line) continue;
-    if (sectionStopRe.test(line)) { stopped = true; continue; }
-    if (stopped || skipLineRe.test(line)) continue;
+    if (SECTION_STOP_RE.test(line)) { stopped = true; continue; }
+    if (stopped || INGREDIENT_SKIP_RE.test(line)) continue;
     if (!looksLikeIngredientLine(line)) continue;
     const cleaned = normalizeIngredientText(stripLeadingBullet(line));
     if (cleaned) items.push(cleaned);
@@ -995,19 +1025,46 @@ function parseIngredientsFromCaption(caption) {
   return dedupeIngredients(items);
 }
 
+function cleanCaptionTitle(text) {
+  if (!text) return null;
+  let name = text
+    .replace(/\s*\(\s*(voor\s*)?\d+\s*(à|-|tot)?\s*\d*\s*persone?n?\s*\)\s*$/i, '') // "(2 personen)" eraf
+    .replace(/^[^\p{L}\p{N}]+/u, '')
+    .replace(/[^\p{L}\p{N})]+$/u, '')
+    .trim();
+  if (name.length < 3) return null;
+  if (name.length > 90) name = name.slice(0, 90).replace(/\s+\S*$/, '').trim();
+  return normalizeIngredientText(name) || null;
+}
+
 function parseTitleFromCaption(caption, ogTitle) {
-  const firstLine = caption.split(/\r?\n/).map(l => l.trim()).find(Boolean) || '';
-  let title = firstLine.replace(/^[^\p{L}\p{N}]+/u, '').replace(/[^\p{L}\p{N})]+$/u, '').trim();
-  if (title.length < 3 || /^(follow|link in bio|don'?t forget|comment|tag a|save this|recipe below)/i.test(title)) {
-    title = '';
+  const lines = caption.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+  // 1) Expliciete "Recept: <naam>"-regel heeft voorrang (de echte receptnaam).
+  for (const line of lines) {
+    const m = line.match(/^recept\s*[:\-]\s*(.+)$/i);
+    if (m) {
+      const name = cleanCaptionTitle(m[1]);
+      if (name) return name;
+    }
   }
-  if (title.length > 90) {
-    title = title.slice(0, 90).replace(/\s+\S*$/, '').trim();
+
+  // 2) Eerste 'echte' regel: geen vraag of engagement-bait.
+  for (const line of lines) {
+    if (line.includes('?')) continue;                       // "Zou jij dit maken?"
+    if (/^(follow|link in bio|don'?t forget|comment|tag a|save this|recipe below|sla dit|deel (dit|het)|volg |bewaar|drop een|dubbeltik)/i
+      .test(line.replace(/^[^\p{L}\p{N}]+/u, ''))) continue;
+    if (INGREDIENTS_HEADER_RE.test(line) || SECTION_STOP_RE.test(line)) break;
+    const name = cleanCaptionTitle(line);
+    if (name) return name;
   }
-  if (!title && ogTitle) {
-    title = ogTitle.split(/\s+on instagram/i)[0].replace(/^[^\p{L}\p{N}]+/u, '').trim();
+
+  // 3) Fallback: og:title.
+  if (ogTitle) {
+    const name = cleanCaptionTitle(ogTitle.split(/\s+on instagram/i)[0]);
+    if (name) return name;
   }
-  return normalizeIngredientText(title) || null;
+  return null;
 }
 
 function parseCaloriesFromCaption(caption) {
@@ -1022,13 +1079,22 @@ async function buildInstagramPayload(url) {
   }
 
   const caption = data.caption;
-  const text = caption.toLowerCase();
+  const title = parseTitleFromCaption(caption, data.ogTitle);
+
+  // Soort/menugang bepalen we op de receptnaam + intro (de tekst vóór de
+  // ingrediëntenlijst). Zo triggeren losse ingrediënten zoals "bouillon" geen
+  // verkeerde soort ("Soep"). Doel/tijd/calorieën mogen uit de hele caption.
+  const headerMatch = caption.search(/\n\s*(?:ingredi[eë]nten?|ingredients?|wat (?:je |heb je )?nodig|what you(?:'?ll)? need|boodschappen|benodigdheden|je hebt nodig|dit heb je nodig)/i);
+  const leadText = (headerMatch >= 0 ? caption.slice(0, headerMatch) : caption);
+  const dishSource = `${title || ''} ${leadText}`.toLowerCase();
+  const fullText = caption.toLowerCase();
   const minutes = parseDurationToMinutes(caption);
+
   const payload = {
-    title: parseTitleFromCaption(caption, data.ogTitle),
-    dish_type: mapDishType(text),
-    meal_category: mapMealCategory(text),
-    meal_type: mapMealType(text),
+    title,
+    dish_type: mapDishType(dishSource),
+    meal_category: mapMealCategory(dishSource),
+    meal_type: mapMealType(fullText),
     time_required: mapTimeRequired(minutes),
     calories: parseCaloriesFromCaption(caption),
     ingredients: parseIngredientsFromCaption(caption),
