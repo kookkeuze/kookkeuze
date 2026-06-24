@@ -1407,8 +1407,15 @@ select:focus {
 }
 
 .overview-grid-cards .recipe-card-content {
-  display: block;
+  display: grid;
+  gap: 8px;                 /* gelijke afstand tussen alle regels */
+  align-content: start;
   padding: 16px 18px 18px;
+}
+
+/* Knop iets meer lucht geven t.o.v. de eerste parameter (tijd) */
+.overview-grid-cards .recipe-link {
+  margin-bottom: 6px;
 }
 
 .recipe-card:hover {
@@ -1840,7 +1847,9 @@ select:focus {
     width: 100%;
     height: auto;
     padding: 16px 18px 18px;
-    display: block;
+    display: grid;
+    gap: 8px;
+    align-content: start;
   }
 
   .overview-grid-cards .recipe-card h3 {
