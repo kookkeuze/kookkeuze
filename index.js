@@ -3543,9 +3543,8 @@ function initHowItWorksSlider() {
   let current = 0;
 
   function applyWidths() {
-    const w = viewport.offsetWidth;
-    slides.forEach(s => { s.style.width = w + 'px'; s.style.flexShrink = '0'; });
-    // Gelijke hoogte voor alle kaarten
+    // Slidebreedte komt uit CSS (flex: 0 0 100%), dus altijd gelijk aan de
+    // viewport. Hier alleen de kaarten op gelijke hoogte zetten.
     const cards = slides.map(s => s.querySelector('.hiw-card'));
     cards.forEach(c => { if (c) c.style.height = ''; });
     const maxH = Math.max(...cards.map(c => c ? c.offsetHeight : 0));
@@ -3577,21 +3576,32 @@ function initHowItWorksSlider() {
 
   window.addEventListener('resize', () => { applyWidths(); goTo(current); });
 
-  // Swipe-ondersteuning (mobiel)
+  // Swipe-ondersteuning (mobiel/tablet)
   let touchStartX = 0;
+  let touchStartY = 0;
   let touchDeltaX = 0;
+  let swiping = false;
   track.addEventListener('touchstart', e => {
     touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
     touchDeltaX = 0;
+    swiping = true;
   }, { passive: true });
   track.addEventListener('touchmove', e => {
+    if (!swiping) return;
     touchDeltaX = e.touches[0].clientX - touchStartX;
   }, { passive: true });
-  track.addEventListener('touchend', () => {
-    if (Math.abs(touchDeltaX) > 45) {
+  const endSwipe = () => {
+    if (!swiping) return;
+    swiping = false;
+    if (Math.abs(touchDeltaX) > 40) {
       goTo(current + (touchDeltaX < 0 ? 1 : -1));
     }
-  });
+  };
+  // Zowel touchend als touchcancel afvangen: bij een lichte verticale beweging
+  // kan de browser het gebaar annuleren (touchcancel) i.p.v. afronden.
+  track.addEventListener('touchend', endSwipe);
+  track.addEventListener('touchcancel', endSwipe);
 
   requestAnimationFrame(() => { applyWidths(); goTo(0); });
 }

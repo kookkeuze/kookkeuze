@@ -4169,10 +4169,14 @@ select:focus {
   width: 100%;
   transition: transform .4s cubic-bezier(.4, 0, .2, 1);
   will-change: transform;
+  /* Horizontale swipe is voor de slider; verticaal scrollen blijft van de
+     browser. Zonder dit kaapt de browser de swipe als scroll (touchcancel). */
+  touch-action: pan-y;
 }
 
 .hiw-slide{
-  flex: 0 0 auto;
+  flex: 0 0 100%;          /* exact viewport-breed, blijft in sync bij resize */
+  width: 100%;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
