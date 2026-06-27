@@ -3962,14 +3962,18 @@ select:focus {
   -webkit-line-clamp: unset;
 }
 
-/* Afbeelding de (gegroeide) kaarthoogte laten vullen, geen vaste 390px. */
-.random-recipe-modal-content .result-image-cell,
-.random-recipe-modal-content .recipe-card-image,
-.random-recipe-modal-content .recipe-card-image-skeleton,
-.random-recipe-modal-content .recipe-card-image-fallback {
-  height: 100%;
-  min-height: 240px;
-  max-height: none;
+/* Alleen op desktop (horizontale kaart) de afbeelding de gegroeide kaarthoogte
+   laten vullen. Op mobiel staat de afbeelding bovenaan met een vaste hoogte,
+   dus daar NIET 100% gebruiken (anders duwt de foto de tekst uit beeld). */
+@media (min-width: 980px) {
+  .random-recipe-modal-content .result-image-cell,
+  .random-recipe-modal-content .recipe-card-image,
+  .random-recipe-modal-content .recipe-card-image-skeleton,
+  .random-recipe-modal-content .recipe-card-image-fallback {
+    height: 100%;
+    min-height: 240px;
+    max-height: none;
+  }
 }
 
 .random-recipe-empty {
