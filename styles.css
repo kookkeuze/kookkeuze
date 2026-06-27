@@ -3875,39 +3875,38 @@ select:focus {
 
 /* Random-recept popup (gecentreerd op alle schermen via .modal) */
 .modal-content.random-recipe-modal-content {
-  width: min(720px, 96vw);
-  max-width: min(720px, 96vw);
+  width: min(900px, 96vw);
+  max-width: min(900px, 96vw);
   padding: 24px;
 }
 
-/* Rond, contrasterend knopje zodat het kruisje altijd leesbaar blijft over de
-   foto (ongeacht de kleur van de foto). */
+/* Donker, half-transparant rondje met wit kruisje: leest als een nette,
+   herkenbare sluitknop én blijft zichtbaar over zowel de witte kaart als over
+   een foto, ongeacht de kleur. */
 .random-recipe-modal-content .modal-close {
   z-index: 20;
-  top: 12px;
-  right: 12px;
-  width: 34px;
-  height: 34px;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
   min-width: 0;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #2f3a35;
-  background: rgba(255, 255, 255, 0.92);
+  color: #ffffff;
+  background: rgba(28, 38, 32, 0.5);
   border: none;
   border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
-  font-size: 17px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-size: 15px;
   line-height: 1;
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
   transition: background 0.15s ease, transform 0.15s ease;
 }
 
 .random-recipe-modal-content .modal-close:hover {
-  background: #ffffff;
-  transform: scale(1.06);
+  background: rgba(28, 38, 32, 0.74);
+  transform: scale(1.08);
 }
 
 /* Soepele 'pop'-animatie wanneer de random-popup verschijnt */
@@ -3942,11 +3941,35 @@ select:focus {
   background: transparent;
   box-shadow: none;
   border: none;
+  /* Laat de kaart meegroeien met de inhoud i.p.v. een vaste hoogte, zodat ook
+     lange titels volledig passen. */
+  height: auto;
+  min-height: 0;
+  max-height: none;
 }
 
 .random-recipe-modal-content .recipe-card:hover {
   transform: none;
   box-shadow: none;
+}
+
+/* Titel in de popup nooit afkappen — altijd volledig tonen. */
+.random-recipe-modal-content .recipe-card h3 {
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  display: block;
+  -webkit-line-clamp: unset;
+}
+
+/* Afbeelding de (gegroeide) kaarthoogte laten vullen, geen vaste 390px. */
+.random-recipe-modal-content .result-image-cell,
+.random-recipe-modal-content .recipe-card-image,
+.random-recipe-modal-content .recipe-card-image-skeleton,
+.random-recipe-modal-content .recipe-card-image-fallback {
+  height: 100%;
+  min-height: 240px;
+  max-height: none;
 }
 
 .random-recipe-empty {
