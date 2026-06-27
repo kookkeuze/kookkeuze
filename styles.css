@@ -3880,24 +3880,62 @@ select:focus {
   padding: 24px;
 }
 
+/* Rond, contrasterend knopje zodat het kruisje altijd leesbaar blijft over de
+   foto (ongeacht de kleur van de foto). */
 .random-recipe-modal-content .modal-close {
   z-index: 20;
-  top: 10px;
+  top: 12px;
   right: 12px;
-  padding: 4px;
+  width: 34px;
+  height: 34px;
   min-width: 0;
-  width: auto;
-  height: auto;
-  color: #2f3a35;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  font-size: 28px;
-  line-height: 1;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  color: #2f3a35;
+  background: rgba(255, 255, 255, 0.92);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  font-size: 17px;
+  line-height: 1;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.random-recipe-modal-content .modal-close:hover {
+  background: #ffffff;
+  transform: scale(1.06);
+}
+
+/* Soepele 'pop'-animatie wanneer de random-popup verschijnt */
+@keyframes randomPopIn {
+  0%   { opacity: 0; transform: scale(0.85); }
+  60%  { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes randomBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+#randomRecipeModal:not(.hidden) {
+  animation: randomBackdropIn 0.2s ease both;
+}
+
+#randomRecipeModal:not(.hidden) .modal-content {
+  animation: randomPopIn 0.3s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+  transform-origin: center center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #randomRecipeModal:not(.hidden),
+  #randomRecipeModal:not(.hidden) .modal-content {
+    animation: none;
+  }
 }
 
 .random-recipe-modal-content .recipe-card {
