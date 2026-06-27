@@ -1510,14 +1510,14 @@ document.getElementById('randomBtn').addEventListener('click', async () => {
       .then(r => r.json())
       .then(d => {
         if (!d || d.message === 'Geen resultaten gevonden.') {
-          resultDiv.innerHTML = '<p>Geen resultaten gevonden.</p>';
+          showRandomMessage('Geen resultaten gevonden.');
         } else {
-          showRecipes([d], { mode: 'internet' });
+          showRandomResult(d, { mode: 'internet' });
         }
       })
       .catch(err => {
         console.error(err);
-        resultDiv.innerHTML = '<p>Er ging iets fout bij het ophalen van een random recept.</p>';
+        showRandomMessage('Er ging iets fout bij het ophalen van een random recept.');
       });
     return;
   }
@@ -1532,14 +1532,14 @@ document.getElementById('randomBtn').addEventListener('click', async () => {
     .then(r => r.json())
     .then(d => {
       if (!d || d.message === 'Geen resultaten gevonden.') {
-        resultDiv.innerHTML = '<p>Geen resultaten gevonden.</p>';
+        showRandomMessage('Geen resultaten gevonden.');
       } else {
-        showRecipes([d]);
+        showRandomResult(d);
       }
     })
     .catch(err => {
       console.error(err);
-      resultDiv.innerHTML = '<p>Er ging iets fout bij het ophalen van een random recept.</p>';
+      showRandomMessage('Er ging iets fout bij het ophalen van een random recept.');
     });
 });
 
@@ -1561,8 +1561,14 @@ function showRecipes(arr, options = {}) {
     }
     return;
   }
+  resultDiv.innerHTML = buildRecipeCardsHtml(arr, options);
+  hydrateResultImages();
+}
+
+function buildRecipeCardsHtml(arr, options = {}) {
   const isInternetMode = options.mode === 'internet';
   const singleClass = arr.length === 1 ? ' single-result' : '';
+  const extraClass = options.extraClass ? ` ${options.extraClass}` : '';
   const sharedTargets = getSharedDatabaseTargets();
   const importMode = isSharedDatabaseActive()
     ? 'to-own'
@@ -1570,7 +1576,7 @@ function showRecipes(arr, options = {}) {
   const importLabel = importMode === 'to-own'
     ? 'Importeer naar mijn database'
     : 'Importeer naar gedeelde database';
-  let html = `<div class="recipe-cards-container search-results${singleClass}">`;
+  let html = `<div class="recipe-cards-container search-results${singleClass}${extraClass}">`;
   arr.forEach(r => {
     const recipeId = Number(r.id) > 0 ? Number(r.id) : '';
     const safeUrl = encodeURIComponent(r.url || '');
@@ -1674,9 +1680,59 @@ function showRecipes(arr, options = {}) {
       </div>`;
   });
   html += '</div>';
-  resultDiv.innerHTML = html;
-  hydrateResultImages();
+  return html;
 }
+
+/* — Random recept in een gecentreerde popup — */
+const randomRecipeModal = document.getElementById('randomRecipeModal');
+const randomRecipeBody = document.getElementById('randomRecipeBody');
+const closeRandomRecipeModalBtn = document.getElementById('closeRandomRecipeModal');
+
+function openRandomRecipeModal() {
+  if (!randomRecipeModal) return;
+  randomRecipeModal.classList.remove('hidden');
+  randomRecipeModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeRandomRecipeModalPanel() {
+  if (!randomRecipeModal) return;
+  randomRecipeModal.classList.add('hidden');
+  randomRecipeModal.setAttribute('aria-hidden', 'true');
+  closeAllRecipeExportMenus();
+}
+
+function showRandomResult(recipe, options = {}) {
+  // Geen modal in de DOM? Val terug op de oude inline-weergave.
+  if (!randomRecipeModal || !randomRecipeBody) {
+    showRecipes([recipe], options);
+    return;
+  }
+  randomRecipeBody.innerHTML = buildRecipeCardsHtml([recipe], {
+    ...options,
+    extraClass: 'weekmenu-preview-cards'
+  });
+  hydrateResultImages();
+  openRandomRecipeModal();
+}
+
+function showRandomMessage(message) {
+  if (!randomRecipeModal || !randomRecipeBody) {
+    resultDiv.innerHTML = `<p>${message}</p>`;
+    return;
+  }
+  randomRecipeBody.innerHTML = `<p class="random-recipe-empty">${message}</p>`;
+  openRandomRecipeModal();
+}
+
+closeRandomRecipeModalBtn?.addEventListener('click', closeRandomRecipeModalPanel);
+randomRecipeModal?.addEventListener('click', e => {
+  if (e.target === randomRecipeModal) closeRandomRecipeModalPanel();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && randomRecipeModal && !randomRecipeModal.classList.contains('hidden')) {
+    closeRandomRecipeModalPanel();
+  }
+});
 
 async function fetchRecipeIngredients(recipeUrl) {
   const res = await fetch(`${API_BASE}/api/recipe-info?url=${encodeURIComponent(recipeUrl)}`, {
@@ -1909,7 +1965,7 @@ document.addEventListener('click', e => {
   closeAllRecipeExportMenus();
 });
 
-resultDiv?.addEventListener('click', async e => {
+async function onRecipeCardClick(e) {
   const noteBtn = e.target.closest('[data-recipe-note-btn]');
   if (noteBtn) {
     const recipeUrl = decodeURIComponent(noteBtn.dataset.recipeUrl || '');
@@ -1994,7 +2050,12 @@ resultDiv?.addEventListener('click', async e => {
   plannerSuggestedDay = null;
   plannerSuggestedSlot = null;
   openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
-});
+}
+
+// Zelfde kaartacties (export, notities, Bring, plannen, opslaan) zowel in de
+// zoekresultaten als in de random-popup.
+resultDiv?.addEventListener('click', onRecipeCardClick);
+randomRecipeModal?.addEventListener('click', onRecipeCardClick);
 
 /* ========= WEEKMENU PLANNER ========= */
 const weekmenuGrid = document.getElementById('weekmenuGrid');

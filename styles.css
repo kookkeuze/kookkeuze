@@ -3873,6 +3873,51 @@ select:focus {
   box-shadow: none;
 }
 
+/* Random-recept popup (gecentreerd op alle schermen via .modal) */
+.modal-content.random-recipe-modal-content {
+  width: min(720px, 96vw);
+  max-width: min(720px, 96vw);
+  padding: 24px;
+}
+
+.random-recipe-modal-content .modal-close {
+  z-index: 20;
+  top: 10px;
+  right: 12px;
+  padding: 4px;
+  min-width: 0;
+  width: auto;
+  height: auto;
+  color: #2f3a35;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 28px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.random-recipe-modal-content .recipe-card {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+
+.random-recipe-modal-content .recipe-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.random-recipe-empty {
+  text-align: center;
+  color: #4b5650;
+  font-size: 1.05rem;
+  margin: 14px 0 6px;
+}
+
 .database-modal-content .database-bar {
   margin: 10px 0 12px;
 }
