@@ -1085,6 +1085,10 @@ async function openRecipePackFlow(options = {}) {
   renderRecipePackStep();
 }
 
+function hideRecipePacksButton() {
+  document.getElementById('openRecipePacksBtn')?.classList.add('hidden');
+}
+
 async function maybeStartRecipePackOnboarding() {
   const token = getValidToken();
   if (!token) return;
@@ -1102,8 +1106,10 @@ async function maybeStartRecipePackOnboarding() {
     if (data.shouldShow) {
       activateTab('#overzichtRecepten');
       await openRecipePackFlow({ fromOnboarding: true });
+      hideRecipePacksButton();
     } else if (data.seen) {
       recipePackOnboardingMarkedDone = true;
+      hideRecipePacksButton();
     }
   } catch (_err) {
     // onboarding check is best effort
