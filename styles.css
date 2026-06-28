@@ -3010,13 +3010,18 @@ select:focus {
     overflow-wrap: anywhere;
   }
 
+  /* Op telefoon vouwt het exportmenu in de normale flow uit (niet absoluut),
+     zodat het binnen de popup blijft, volledig leesbaar is en netjes meescrollt
+     in plaats van buiten de modal te vallen. */
+  .recipe-export-menu.is-open {
+    width: 100%;
+  }
+
   .recipe-export-dropdown {
-    position: absolute;
-    right: 0;
-    left: auto;
-    width: max-content;
-    max-width: 78vw;
-    min-width: 200px;
+    position: static;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
     margin-top: 8px;
     box-shadow: 0 8px 18px rgba(28, 47, 35, 0.12);
   }
