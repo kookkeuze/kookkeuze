@@ -1914,6 +1914,25 @@ function isInstagramSource(url) {
   return /^https?:\/\/(www\.)?instagram\.com\//i.test(url || '');
 }
 
+// Bronnen waarvan Bring de ingrediënten niet zelf uit de pagina kan lezen
+// (Instagram heeft geen schema.org; AH en Jumbo leveren hun ingrediënten via
+// JS / blokkeren Bring's crawler). Voor deze sturen we Bring naar onze eigen
+// export-pagina, die de door ons uitgelezen ingrediënten als schema.org serveert.
+const BRING_PROXY_HOSTS = [
+  /(^|\.)instagram\.com$/i,
+  /(^|\.)ah\.nl$/i,
+  /(^|\.)albertheijn\.nl$/i,
+  /(^|\.)jumbo\.com$/i
+];
+
+function bringNeedsProxy(url) {
+  try {
+    return BRING_PROXY_HOSTS.some(re => re.test(new URL(url).hostname));
+  } catch {
+    return false;
+  }
+}
+
 function buildBringDeeplink(targetUrl) {
   return `https://api.getbring.com/rest/bringrecipes/deeplink?url=${encodeURIComponent(targetUrl)}&source=web`;
 }
@@ -1927,10 +1946,10 @@ function openBringExport(recipeUrl) {
     return;
   }
 
-  // Instagram heeft geen schema.org-receptdata die Bring kan lezen. Stuur Bring
-  // dan naar onze eigen export-pagina, die de uitgelezen ingrediënten als
-  // schema.org serveert. Andere bronnen gaan rechtstreeks (rijkere data).
-  const targetForBring = isInstagramSource(cleanUrl)
+  // Bronnen die Bring niet zelf kan uitlezen (Instagram, AH, Jumbo) sturen we
+  // via onze eigen export-pagina met schema.org-data. Andere bronnen gaan
+  // rechtstreeks naar Bring (die leest daar zelf de rijkere data uit).
+  const targetForBring = bringNeedsProxy(cleanUrl)
     ? `${API_BASE}/api/bring-export?url=${encodeURIComponent(cleanUrl)}`
     : cleanUrl;
 
