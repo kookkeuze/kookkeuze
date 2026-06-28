@@ -2929,13 +2929,33 @@ function showRecipeAddedToast(message) {
   }
 
   recipeAddedToastText.textContent = message;
-  recipeAddedToast.classList.remove('hide');
+  recipeAddedToast.classList.remove('hide', 'to-preview');
   recipeAddedToast.classList.add('show');
 
   recipeToastTimer = setTimeout(() => {
     recipeAddedToast.classList.remove('show');
     recipeAddedToast.classList.add('hide');
   }, 2200);
+}
+
+// Laat het groene vinkje eerst even zien en glijd dan soepel door naar de
+// recept-popup (dezelfde als bij een random recept), zodat je het zojuist
+// toegevoegde recept meteen kunt inplannen of exporteren.
+function transitionFromToastToRecipePreview(recipe) {
+  setTimeout(() => {
+    if (recipeToastTimer) {
+      clearTimeout(recipeToastTimer);
+      recipeToastTimer = null;
+    }
+    // Het vinkje schaalt op en vervaagt terwijl de popup tegelijk inzoomt:
+    // dat leest als één doorlopende beweging van vinkje naar recept-popup.
+    if (recipeAddedToast) {
+      recipeAddedToast.classList.remove('show', 'hide');
+      recipeAddedToast.classList.add('to-preview');
+      setTimeout(() => recipeAddedToast.classList.remove('to-preview'), 400);
+    }
+    showRandomResult(recipe);
+  }, 950);
 }
 
 const fieldNameToId = {
@@ -3114,11 +3134,31 @@ addRecipeForm.addEventListener('submit', async e => {
       }
     }
 
+    const joinField = val => Array.isArray(val) ? val.filter(Boolean).join(', ') : (val || '');
+    const addedRecipe = {
+      id: d.id || '',
+      title: bodyData.title || 'Recept',
+      url: bodyData.url || '',
+      dish_type: joinField(bodyData.dish_type),
+      meal_category: joinField(bodyData.meal_category),
+      meal_type: joinField(bodyData.meal_type),
+      time_required: joinField(bodyData.time_required),
+      calories: bodyData.calories
+    };
+
     addMessageDiv.innerHTML = inlineMessage;
     showRecipeAddedToast(toastMessage);
     addRecipeForm.reset();
     ['dishTypeNew', 'mealCategoryNew', 'mealTypeNew', 'timeRequiredNew']
       .forEach(id => document.getElementById(id)?._multiSelectApi?.clear());
+
+    // Houd de zojuist toegevoegde recepten in sync, en glijd na het groene
+    // vinkje soepel door naar de recept-popup zodat je meteen kunt inplannen
+    // of exporteren.
+    fetchAllRecipes();
+    if (addedRecipe.id && addedRecipe.url) {
+      transitionFromToastToRecipePreview(addedRecipe);
+    }
   } catch (err) {
     console.error(err);
     addMessageDiv.innerHTML = '<p style="color:red;">Server niet bereikbaar.</p>';

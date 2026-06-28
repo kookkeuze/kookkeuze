@@ -103,6 +103,22 @@ textarea {
   animation: recipeToastOut 240ms ease forwards;
 }
 
+/* Vinkje zoomt op en vervaagt -- handoff naar de recept-popup. */
+.recipe-toast.to-preview {
+  animation: recipeToastToPreview 380ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes recipeToastToPreview {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) scale(1.4);
+  }
+}
+
 .recipe-toast-icon {
   width: 74px;
   height: 74px;
