@@ -1653,7 +1653,7 @@ select:focus {
   right: 0;
   top: calc(100% + 8px);
   min-width: 230px;
-  padding: 8px;
+  padding: 0 8px;
   border: 1px solid #dfe8e2;
   border-radius: 12px;
   background: #ffffff;
@@ -1661,6 +1661,30 @@ select:focus {
   display: grid;
   gap: 6px;
   z-index: 30;
+  /* Soepele slide-uitvouw op alle schermen. */
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition: max-height 0.3s ease, opacity 0.22s ease, transform 0.3s ease,
+    padding 0.3s ease;
+}
+
+/* Houd de dropdown in de layout (i.p.v. display:none) zodat de animatie kan
+   lopen; in gesloten staat is hij door max-height/opacity onzichtbaar. */
+.recipe-export-dropdown.hidden {
+  display: grid !important;
+}
+
+.recipe-export-dropdown:not(.hidden) {
+  max-height: 70vh;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  opacity: 1;
+  overflow-y: auto;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .recipe-export-option {
@@ -3016,7 +3040,8 @@ select:focus {
   /* Op telefoon: Notitie en Exporteer blijven altijd naast elkaar. Het
      exportmenu lost op via display:contents, zodat de dropdown een eigen rij
      met volle breedte pakt (onder beide knoppen) en in de normale flow blijft
-     -- zo blijft alles binnen de popup leesbaar en klikbaar. */
+     -- zo blijft alles binnen de popup leesbaar en klikbaar. De slide-animatie
+     komt uit de basisregel; hier alleen de positionering aangepast. */
   .recipe-export-menu {
     display: contents;
   }
@@ -3027,34 +3052,14 @@ select:focus {
     width: 100%;
     min-width: 0;
     max-width: none;
-    max-height: 0;
     margin-top: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    opacity: 0;
-    overflow: hidden;
-    pointer-events: none;
-    transform: translateY(-6px);
     box-shadow: 0 8px 18px rgba(28, 47, 35, 0.12);
     transition: max-height 0.3s ease, opacity 0.22s ease, transform 0.3s ease,
       margin-top 0.3s ease, padding 0.3s ease;
   }
 
-  /* Houd de dropdown in de DOM-flow zodat de slide-animatie kan lopen
-     (override van de globale .hidden display:none). */
-  .recipe-export-dropdown.hidden {
-    display: grid !important;
-  }
-
   .recipe-export-dropdown:not(.hidden) {
-    max-height: 70vh;
     margin-top: 8px;
-    padding-top: 8px;
-    padding-bottom: 8px;
-    opacity: 1;
-    overflow-y: auto;
-    pointer-events: auto;
-    transform: translateY(0);
   }
 
   .recipe-export-trigger,
@@ -3977,17 +3982,22 @@ select:focus {
   -webkit-line-clamp: unset;
 }
 
-/* Alleen op desktop (horizontale kaart) de afbeelding de gegroeide kaarthoogte
-   laten vullen. Op mobiel staat de afbeelding bovenaan met een vaste hoogte,
-   dus daar NIET 100% gebruiken (anders duwt de foto de tekst uit beeld). */
+/* Op desktop (horizontale kaart) de afbeelding altijd dezelfde, vaste uitsnede
+   geven -- onafhankelijk van de titellengte. De kaart mag in hoogte meegroeien
+   voor lange titels, maar de foto blijft een nette landscape-crop bovenaan.
+   Op mobiel staat de afbeelding bovenaan met een eigen vaste hoogte. */
 @media (min-width: 980px) {
+  .random-recipe-modal-content .result-image-cell {
+    align-self: start;
+  }
+
   .random-recipe-modal-content .result-image-cell,
   .random-recipe-modal-content .recipe-card-image,
   .random-recipe-modal-content .recipe-card-image-skeleton,
   .random-recipe-modal-content .recipe-card-image-fallback {
-    height: 100%;
-    min-height: 240px;
-    max-height: none;
+    height: 360px;
+    min-height: 360px;
+    max-height: 360px;
   }
 }
 
