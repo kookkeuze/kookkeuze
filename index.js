@@ -2021,6 +2021,19 @@ async function onRecipeCardClick(e) {
       const saved = await ensureInternetRecipeSaved(filledRecipe);
       if (!saved) return;
       showRecipeAddedToast('Recept toegevoegd aan je database.');
+      const previewRecipe = {
+        id: saved.id || '',
+        title: filledRecipe.title || 'Recept',
+        url: filledRecipe.url || '',
+        dish_type: filledRecipe.dish_type || '',
+        meal_category: filledRecipe.meal_category || '',
+        meal_type: filledRecipe.meal_type || '',
+        time_required: filledRecipe.time_required || '',
+        calories: filledRecipe.calories
+      };
+      if (previewRecipe.id && previewRecipe.url) {
+        transitionFromToastToRecipePreview(previewRecipe);
+      }
     });
     return;
   }
