@@ -3000,7 +3000,10 @@ select:focus {
   }
 
   .recipe-secondary-actions {
-    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 0;
     margin-bottom: 10px;
   }
 
@@ -3010,20 +3013,48 @@ select:focus {
     overflow-wrap: anywhere;
   }
 
-  /* Op telefoon vouwt het exportmenu in de normale flow uit (niet absoluut),
-     zodat het binnen de popup blijft, volledig leesbaar is en netjes meescrollt
-     in plaats van buiten de modal te vallen. */
-  .recipe-export-menu.is-open {
-    width: 100%;
+  /* Op telefoon: Notitie en Exporteer blijven altijd naast elkaar. Het
+     exportmenu lost op via display:contents, zodat de dropdown een eigen rij
+     met volle breedte pakt (onder beide knoppen) en in de normale flow blijft
+     -- zo blijft alles binnen de popup leesbaar en klikbaar. */
+  .recipe-export-menu {
+    display: contents;
   }
 
   .recipe-export-dropdown {
     position: static;
+    flex: 1 1 100%;
     width: 100%;
     min-width: 0;
     max-width: none;
-    margin-top: 8px;
+    max-height: 0;
+    margin-top: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transform: translateY(-6px);
     box-shadow: 0 8px 18px rgba(28, 47, 35, 0.12);
+    transition: max-height 0.3s ease, opacity 0.22s ease, transform 0.3s ease,
+      margin-top 0.3s ease, padding 0.3s ease;
+  }
+
+  /* Houd de dropdown in de DOM-flow zodat de slide-animatie kan lopen
+     (override van de globale .hidden display:none). */
+  .recipe-export-dropdown.hidden {
+    display: grid !important;
+  }
+
+  .recipe-export-dropdown:not(.hidden) {
+    max-height: 70vh;
+    margin-top: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    opacity: 1;
+    overflow-y: auto;
+    pointer-events: auto;
+    transform: translateY(0);
   }
 
   .recipe-export-trigger,
