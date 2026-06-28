@@ -1671,7 +1671,10 @@ select:focus {
   border-radius: 10px;
   background: #ffffff;
   color: #33423a;
-  font-size: 12px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
@@ -1689,8 +1692,8 @@ select:focus {
   width: 20px;
   height: 20px;
   border-radius: 7px;
-  background: #e9f5ec;
-  color: #235b2a;
+  background: #fbeadf;
+  color: #c2632c;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2058,8 +2061,8 @@ select:focus {
   width: 20px;
   height: 20px;
   border-radius: 7px;
-  background: #5d4ca5;
-  color: #ffffff;
+  background: #fbeadf;
+  color: #c2632c;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3876,13 +3879,13 @@ select:focus {
   box-shadow: none;
   font-size: 15px;
   line-height: 1;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .random-recipe-modal-content .modal-close:hover {
-  background: #fbe9e7;
+  background: #e0392b;
   border-color: #e0392b;
-  transform: scale(1.08);
+  color: #ffffff;
 }
 
 /* Soepele 'pop'-animatie wanneer de random-popup verschijnt */
