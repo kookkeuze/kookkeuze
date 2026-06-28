@@ -1704,6 +1704,7 @@ function openRandomRecipeModal() {
 function closeRandomRecipeModalPanel() {
   if (!randomRecipeModal) return;
   randomRecipeModal.classList.add('hidden');
+  randomRecipeModal.classList.remove('from-add');
   randomRecipeModal.setAttribute('aria-hidden', 'true');
   closeAllRecipeExportMenus();
 }
@@ -2947,14 +2948,18 @@ function transitionFromToastToRecipePreview(recipe) {
       clearTimeout(recipeToastTimer);
       recipeToastTimer = null;
     }
-    // Het vinkje schaalt op en vervaagt terwijl de popup tegelijk inzoomt:
-    // dat leest als één doorlopende beweging van vinkje naar recept-popup.
+    // Eén doorlopende beweging: het vinkje zakt omlaag en groeit, terwijl de
+    // popup vanuit datzelfde punt naar beneden openvouwt en op zijn plek
+    // landt. Dezelfde easing/timing zorgt dat het als één animatie oogt.
     if (recipeAddedToast) {
       recipeAddedToast.classList.remove('show', 'hide');
       recipeAddedToast.classList.add('to-preview');
-      setTimeout(() => recipeAddedToast.classList.remove('to-preview'), 400);
+      setTimeout(() => recipeAddedToast.classList.remove('to-preview'), 360);
     }
+    if (randomRecipeModal) randomRecipeModal.classList.add('from-add');
     showRandomResult(recipe);
+    // 'from-add' wordt weer verwijderd zodra de popup sluit, zodat een gewone
+    // random-keuze daarna weer de normale pop-in gebruikt.
   }, 950);
 }
 

@@ -103,19 +103,20 @@ textarea {
   animation: recipeToastOut 240ms ease forwards;
 }
 
-/* Vinkje zoomt op en vervaagt -- handoff naar de recept-popup. */
+/* Vinkje zakt omlaag en groeit terwijl het vervaagt -- begin van de handoff
+   naar de recept-popup, die vanuit ditzelfde punt openvouwt. */
 .recipe-toast.to-preview {
-  animation: recipeToastToPreview 380ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: recipeToastToPreview 340ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
 }
 
 @keyframes recipeToastToPreview {
   from {
     opacity: 1;
-    transform: translateX(-50%) scale(1);
+    transform: translateX(-50%) translateY(0) scale(1);
   }
   to {
     opacity: 0;
-    transform: translateX(-50%) scale(1.4);
+    transform: translateX(-50%) translateY(46px) scale(1.3);
   }
 }
 
@@ -3966,9 +3967,32 @@ select:focus {
   transform-origin: center center;
 }
 
+/* Handoff vanuit het groene vinkje: de popup vouwt vanuit een klein punt
+   bovenin (waar het vinkje stond) naar beneden open en landt op zijn plek.
+   Eén doorlopende beweging samen met de .to-preview-animatie van het vinkje. */
+#randomRecipeModal.from-add:not(.hidden) .modal-content {
+  transform-origin: center top;
+  animation: addRecipeGrow 0.56s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes addRecipeGrow {
+  0% {
+    opacity: 0;
+    transform: translateY(-28px) scale(0.28);
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   #randomRecipeModal:not(.hidden),
-  #randomRecipeModal:not(.hidden) .modal-content {
+  #randomRecipeModal:not(.hidden) .modal-content,
+  #randomRecipeModal.from-add:not(.hidden) .modal-content {
     animation: none;
   }
 }
