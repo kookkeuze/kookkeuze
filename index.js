@@ -426,7 +426,7 @@ function renderRecipeNoteButton(recipeId, recipeUrl, recipeTitle, extraClass = '
   return `
     <button
       type="button"
-      class="recipe-note-btn${hasNote ? ' has-note' : ''}${extraClass ? ` ${extraClass}` : ''}"
+      class="recipe-note-trigger${hasNote ? ' has-note' : ''}${extraClass ? ` ${extraClass}` : ''}"
       data-recipe-note-btn
       data-recipe-id="${safeId}"
       data-recipe-url="${safeUrl}"
@@ -434,7 +434,8 @@ function renderRecipeNoteButton(recipeId, recipeUrl, recipeTitle, extraClass = '
       aria-label="${label}"
       title="${label}"
     >
-      <i class="fas fa-plus" aria-hidden="true"></i>
+      <i class="fas fa-pen" aria-hidden="true"></i>
+      <span>Notitie</span>
     </button>
   `;
 }
@@ -1602,12 +1603,12 @@ function buildRecipeCardsHtml(arr, options = {}) {
         <div class="recipe-card-content">
           <div class="recipe-card-head">
             <h3>${displayTitle}</h3>
-            ${renderRecipeNoteButton(recipeId, r.url || '', r.title || 'Recept', 'recipe-note-btn--card')}
           </div>
           <div class="recipe-card-actions">
             <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
               Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
             <div class="recipe-secondary-actions">
+              ${renderRecipeNoteButton(recipeId, r.url || '', r.title || 'Recept', 'recipe-note-trigger--card')}
               <div class="recipe-export-menu">
                 <button
                   type="button"

@@ -1432,10 +1432,8 @@ select:focus {
 }
 
 .recipe-card-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 10px;
+  display: block;
+  min-width: 0;
 }
 
 .recipe-card h3 {
@@ -1580,11 +1578,10 @@ select:focus {
 }
 
 .recipe-secondary-actions {
-  display: grid;
-  grid-template-columns: max-content;
-  align-items: start;
-  justify-items: start;
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
   margin-bottom: 10px;
 }
@@ -1702,49 +1699,33 @@ select:focus {
   font-size: 10px;
 }
 
-.recipe-note-btn {
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 1px solid #d9e6dd;
-  border-radius: 999px;
+.recipe-note-trigger {
+  min-width: 0;
+  padding: 5px 10px;
+  border: 1px solid #dbe4de;
   background: #ffffff;
-  color: #6f7d75;
+  color: #51635a;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  flex-shrink: 0;
-  box-shadow: none;
+  gap: 7px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
-.recipe-note-btn:hover {
-  border-color: #c3d7ca;
-  background: #f7fbf8;
-  color: #35533d;
-  transform: none;
+.recipe-note-trigger:hover {
+  border-color: #c6d4ca;
+  background: #f8fbf9;
+  color: #2f3b34;
+  transform: translateY(-1px);
 }
 
-.recipe-note-btn.has-note {
+.recipe-note-trigger.has-note {
   border-color: #63D671;
   background: #eef9f0;
   color: #2e7b3f;
-}
-
-.recipe-note-btn--card {
-  margin-top: 2px;
-}
-
-.recipe-note-btn--inline {
-  margin-right: 4px;
-}
-
-.recipe-note-btn--slot {
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  font-size: 10px;
 }
 
 @media (min-width: 980px) {
@@ -3880,9 +3861,8 @@ select:focus {
   padding: 24px;
 }
 
-/* Donker, half-transparant rondje met wit kruisje: leest als een nette,
-   herkenbare sluitknop én blijft zichtbaar over zowel de witte kaart als over
-   een foto, ongeacht de kleur. */
+/* Wit rondje met rood kruisje: nette, herkenbare sluitknop die zowel over de
+   witte kaart als over een foto goed zichtbaar blijft. */
 .random-recipe-modal-content .modal-close {
   z-index: 20;
   top: 14px;
@@ -3894,8 +3874,8 @@ select:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
-  background: rgba(28, 38, 32, 0.5);
+  color: #e0392b;
+  background: #ffffff;
   border: none;
   border-radius: 50%;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
@@ -3905,7 +3885,7 @@ select:focus {
 }
 
 .random-recipe-modal-content .modal-close:hover {
-  background: rgba(28, 38, 32, 0.74);
+  background: #fbe9e7;
   transform: scale(1.08);
 }
 
