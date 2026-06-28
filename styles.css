@@ -1609,7 +1609,6 @@ select:focus {
 
 .recipe-export-menu {
   position: relative;
-  margin-top: 2px;
 }
 
 .recipe-export-menu.is-open {
@@ -1861,11 +1860,8 @@ select:focus {
     white-space: normal;
   }
 
-  .recipe-export-menu {
-    margin-top: 2px;
-  }
-
-  .recipe-export-trigger {
+  .recipe-export-trigger,
+  .recipe-note-trigger {
     font-size: 11px;
     padding: 5px 9px;
   }
@@ -3001,13 +2997,8 @@ select:focus {
   }
 
   .recipe-secondary-actions {
-    grid-template-columns: 1fr;
     gap: 8px;
     margin-bottom: 10px;
-  }
-
-  .recipe-export-menu {
-    width: 100%;
   }
 
   .recipe-inline-action {
@@ -3017,16 +3008,20 @@ select:focus {
   }
 
   .recipe-export-dropdown {
-    position: static;
-    width: 100%;
-    min-width: 0;
+    position: absolute;
+    right: 0;
+    left: auto;
+    width: max-content;
+    max-width: 78vw;
+    min-width: 200px;
     margin-top: 8px;
     box-shadow: 0 8px 18px rgba(28, 47, 35, 0.12);
   }
 
-  .recipe-export-trigger {
-    font-size: 10px;
-    padding: 7px 9px;
+  .recipe-export-trigger,
+  .recipe-note-trigger {
+    font-size: 11px;
+    padding: 6px 10px;
   }
 
   .assign-modal-content {
@@ -3876,9 +3871,9 @@ select:focus {
   justify-content: center;
   color: #e0392b;
   background: #ffffff;
-  border: none;
+  border: 1px solid #ecd3d0;
   border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   font-size: 15px;
   line-height: 1;
   transition: background 0.15s ease, transform 0.15s ease;
@@ -3886,6 +3881,7 @@ select:focus {
 
 .random-recipe-modal-content .modal-close:hover {
   background: #fbe9e7;
+  border-color: #e0392b;
   transform: scale(1.08);
 }
 
