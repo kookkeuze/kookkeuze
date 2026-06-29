@@ -18,7 +18,12 @@ h2 {
 }
 
 :root {
-  --btn-radius: 12px;
+  /* Radius-schaal — gebruik deze tokens i.p.v. losse pixelwaarden. */
+  --radius-xs: 8px;
+  --radius-sm: 10px;   /* formuliervelden, kleine kaarten */
+  --radius-md: 12px;   /* knoppen, kaarten, modals */
+  --radius-lg: 16px;   /* grote modals, toast, hero */
+  --btn-radius: var(--radius-md);
 
   /* Merkkleuren — gebruik deze tokens i.p.v. losse hex-codes. */
   --green: #63D671;          /* primaire merkgroen (knoppen/CTA) */
@@ -31,6 +36,11 @@ h2 {
   --accent-strong: #c2632c;       /* oranje voor kleine iconen (meer contrast) */
 
   --danger: #e0392b;         /* rood voor sluiten/verwijderen */
+  --danger-hover: #c5301f;   /* rood hover */
+
+  /* Formuliervelden — uniforme rand/focus. */
+  --field-border: #d6e1d9;
+  --field-focus-ring: 0 0 0 3px rgba(99, 214, 113, 0.18);
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -73,7 +83,7 @@ textarea {
   background: var(--green);
   border: none;
   color: #ffffff;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 
 .green-btn.fetch-info-btn:hover {
@@ -99,7 +109,7 @@ textarea {
   z-index: 2500;
   background: #ffffff;
   border: 1px solid #d6f1db;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.14);
   padding: 16px 22px 14px;
   min-width: 260px;
@@ -206,7 +216,7 @@ html {
   max-width: 1200px;
   margin: 0 auto 32px;
   background: #fff;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   padding: 32px;
   box-shadow: 0 8px 24px rgba(149, 157, 165, 0.1);
 }
@@ -265,7 +275,7 @@ html {
   margin: 0 0 14px;
   padding: 14px 18px 16px;
   border: 1px solid #e6ece8;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: #fbfdfc;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -314,7 +324,7 @@ html {
   margin: 0 0 18px;
   padding: 14px;
   border: 1px solid #dbe8df;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: #ffffff;
   display: grid;
   gap: 12px;
@@ -333,9 +343,16 @@ html {
 
 .share-invite-row input {
   flex: 1 1 300px;
-  border: 2px solid #d9e4dc;
-  border-radius: 10px;
+  border: 1.5px solid var(--field-border);
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.share-invite-row input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: var(--field-focus-ring);
 }
 
 .share-columns {
@@ -361,7 +378,7 @@ html {
   align-items: center;
   gap: 10px;
   border: 1px solid #e2ebe4;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
   background: #fbfdfb;
 }
@@ -372,7 +389,7 @@ html {
   word-break: break-word;
 }
 
-.share-item .accent-btn {
+.share-item .danger-btn {
   min-width: 92px;
   padding: 6px 10px;
   font-size: 11px;
@@ -491,7 +508,7 @@ html {
 .hero-header {
   background: linear-gradient(135deg, var(--green) 0%, var(--green-hover) 100%);
   padding: 48px 32px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   text-align: center;
   margin-bottom: 32px;
   box-shadow: 0 8px 32px rgba(99, 214, 113, 0.15);
@@ -536,8 +553,8 @@ html {
 
 .hero-search input {
   padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1.5px solid var(--field-border);
+  border-radius: var(--radius-sm);
   font-size: 16px;
   transition: all 0.2s ease;
   width: 100%;
@@ -547,7 +564,7 @@ html {
 .hero-search input:focus {
   outline: none;
   border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
+  box-shadow: var(--field-focus-ring);
 }
 
 /* Tijd en Random styling */
@@ -624,6 +641,30 @@ button {
   transform: translateY(-1px);
 }
 
+/* Rode knop voor destructieve acties (verwijderen, intrekken). */
+.danger-btn {
+  background-color: var(--danger);
+  color: #ffffff;
+}
+
+.danger-btn:hover {
+  background-color: var(--danger-hover);
+  transform: translateY(-1px);
+}
+
+/* Neutrale outline-knop voor secundaire/annuleer-acties. */
+.ghost-btn {
+  background: #ffffff;
+  color: var(--green-deep);
+  border: 1.5px solid #cfe0d4;
+}
+
+.ghost-btn:hover {
+  border-color: var(--green);
+  background: #f7fbf8;
+  transform: translateY(-1px);
+}
+
 
 /* Formulier spacing voor 'Voeg een recept toe' */
 .add-recipe-form {
@@ -691,8 +732,8 @@ button {
 #addRecipeForm textarea {
   width: 100%;
   padding: 11px 13px;
-  border: 1.5px solid #d5e3d9;
-  border-radius: 10px;
+  border: 1.5px solid var(--field-border);
+  border-radius: var(--radius-sm);
   font-size: 15px;
   color: #2f3a35;
   background: #ffffff;
@@ -704,7 +745,7 @@ button {
 #addRecipeForm textarea:focus {
   outline: none;
   border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
+  box-shadow: var(--field-focus-ring);
 }
 
 #addRecipeForm textarea {
@@ -744,7 +785,7 @@ button {
   gap: 10px;
   padding: 14px;
   border: 1px solid #e3ece5;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, #fbfdfb 0%, #f6fbf7 100%);
 }
 
@@ -777,8 +818,8 @@ select {
   background-position: right 12px center;
   background-size: 16px;
   padding: 10px 40px 10px 16px;
-  border-radius: 8px;
-  border: 2px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--field-border);
   font-size: 16px;
   color: #2d3436;
   cursor: pointer;
@@ -793,7 +834,7 @@ select:hover {
 select:focus {
   outline: none;
   border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
+  box-shadow: var(--field-focus-ring);
 }
 
 .multi-select-native {
@@ -809,8 +850,8 @@ select:focus {
   width: 100%;
   min-width: 160px;
   height: 44px;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1.5px solid var(--field-border);
+  border-radius: var(--radius-sm);
   background: #fff;
   color: #2d3436;
   padding: 10px 36px 10px 14px;
@@ -837,7 +878,7 @@ select:focus {
 
 .multi-select.open .multi-select-trigger {
   border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
+  box-shadow: var(--field-focus-ring);
 }
 
 .multi-select-menu {
@@ -847,7 +888,7 @@ select:focus {
   right: 0;
   background: #fff;
   border: 1px solid #dfe7e2;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   box-shadow: 0 10px 24px rgba(25, 38, 29, 0.12);
   padding: 8px;
   max-height: 220px;
@@ -868,7 +909,7 @@ select:focus {
   justify-content: initial !important;
   column-gap: 10px;
   padding: 7px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
   font-size: 14px;
   margin-top: 0 !important;
@@ -934,15 +975,6 @@ select:focus {
   line-height: 1.4;
 }
 
-/* Kleinere actieknoppen in overzicht tabel */
-.action-buttons button {
-  min-width: 32px;
-  height: 32px;
-  padding: 0 12px;
-  font-size: 12px;
-  border-radius: var(--btn-radius);
-}
-
 .overview-table th:last-child,
 .overview-table td:last-child {
   width: 120px;
@@ -1001,7 +1033,7 @@ select:focus {
 /* Tabel container aanpassingen */
 .table-container {
   background: white;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   box-shadow: 0 4px 16px rgba(149, 157, 165, 0.1);
   margin-top: 32px;
   overflow-x: auto;
@@ -1103,7 +1135,7 @@ select:focus {
 .recipe-thumb-skeleton {
   width: 60px;
   height: 60px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1152,22 +1184,6 @@ select:focus {
 .time-select {
   min-width: 140px;
   max-width: 160px;
-}
-
-/* Actieknoppen container */
-.action-buttons {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
-}
-
-/* Actieknoppen styling */
-.action-buttons button {
-  min-width: 80px;
-  height: 32px;
-  padding: 0 16px;
-  font-size: 13px;
-  border-radius: var(--btn-radius);
 }
 
 /* Hover effect voor rijen */
@@ -1248,18 +1264,6 @@ select:focus {
     gap: 12px;
   }
 
-  .action-buttons {
-    margin-left: 0;
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .action-buttons button {
-    min-width: 70px;
-    height: 28px;
-    font-size: 12px;
-  }
-
   .hero-random button {
     font-size: 15px;
     padding: 10px 25px;
@@ -1331,7 +1335,7 @@ select:focus {
   }
 
   .hero-header {
-    border-radius: 8px;
+    border-radius: var(--radius-xs);
     padding: 24px 16px;
   }
 
@@ -1369,26 +1373,6 @@ select:focus {
   color: white;
 }
 
-/* Actieknoppen in tabel */
-.action-buttons .green-btn {
-  background-color: #96FC42;
-  color: #333;
-  border: 1px solid #63A771;
-}
-
-.action-buttons .green-btn:hover {
-  background-color: var(--green-bright);
-}
-
-.action-buttons .accent-btn {
-  background-color: var(--accent-color);
-  color: white;
-}
-
-.action-buttons .accent-btn:hover {
-  background-color: var(--accent-color-hover);
-}
-
 /* Container die de kaarten naast elkaar kan zetten */
 .recipe-cards-container {
   display: flex;
@@ -1410,7 +1394,7 @@ select:focus {
   flex: 0 1 380px;
   background: #ffffff;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 0;
   overflow: hidden;
   position: relative;
@@ -1694,7 +1678,7 @@ select:focus {
   min-width: 230px;
   padding: 0 8px;
   border: 1px solid #dfe8e2;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: #ffffff;
   box-shadow: 0 12px 28px rgba(28, 47, 35, 0.14);
   display: grid;
@@ -1731,7 +1715,7 @@ select:focus {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid #edf2ee;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: #ffffff;
   color: #33423a;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -1968,8 +1952,8 @@ select:focus {
 #calorieMulti {
   min-width: 200px;
   height: auto;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1.5px solid var(--field-border);
+  border-radius: var(--radius-sm);
   padding: 10px;
   font-size: 16px;
   cursor: pointer;
@@ -1977,7 +1961,7 @@ select:focus {
 
 #calorieMulti:focus {
   border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
+  box-shadow: var(--field-focus-ring);
 }
 
 /* ===== WEEKMENU PLANNER ===== */
@@ -2002,7 +1986,7 @@ select:focus {
   margin: 16px 0 8px;
   padding: 14px;
   border: 1px solid #d9e8dc;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, #fbfffc 0%, #f5faf6 100%);
 }
 
@@ -2010,7 +1994,7 @@ select:focus {
   width: 100%;
   padding: 13px 14px;
   border: 2px solid var(--green);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   font-size: 15px;
   background: #ffffff;
   box-shadow: 0 6px 14px rgba(67, 115, 75, 0.08);
@@ -2034,7 +2018,7 @@ select:focus {
   gap: 12px;
   background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
   border: 1px solid #dfe9e2;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   padding: 12px;
   box-shadow: 0 2px 8px rgba(47, 106, 55, 0.05);
 }
@@ -2264,7 +2248,7 @@ select:focus {
 
 .weekmenu-day-card {
   border: 1px solid #dde8df;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: #f5faf6;
   display: grid;
   grid-template-rows: auto 1fr;
@@ -2302,7 +2286,7 @@ select:focus {
 
 .weekmenu-slot-item {
   border: 1px solid #edf3ee;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 8px;
   display: grid;
   gap: 8px;
@@ -2486,18 +2470,20 @@ select:focus {
 .save-internet-field-row input {
   width: 100%;
   padding: 9px 12px;
-  border: 1.5px solid #d0e8d4;
-  border-radius: 8px;
+  border: 1.5px solid var(--field-border);
+  border-radius: var(--radius-sm);
   font-size: 14px;
   font-family: inherit;
   background: #fff;
   color: #2d3a30;
   box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .save-internet-field-row input:focus {
   outline: none;
   border-color: var(--green);
+  box-shadow: var(--field-focus-ring);
 }
 
 /* Multi-select dropdown past de volledige breedte van het veld */
@@ -2522,8 +2508,8 @@ select:focus {
   width: 100%;
   min-height: 150px;
   padding: 12px 14px;
-  border: 1px solid #dbe7de;
-  border-radius: 14px;
+  border: 1.5px solid var(--field-border);
+  border-radius: var(--radius-md);
   resize: vertical;
   font: inherit;
   line-height: 1.5;
@@ -2534,7 +2520,7 @@ select:focus {
 .recipe-note-textarea:focus {
   outline: none;
   border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.14);
+  box-shadow: var(--field-focus-ring);
 }
 
 .recipe-note-help {
@@ -2559,6 +2545,23 @@ select:focus {
   max-width: 440px;
 }
 
+/* Zelfde soepele verschijning als de andere popups. */
+.app-dialog {
+  animation: randomBackdropIn 0.18s ease both;
+}
+
+.app-dialog .modal-content {
+  animation: randomPopIn 0.26s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+  transform-origin: center center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-dialog,
+  .app-dialog .modal-content {
+    animation: none;
+  }
+}
+
 .app-dialog-actions {
   margin-top: 20px;
   display: flex;
@@ -2575,7 +2578,8 @@ select:focus {
 
 .app-dialog-actions--list .green-btn,
 .app-dialog-actions--list .accent-btn,
-.app-dialog-actions--list .overview-view-btn {
+.app-dialog-actions--list .danger-btn,
+.app-dialog-actions--list .ghost-btn {
   width: 100%;
   min-width: 0;
 }
@@ -2688,7 +2692,7 @@ select:focus {
   gap: 2px;
   padding: 8px 6px;
   border: 1px solid #d9e7dc;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: #ffffff;
   color: #3e4a44;
   font-family: inherit;
@@ -2721,7 +2725,7 @@ select:focus {
   min-width: 0;
   padding: 8px 10px;
   border: 1px solid #d9e7dc;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: #ffffff;
   color: #3e4a44;
   font-family: inherit;
@@ -2780,7 +2784,7 @@ select:focus {
 .weekmenu-slot-thumb-skeleton {
   width: 100%;
   height: 84px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -2810,7 +2814,7 @@ select:focus {
 .weekmenu-search-thumb-wrap {
   width: 64px;
   height: 64px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   flex-shrink: 0;
   border: 1px solid #d9e8dc;
@@ -2825,7 +2829,7 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 
 .weekmenu-search-thumb {
@@ -3284,7 +3288,7 @@ select:focus {
     height: 46px;
     padding: 0 44px 0 14px;
     border: 1.5px solid #d7e7dc;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: #ffffff;
     color: #2f3a35;
     font-size: 16px;
@@ -3300,7 +3304,7 @@ select:focus {
 
   .mobile-nav:focus {
     border-color: var(--green);
-    box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.12);
+    box-shadow: var(--field-focus-ring);
   }
 
   .dropdown-icon {
@@ -3455,15 +3459,24 @@ select:focus {
 .mobile-nav-close {
   width: 38px;
   height: 38px;
-  border: none;
-  background: transparent;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid #ecd3d0;
+  background: #ffffff;
   border-radius: 50%;
-  font-size: 18px;
-  color: #2f3a35;
+  font-size: 16px;
+  color: var(--danger);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.mobile-nav-close:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #ffffff;
 }
 
 .mobile-nav-links {
@@ -3481,7 +3494,7 @@ select:focus {
   background: transparent;
   color: #2f3a35;
   padding: 16px 18px;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   text-align: left;
   font-size: 1.25rem;
   font-family: 'EatingPasta', Arial, sans-serif;
@@ -3655,7 +3668,7 @@ select:focus {
   .topbar {
     top: calc(8px + var(--safe-top));
     margin: 0 10px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     border: 1px solid #dfe8e2;
     box-shadow: 0 6px 18px rgba(34, 51, 41, 0.1);
     padding-top: calc(6px + var(--safe-top));
@@ -3778,7 +3791,7 @@ select:focus {
 
 .modal-content {
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   padding: 32px 40px;
   width: 100%;
   max-width: 400px;
@@ -4295,7 +4308,7 @@ select:focus {
   .modal-content {
     padding: 24px 20px;
     max-width: 100%;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
   }
 
   .auth-pane {

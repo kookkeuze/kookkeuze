@@ -826,7 +826,7 @@ async function loadSharePanelData() {
     ? members.map(m => `
         <div class="share-item">
           <span>${m.email}${m.role === 'admin' ? ' (beheerder)' : ''}</span>
-          ${m.role === 'admin' ? '' : `<button type="button" class="accent-btn share-remove-member-btn" data-member-id="${m.member_user_id}">Intrekken</button>`}
+          ${m.role === 'admin' ? '' : `<button type="button" class="danger-btn share-remove-member-btn" data-member-id="${m.member_user_id}">Intrekken</button>`}
         </div>`).join('')
     : '<p class="share-empty">Nog geen gedeelde leden.</p>';
 
@@ -834,7 +834,7 @@ async function loadSharePanelData() {
     ? invites.map(inv => `
         <div class="share-item">
           <span>${inv.invite_email}</span>
-          <button type="button" class="accent-btn share-cancel-invite-btn" data-invite-id="${inv.id}">Intrekken</button>
+          <button type="button" class="danger-btn share-cancel-invite-btn" data-invite-id="${inv.id}">Intrekken</button>
         </div>`).join('')
     : '<p class="share-empty">Geen openstaande uitnodigingen.</p>';
 }
@@ -2972,10 +2972,11 @@ function showRecipeAddedToast(message, type = 'success') {
   recipeAddedToast.classList.remove('hide', 'to-preview');
   recipeAddedToast.classList.add('show');
 
+  // Foutmeldingen blijven langer staan zodat je ze zeker kunt lezen.
   recipeToastTimer = setTimeout(() => {
     recipeAddedToast.classList.remove('show');
     recipeAddedToast.classList.add('hide');
-  }, 2200);
+  }, isError ? 4800 : 2200);
 }
 
 // Laat het groene vinkje eerst even zien en glijd dan soepel door naar de
@@ -3005,8 +3006,11 @@ function transitionFromToastToRecipePreview(recipe) {
 // Generieke, in-stijl dialoog ter vervanging van alert()/confirm()/prompt().
 // Geeft een Promise terug die resolvet met de gekozen waarde (of null bij
 // annuleren/sluiten).
+let appDialogTitleSeq = 0;
+
 function openChoiceModal({ title = '', message = '', choices = [] }) {
   return new Promise(resolve => {
+    const previouslyFocused = document.activeElement;
     const overlay = document.createElement('div');
     overlay.className = 'modal app-dialog';
     overlay.setAttribute('role', 'dialog');
@@ -3018,9 +3022,34 @@ function openChoiceModal({ title = '', message = '', choices = [] }) {
       settled = true;
       document.removeEventListener('keydown', onKey);
       overlay.remove();
+      // Focus terug naar het element dat de dialoog opende.
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+        previouslyFocused.focus();
+      }
       resolve(value);
     };
-    const onKey = e => { if (e.key === 'Escape') finish(null); };
+
+    const getFocusable = () => Array.from(
+      overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+    ).filter(el => !el.disabled && el.offsetParent !== null);
+
+    const onKey = e => {
+      if (e.key === 'Escape') { finish(null); return; }
+      // Focus-trap: houd Tab binnen de dialoog.
+      if (e.key === 'Tab') {
+        const focusable = getFocusable();
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
 
     const content = document.createElement('div');
     content.className = 'modal-content app-dialog-content';
@@ -3034,10 +3063,13 @@ function openChoiceModal({ title = '', message = '', choices = [] }) {
     content.appendChild(closeBtn);
 
     if (title) {
+      const titleId = `app-dialog-title-${++appDialogTitleSeq}`;
       const h = document.createElement('h3');
       h.className = 'assign-modal-title';
+      h.id = titleId;
       h.textContent = title;
       content.appendChild(h);
+      overlay.setAttribute('aria-labelledby', titleId);
     }
     if (message) {
       const p = document.createElement('p');
@@ -3053,7 +3085,8 @@ function openChoiceModal({ title = '', message = '', choices = [] }) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = choice.variant === 'accent' ? 'accent-btn'
-        : choice.variant === 'ghost' ? 'overview-view-btn'
+        : choice.variant === 'danger' ? 'danger-btn'
+        : choice.variant === 'ghost' ? 'ghost-btn'
         : 'green-btn';
       btn.textContent = choice.label;
       btn.addEventListener('click', () => finish(choice.value));
@@ -3066,7 +3099,7 @@ function openChoiceModal({ title = '', message = '', choices = [] }) {
     document.addEventListener('keydown', onKey);
     document.body.appendChild(overlay);
 
-    actions.querySelector('.green-btn, .accent-btn')?.focus?.();
+    actions.querySelector('.green-btn, .accent-btn, .danger-btn')?.focus?.();
   });
 }
 
@@ -3077,7 +3110,7 @@ async function openConfirmModal({ title, message = '', confirmLabel = 'Bevestige
     message,
     choices: [
       { label: cancelLabel, value: false, variant: 'ghost' },
-      { label: confirmLabel, value: true, variant: danger ? 'accent' : 'green' }
+      { label: confirmLabel, value: true, variant: danger ? 'danger' : 'green' }
     ]
   });
   return result === true;
@@ -3396,7 +3429,7 @@ function renderOverviewPage() {
         <td>${dropdown(timeOpt,  r.time_required, 'Tijd')}</td>
         <td><input class="calories-field" type="number" value="${cals}" /></td>
         <td><button class="green-btn edit-btn">Opslaan</button></td>
-        <td><button class="accent-btn delete-btn">Verwijder</button></td>
+        <td><button class="danger-btn delete-btn">Verwijder</button></td>
       </tr>`;
     gridHtml += `
       <div class="recipe-card">
