@@ -3564,6 +3564,23 @@ select:focus {
   display: block;
 }
 
+/* Eigen SVG-iconen in de menubalk (database, app, persoon) — gelijke maat. */
+.topbar-icon-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  display: block;
+}
+
+/* Iconen in het mobiele uitklapmenu, op tekstregelhoogte. */
+.mobile-menu-icon-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  vertical-align: -4px;
+  margin-right: 8px;
+}
+
 .install-app-btn {
   color: #2f3740;
 }
