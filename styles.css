@@ -19,8 +19,19 @@ h2 {
 
 :root {
   --btn-radius: 12px;
-  --accent-color: #d97a45;
-  --accent-color-hover: #c96936;
+
+  /* Merkkleuren — gebruik deze tokens i.p.v. losse hex-codes. */
+  --green: #63D671;          /* primaire merkgroen (knoppen/CTA) */
+  --green-hover: #4ac858;    /* hover/donkerder voor primaire groen */
+  --green-bright: #43FD68;   /* extra felle hover-accenten */
+  --green-deep: #235b2a;     /* donkergroen voor tekst, randen, iconen */
+
+  --accent-color: #d97a45;        /* oranje accent */
+  --accent-color-hover: #c96936;  /* oranje accent hover */
+  --accent-strong: #c2632c;       /* oranje voor kleine iconen (meer contrast) */
+
+  --danger: #e0392b;         /* rood voor sluiten/verwijderen */
+
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -59,14 +70,14 @@ textarea {
   white-space: nowrap;
   padding: 9px 14px;
   font-size: 12px;
-  background: #63D671;
+  background: var(--green);
   border: none;
   color: #ffffff;
   border-radius: 10px;
 }
 
 .green-btn.fetch-info-btn:hover {
-  background: #63D671;
+  background: var(--green);
   color: #ffffff;
   transform: none;
   box-shadow: none;
@@ -125,12 +136,17 @@ textarea {
   height: 74px;
   margin: 0 auto 10px;
   border-radius: 999px;
-  background: #63D671;
+  background: var(--green);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 34px;
+}
+
+/* Foutmelding-variant van de toast: rood icoon i.p.v. groen vinkje. */
+.recipe-toast.is-error .recipe-toast-icon {
+  background: var(--danger);
 }
 
 .recipe-toast-text {
@@ -222,15 +238,15 @@ html {
 }
 
 .nav-tabs li a:hover {
-  color: #63D671;
+  color: var(--green);
   background-color: #f7fdf7;
 }
 
 .nav-tabs li a.active {
   background-color: #fff;
   font-weight: 600;
-  color: #63D671;
-  border-bottom: 3px solid #63D671;
+  color: var(--green);
+  border-bottom: 3px solid var(--green);
 }
 
 /* Tab content */
@@ -306,7 +322,7 @@ html {
 
 .share-panel h3 {
   margin: 0;
-  color: #235b2a;
+  color: var(--green-deep);
 }
 
 .share-invite-row {
@@ -356,7 +372,7 @@ html {
   word-break: break-word;
 }
 
-.share-item .pink-btn {
+.share-item .accent-btn {
   min-width: 92px;
   padding: 6px 10px;
   font-size: 11px;
@@ -473,7 +489,7 @@ html {
 }
 
 .hero-header {
-  background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-hover) 100%);
   padding: 48px 32px;
   border-radius: 16px;
   text-align: center;
@@ -530,7 +546,7 @@ html {
 
 .hero-search input:focus {
   outline: none;
-  border-color: #63D671;
+  border-color: var(--green);
   box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
 }
 
@@ -554,7 +570,7 @@ html {
 }
 
 .hero-random button {
-  background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-hover) 100%);
   color: rgb(255, 255, 255);
   font-size: 18px;
   font-weight: 600;
@@ -586,20 +602,26 @@ button {
 }
 
 .green-btn {
-  background-color: #63D671;
+  background-color: var(--green);
   color: white;
   box-shadow: none;
 }
 
 .green-btn:hover {
-  background-color: #4ac858;
+  background-color: var(--green-hover);
   transform: translateY(-1px);
   box-shadow: none;
 }
 
-.pink-btn {
+/* Oranje accentknop (zoeken, intrekken/verwijderen). Hernoemd van .pink-btn. */
+.accent-btn {
   background-color: var(--accent-color);
   color: white;
+}
+
+.accent-btn:hover {
+  background-color: var(--accent-color-hover);
+  transform: translateY(-1px);
 }
 
 
@@ -681,7 +703,7 @@ button {
 #addRecipeForm select:focus,
 #addRecipeForm textarea:focus {
   outline: none;
-  border-color: #63D671;
+  border-color: var(--green);
   box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
 }
 
@@ -764,13 +786,13 @@ select {
 }
 
 select:hover {
-  border-color: #63D671;
+  border-color: var(--green);
   background-color: #f7fdf7;
 }
 
 select:focus {
   outline: none;
-  border-color: #63D671;
+  border-color: var(--green);
   box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
 }
 
@@ -808,13 +830,13 @@ select:focus {
 }
 
 .multi-select-chevron {
-  color: #63D671;
+  color: var(--green);
   font-size: 13px;
   margin-left: 8px;
 }
 
 .multi-select.open .multi-select-trigger {
-  border-color: #63D671;
+  border-color: var(--green);
   box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
 }
 
@@ -859,7 +881,7 @@ select:focus {
 }
 
 .multi-select-option input {
-  accent-color: #63D671;
+  accent-color: var(--green);
   width: 16px;
   height: 16px;
   margin: 0;
@@ -957,7 +979,7 @@ select:focus {
   padding: 6px 10px;
   border: 1px solid #cfe0d4;
   background: #fff;
-  color: #235b2a;
+  color: var(--green-deep);
   border-radius: var(--btn-radius);
   font-size: 12px;
   font-weight: 600;
@@ -972,8 +994,8 @@ select:focus {
 
 .overview-view-btn.active {
   background: #eef6ef;
-  border-color: #235b2a;
-  color: #235b2a;
+  border-color: var(--green-deep);
+  color: var(--green-deep);
 }
 
 /* Tabel container aanpassingen */
@@ -1015,8 +1037,8 @@ select:focus {
 }
 
 .overview-page-btn.active {
-  background: #235b2a;
-  border-color: #235b2a;
+  background: var(--green-deep);
+  border-color: var(--green-deep);
   color: #fff;
 }
 
@@ -1029,7 +1051,7 @@ select:focus {
 
 /* Headers styling */
 .overview-table th {
-  background-color: #63D671;
+  background-color: var(--green);
   color: white;
   font-weight: 600;
   padding: 12px 16px;
@@ -1094,7 +1116,7 @@ select:focus {
 }
 
 .recipe-thumb-fallback {
-  background: linear-gradient(135deg, #63D671 0%, var(--accent-color) 100%);
+  background: linear-gradient(135deg, var(--green) 0%, var(--accent-color) 100%);
   color: #fff;
   font-weight: 700;
   font-size: 18px;
@@ -1295,11 +1317,11 @@ select:focus {
   }
 
   .hero-random button {
-    background-color: #63D671;  
+    background-color: var(--green);  
   }
 
   .hero-random button:hover {
-    background-color: #4ac858;
+    background-color: var(--green-hover);
   }
 
   /* dropdowns krijgen geen max/min beperking */
@@ -1330,20 +1352,20 @@ select:focus {
 /* Zoekknop styling (desktop) */
 .hero-search button {
   background-color: #ffffff;
-  color: #235b2a;
-  border: solid #235b2a 2px;
+  color: var(--green-deep);
+  border: solid var(--green-deep) 2px;
   font-family: 'EatingPasta', Arial, sans-serif;
   letter-spacing: 1px;
 }
 
 .hero-search button:hover {
-  background-color: #235b2a;
+  background-color: var(--green-deep);
   color: white;
 }
 
 /* Tabel styling */
 .overview-table th {
-  background-color: #63D671;
+  background-color: var(--green);
   color: white;
 }
 
@@ -1355,15 +1377,15 @@ select:focus {
 }
 
 .action-buttons .green-btn:hover {
-  background-color: #43FD68;
+  background-color: var(--green-bright);
 }
 
-.action-buttons .pink-btn {
+.action-buttons .accent-btn {
   background-color: var(--accent-color);
   color: white;
 }
 
-.action-buttons .pink-btn:hover {
+.action-buttons .accent-btn:hover {
   background-color: var(--accent-color-hover);
 }
 
@@ -1533,9 +1555,9 @@ select:focus {
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  border: 1px solid #4fcf62;
+  border: 1px solid var(--green);
   border-radius: var(--btn-radius);
-  background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-hover) 100%);
   box-shadow: none;
   font-family: 'EatingPasta', Arial, sans-serif;
   letter-spacing: 0.4px;
@@ -1608,7 +1630,7 @@ select:focus {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #235b2a;
+  color: var(--green-deep);
   font-size: 13px;
   font-family: inherit;
   font-weight: 700;
@@ -1734,7 +1756,7 @@ select:focus {
   height: 20px;
   border-radius: 7px;
   background: #fbeadf;
-  color: #c2632c;
+  color: var(--accent-strong);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1766,7 +1788,7 @@ select:focus {
 }
 
 .recipe-note-trigger.has-note {
-  border-color: #63D671;
+  border-color: var(--green);
   background: #eef9f0;
   color: #2e7b3f;
 }
@@ -1954,7 +1976,7 @@ select:focus {
 }
 
 #calorieMulti:focus {
-  border-color: #63D671;
+  border-color: var(--green);
   box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.1);
 }
 
@@ -1987,7 +2009,7 @@ select:focus {
 .weekmenu-search input {
   width: 100%;
   padding: 13px 14px;
-  border: 2px solid #63D671;
+  border: 2px solid var(--green);
   border-radius: 12px;
   font-size: 15px;
   background: #ffffff;
@@ -1996,7 +2018,7 @@ select:focus {
 
 .weekmenu-search input:focus {
   outline: none;
-  border-color: #4ac858;
+  border-color: var(--green-hover);
   box-shadow: 0 0 0 4px rgba(99, 214, 113, 0.16), 0 6px 14px rgba(67, 115, 75, 0.08);
 }
 
@@ -2056,45 +2078,45 @@ select:focus {
 
 .plan-weekmenu-btn {
   background: #ffffff;
-  color: #235b2a;
-  border: 2px solid #235b2a;
+  color: var(--green-deep);
+  border: 2px solid var(--green-deep);
   padding: 8px 14px;
   font-size: 12px;
   min-width: 126px;
 }
 
 .weekmenu-primary-action {
-  background: #63D671;
-  border-color: #63D671;
+  background: var(--green);
+  border-color: var(--green);
   color: #ffffff;
 }
 
 .weekmenu-primary-action:hover {
-  background: #4ac858;
-  border-color: #4ac858;
+  background: var(--green-hover);
+  border-color: var(--green-hover);
   color: #ffffff;
 }
 
 .weekmenu-secondary-action {
   background: #ffffff;
-  color: #235b2a;
-  border-color: #235b2a;
+  color: var(--green-deep);
+  border-color: var(--green-deep);
 }
 
 .plan-weekmenu-btn:hover {
-  background: #235b2a;
+  background: var(--green-deep);
   color: #ffffff;
   transform: translateY(-1px);
 }
 
 .import-transfer-btn {
-  color: #d97d44;
-  border-color: #d97d44;
+  color: var(--accent-color);
+  border-color: var(--accent-color);
   background: #ffffff;
 }
 
 .import-transfer-btn:hover {
-  background: #d97d44;
+  background: var(--accent-color);
   color: #ffffff;
 }
 
@@ -2103,7 +2125,7 @@ select:focus {
   height: 20px;
   border-radius: 7px;
   background: #fbeadf;
-  color: #c2632c;
+  color: var(--accent-strong);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2119,8 +2141,8 @@ select:focus {
 }
 
 .weekmenu-secondary-action:hover {
-  background: #235b2a;
-  border-color: #235b2a;
+  background: var(--green-deep);
+  border-color: var(--green-deep);
   color: #ffffff;
 }
 
@@ -2263,7 +2285,7 @@ select:focus {
 .weekmenu-day-name {
   margin: 0;
   font-weight: 700;
-  color: #235b2a;
+  color: var(--green-deep);
 }
 
 .weekmenu-day-date {
@@ -2330,7 +2352,7 @@ select:focus {
   padding: 0;
   border: none;
   border-radius: 0;
-  color: #63D671;
+  color: var(--green);
   background: transparent;
   box-shadow: none;
   font-size: 16px;
@@ -2368,20 +2390,20 @@ select:focus {
   padding: 0;
   border: none;
   border-radius: 0;
-  color: #63D671;
+  color: var(--green);
   background: transparent;
   font-size: 15px;
 }
 
 .weekmenu-slot-item .weekmenu-add-btn:hover {
-  color: #4ac858;
+  color: var(--green-hover);
   background: transparent;
   transform: none;
   box-shadow: none;
 }
 
 .weekmenu-slot-item .weekmenu-preview-btn:hover {
-  color: #4ac858;
+  color: var(--green-hover);
   background: transparent;
   transform: none;
   box-shadow: none;
@@ -2475,7 +2497,7 @@ select:focus {
 
 .save-internet-field-row input:focus {
   outline: none;
-  border-color: #63D671;
+  border-color: var(--green);
 }
 
 /* Multi-select dropdown past de volledige breedte van het veld */
@@ -2511,7 +2533,7 @@ select:focus {
 
 .recipe-note-textarea:focus {
   outline: none;
-  border-color: #63D671;
+  border-color: var(--green);
   box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.14);
 }
 
@@ -2522,12 +2544,40 @@ select:focus {
   line-height: 1.45;
 }
 
+/* Modal-footer: acties rechts uitgelijnd (secundair links van primair),
+   gelijk aan .assign-modal-controls voor een consistente uitstraling. */
 .recipe-note-actions {
   margin-top: 18px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* Generieke dialoog (openChoiceModal/openConfirmModal). */
+.app-dialog-content {
+  max-width: 440px;
+}
+
+.app-dialog-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Bij meer dan twee keuzes (bv. database kiezen) als volle-breedte lijst. */
+.app-dialog-actions--list {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.app-dialog-actions--list .green-btn,
+.app-dialog-actions--list .accent-btn,
+.app-dialog-actions--list .overview-view-btn {
+  width: 100%;
+  min-width: 0;
 }
 
 .assign-modal-sub {
@@ -2541,7 +2591,7 @@ select:focus {
   margin-top: 12px;
 }
 
-.assign-modal-controls .pink-btn {
+.assign-modal-controls .green-btn {
   padding: 9px 16px;
   font-size: 12px;
   min-width: 120px;
@@ -2656,9 +2706,9 @@ select:focus {
 }
 
 .assign-day-btn.active {
-  border-color: #63D671;
+  border-color: var(--green);
   background: #f5fff6;
-  color: #235b2a;
+  color: var(--green-deep);
 }
 
 .assign-picker-slots {
@@ -2680,9 +2730,9 @@ select:focus {
 }
 
 .assign-slot-btn.active {
-  border-color: #63D671;
+  border-color: var(--green);
   background: #f5fff6;
-  color: #235b2a;
+  color: var(--green-deep);
 }
 
 .recipe-card-actions .import-transfer-btn {
@@ -2691,13 +2741,13 @@ select:focus {
   padding: 6px 10px;
   font-size: 11px;
   justify-content: center;
-  color: #235b2a;
-  border-color: #235b2a;
+  color: var(--green-deep);
+  border-color: var(--green-deep);
   background: #ffffff;
 }
 
 .recipe-card-actions .import-transfer-btn:hover {
-  background: #235b2a;
+  background: var(--green-deep);
   color: #ffffff;
 }
 
@@ -3098,7 +3148,7 @@ select:focus {
     justify-content: stretch;
   }
 
-  .assign-modal-controls .pink-btn {
+  .assign-modal-controls .green-btn {
     width: 100%;
   }
 }
@@ -3249,7 +3299,7 @@ select:focus {
   }
 
   .mobile-nav:focus {
-    border-color: #63D671;
+    border-color: var(--green);
     box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.12);
   }
 
@@ -3261,7 +3311,7 @@ select:focus {
     right: 14px;
     top: 50%;
     transform: translateY(-50%);
-    color: #63D671;
+    color: var(--green);
     font-size: 15px;
     pointer-events: none;
   }
@@ -3441,7 +3491,7 @@ select:focus {
 
 .mobile-header-menu-link.active {
   background: #eef8f0;
-  color: #235b2a;
+  color: var(--green-deep);
   font-weight: 700;
 }
 
@@ -3462,7 +3512,7 @@ select:focus {
 .topbar .logo {
   font-size: 22px;
   font-weight: 700;
-  color: #63D671;       /* zelfde groen */
+  color: var(--green);       /* zelfde groen */
 }
 
 .topbar-action-btn {
@@ -3879,26 +3929,6 @@ select:focus {
   margin-top: 0;
 }
 
-.weekmenu-preview-modal-content .modal-close {
-  z-index: 20;
-  top: 10px;
-  right: 12px;
-  padding: 4px;
-  min-width: 0;
-  width: auto;
-  height: auto;
-  color: #2f3a35;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  font-size: 28px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .weekmenu-preview-modal-content .recipe-card {
   background: transparent;
   box-shadow: none;
@@ -3915,35 +3945,6 @@ select:focus {
   width: min(900px, 96vw);
   max-width: min(900px, 96vw);
   padding: 24px;
-}
-
-/* Wit rondje met rood kruisje: nette, herkenbare sluitknop die zowel over de
-   witte kaart als over een foto goed zichtbaar blijft. */
-.random-recipe-modal-content .modal-close {
-  z-index: 20;
-  top: 14px;
-  right: 14px;
-  width: 32px;
-  height: 32px;
-  min-width: 0;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #e0392b;
-  background: #ffffff;
-  border: 1px solid #ecd3d0;
-  border-radius: 50%;
-  box-shadow: none;
-  font-size: 15px;
-  line-height: 1;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-
-.random-recipe-modal-content .modal-close:hover {
-  background: #e0392b;
-  border-color: #e0392b;
-  color: #ffffff;
 }
 
 /* Soepele 'pop'-animatie wanneer de random-popup verschijnt */
@@ -4056,15 +4057,35 @@ select:focus {
   margin: 0;
 }
 
+/* Uniforme sluitknop voor álle modals: wit rondje met rood kruis en een
+   subtiele border; bij hover vult het rondje rood met een wit kruis. */
 .modal-close {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  background: none;
-  border: none;
-  font-size: 20px;
-  color: #999;
+  top: 14px;
+  right: 14px;
+  z-index: 20;
+  width: 32px;
+  height: 32px;
+  min-width: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--danger);
+  background: #ffffff;
+  border: 1px solid #ecd3d0;
+  border-radius: 50%;
+  box-shadow: none;
+  font-size: 15px;
+  line-height: 1;
   cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.modal-close:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #ffffff;
 }
 
 /* Tabs boven het formulier */
@@ -4086,7 +4107,7 @@ select:focus {
 }
 
 .auth-tab.active {
-  background: linear-gradient(135deg,#63D671 0%,#4ac858 100%);
+  background: linear-gradient(135deg,var(--green) 0%,var(--green-hover) 100%);
   color: #fff;
 }
 
@@ -4096,13 +4117,13 @@ select:focus {
 /* Meldingen */
 .auth-msg { margin-top: 16px; font-weight: 600; }
 .auth-msg.error  { color: #c94f73; text-align:center; }
-.auth-msg.success{ color:#63D671; text-align:center; }
+.auth-msg.success{ color:var(--green); text-align:center; }
 
 
 .logged-msg {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #63D671;               /* zelfde groen */
+  color: var(--green);               /* zelfde groen */
   display: flex;
   align-items: center;
   gap: 6px;
@@ -4161,7 +4182,7 @@ select:focus {
 }
 
 /* ---------- AUTH COMMON ---------- */
-.auth-title   { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; color:#235b2a; }
+.auth-title   { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; color:var(--green-deep); }
 .auth-sub     { font-size: .95rem; color:#3a3a3a; margin-bottom: 24px; }
 .auth-form    { display:flex; flex-direction:column; gap:16px; }
 
@@ -4179,7 +4200,7 @@ select:focus {
 .primary-btn {
   padding:12px 0; border:none; border-radius:var(--btn-radius);
   font-size:1rem; font-weight:600; color:#fff;
-  background:#4eca5c;         
+  background:var(--green);         
   box-shadow:none;
   cursor:pointer; transition:.15s;
   font-family: 'EatingPasta', Arial, sans-serif;
@@ -4251,19 +4272,12 @@ select:focus {
   width: 16px;
   height: 16px;
   flex: 0 0 auto;
-  accent-color: #4ac858;
+  accent-color: var(--green-hover);
   cursor: pointer;
 }
 .auth-consent a {
-  color: #235b2a;
+  color: var(--green-deep);
   font-weight: 600;
-}
-
-/* 1. Close-icoon beter uitlijnen */
-.modal-close {
-  top: 12px;          /* i.p.v. 16px → iets hoger */
-  right: 12px;        /* i.p.v. 16px → iets dichter op de rand */
-  font-size: 22px;    /* net iets groter voor visuele balans */
 }
 
 /* 2. Meer lucht in het auth-scherm */
@@ -4286,12 +4300,6 @@ select:focus {
 
   .auth-pane {
     padding: 16px 20px 24px;
-  }
-  
-  .modal-close {
-    top: 8px;
-    right: 8px;
-    font-size: 20px;
   }
 }
 /* hoofd-titels & subtitels iets verder uit elkaar */
@@ -4395,7 +4403,7 @@ select:focus {
 .hiw-icon{
   flex: 0 0 auto;
   font-size: 1.4rem;
-  color: #4ac858;
+  color: var(--green-hover);
   line-height: 1;
 }
 
@@ -4424,9 +4432,9 @@ select:focus {
   min-width: 40px;
   min-height: 40px;
   border-radius: 50%;
-  border: 2px solid #235b2a;
+  border: 2px solid var(--green-deep);
   background: #fff;
-  color: #235b2a;
+  color: var(--green-deep);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -4464,7 +4472,7 @@ select:focus {
   display: block;
 }
 .hiw-dot.active{
-  background: #4ac858;
+  background: var(--green-hover);
 }
 
 /* Mobile: pijlen verbergen, swipen volstaat — viewport neemt volledige breedte */
@@ -4489,8 +4497,8 @@ select:focus {
     padding: 16px 34px;
     border-radius: 999px;
     background: #fff;
-    color: #235b2a;
-    border: 2px solid #235b2a;
+    color: var(--green-deep);
+    border: 2px solid var(--green-deep);
     margin: 0 0 10px 0;
     box-shadow: none;
     font-size: clamp(1.8rem, 1.2vw, 1.6rem);
@@ -4513,7 +4521,7 @@ select:focus {
   padding: 16px 28px;
   border-radius: var(--btn-radius);
   font-weight: 600;
-  background: linear-gradient(135deg, #63D671 0%, #4ac858 100%);
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-hover) 100%);
   color: #fff;
   box-shadow: none;
   transition: transform .15s, box-shadow .15s;
@@ -4582,13 +4590,13 @@ select:focus {
 }
 
 .footer-current {
-  color: #235b2a;
+  color: var(--green-deep);
   font-size: 0.95rem;
   font-weight: 600;
 }
 
 .footer-links a {
-  color: #235b2a;
+  color: var(--green-deep);
   text-decoration: none;
   font-size: 0.95rem;
   font-weight: 600;
@@ -4597,7 +4605,7 @@ select:focus {
 }
 
 .footer-links a:hover {
-  border-color: #235b2a;
+  border-color: var(--green-deep);
 }
 
 @media (max-width: 767px) {

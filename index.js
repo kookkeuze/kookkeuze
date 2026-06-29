@@ -826,7 +826,7 @@ async function loadSharePanelData() {
     ? members.map(m => `
         <div class="share-item">
           <span>${m.email}${m.role === 'admin' ? ' (beheerder)' : ''}</span>
-          ${m.role === 'admin' ? '' : `<button type="button" class="pink-btn share-remove-member-btn" data-member-id="${m.member_user_id}">Intrekken</button>`}
+          ${m.role === 'admin' ? '' : `<button type="button" class="accent-btn share-remove-member-btn" data-member-id="${m.member_user_id}">Intrekken</button>`}
         </div>`).join('')
     : '<p class="share-empty">Nog geen gedeelde leden.</p>';
 
@@ -834,7 +834,7 @@ async function loadSharePanelData() {
     ? invites.map(inv => `
         <div class="share-item">
           <span>${inv.invite_email}</span>
-          <button type="button" class="pink-btn share-cancel-invite-btn" data-invite-id="${inv.id}">Intrekken</button>
+          <button type="button" class="accent-btn share-cancel-invite-btn" data-invite-id="${inv.id}">Intrekken</button>
         </div>`).join('')
     : '<p class="share-empty">Geen openstaande uitnodigingen.</p>';
 }
@@ -1042,7 +1042,7 @@ function renderRecipePackStep() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Pakket toevoegen mislukt.');
+        showRecipeAddedToast(data.error || 'Pakket toevoegen mislukt.', 'error');
       } else {
         recipePackStats.added += 1;
         recipePackStats.inserted += Number(data.inserted || 0);
@@ -1052,7 +1052,7 @@ function renderRecipePackStep() {
         renderPlannerSearchResults();
       }
     } catch (_err) {
-      alert('Pakket toevoegen mislukt.');
+      showRecipeAddedToast('Pakket toevoegen mislukt.', 'error');
     } finally {
       recipePackIndex += 1;
       renderRecipePackStep();
@@ -1077,7 +1077,7 @@ async function openRecipePackFlow(options = {}) {
   }
   recipePackList = await fetchRecipePacks();
   if (!recipePackList.length) {
-    alert('Er zijn nu geen pakketten beschikbaar.');
+    showRecipeAddedToast('Er zijn nu geen pakketten beschikbaar.', 'error');
     return;
   }
   recipePackIndex = 0;
@@ -1446,7 +1446,7 @@ async function ensureInternetRecipeSaved(recipe) {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    alert(data.error || 'Recept toevoegen mislukt.');
+    showRecipeAddedToast(data.error || 'Recept toevoegen mislukt.', 'error');
     return null;
   }
 
@@ -1558,7 +1558,7 @@ function showRecipes(arr, options = {}) {
         <div class="empty-state">
           <p class="empty-state-title">Je database is nog leeg</p>
           <p class="empty-state-sub">Voeg je eerste recept toe en begin met je persoonlijke receptendatabase.</p>
-          <button class="pink-btn empty-state-add-btn">Voeg een recept toe</button>
+          <button class="accent-btn empty-state-add-btn">Voeg een recept toe</button>
         </div>`;
       resultDiv.querySelector('.empty-state-add-btn').addEventListener('click', () => {
         activateTab('#voegReceptToe');
@@ -1820,7 +1820,7 @@ recipeNoteSaveBtn?.addEventListener('click', async () => {
     }
   } catch (err) {
     console.error(err);
-    alert(err.message || 'Kon notitie niet opslaan.');
+    showRecipeAddedToast(err.message || 'Kon notitie niet opslaan.', 'error');
   } finally {
     if (recipeNoteSaveBtn) recipeNoteSaveBtn.disabled = false;
     if (recipeNoteDeleteBtn) recipeNoteDeleteBtn.disabled = false;
@@ -1840,7 +1840,7 @@ recipeNoteDeleteBtn?.addEventListener('click', async () => {
     }
   } catch (err) {
     console.error(err);
-    alert(err.message || 'Kon notitie niet verwijderen.');
+    showRecipeAddedToast(err.message || 'Kon notitie niet verwijderen.', 'error');
   } finally {
     if (recipeNoteSaveBtn) recipeNoteSaveBtn.disabled = false;
     if (recipeNoteDeleteBtn) recipeNoteDeleteBtn.disabled = false;
@@ -2408,7 +2408,7 @@ function renderWeekMenuGrid() {
           <div class="weekmenu-slot-item weekmenu-slot-item-filled${primaryFilledClass}">
             <div class="weekmenu-slot-head">
               <p class="weekmenu-slot-name">${slotLabel}</p>
-              <button type="button" class="pink-btn weekmenu-clear-btn weekmenu-clear-icon-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Verwijder recept uit ${slotLabel}">
+              <button type="button" class="accent-btn weekmenu-clear-btn weekmenu-clear-icon-btn" data-day="${day}" data-slot="${slotKey}" aria-label="Verwijder recept uit ${slotLabel}">
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
@@ -2693,7 +2693,7 @@ async function assignRecipeToPlanner(recipeId, dayOfWeek, slot) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error) {
-    alert(data.error || 'Opslaan in weekmenu mislukt.');
+    showRecipeAddedToast(data.error || 'Opslaan in weekmenu mislukt.', 'error');
     return;
   }
   await loadWeekMenu();
@@ -2714,10 +2714,10 @@ async function importRecipeBetweenDatabases(recipeId, targetDbOwnerId, successMe
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    alert(data.error || 'Importeren mislukt.');
+    showRecipeAddedToast(data.error || 'Importeren mislukt.', 'error');
     return;
   }
-  alert(successMessage);
+  showRecipeAddedToast(successMessage);
 }
 
 async function handleImportRecipe(recipeId, importMode) {
@@ -2734,7 +2734,7 @@ async function handleImportRecipe(recipeId, importMode) {
   if (importMode === 'to-shared') {
     const sharedTargets = getSharedDatabaseTargets();
     if (!sharedTargets.length) {
-      alert('Je hebt nog geen gedeelde databases om naartoe te importeren.');
+      showRecipeAddedToast('Je hebt nog geen gedeelde databases om naartoe te importeren.', 'error');
       return;
     }
 
@@ -2742,20 +2742,18 @@ async function handleImportRecipe(recipeId, importMode) {
     if (sharedTargets.length === 1) {
       targetOwnerId = Number(sharedTargets[0].owner_user_id);
     } else {
-      const options = sharedTargets
-        .map((db, idx) => `${idx + 1}. ${db.owner_email}`)
-        .join('\n');
-      const answer = window.prompt(
-        `Kies de gedeelde database waar je naartoe wilt importeren:\n${options}\n\nVul het nummer in:`,
-        '1'
-      );
-      if (!answer) return;
-      const choice = Number(answer);
-      if (!Number.isInteger(choice) || choice < 1 || choice > sharedTargets.length) {
-        alert('Ongeldige keuze.');
-        return;
-      }
-      targetOwnerId = Number(sharedTargets[choice - 1].owner_user_id);
+      targetOwnerId = await openChoiceModal({
+        title: 'Importeren naar gedeelde database',
+        message: 'Kies de gedeelde database waar je dit recept naartoe wilt importeren.',
+        choices: [
+          ...sharedTargets.map(db => ({
+            label: db.owner_email,
+            value: Number(db.owner_user_id),
+            variant: 'green'
+          })),
+          { label: 'Annuleer', value: null, variant: 'ghost' }
+        ]
+      });
     }
 
     if (!targetOwnerId) return;
@@ -2775,7 +2773,7 @@ async function clearPlannerSlot(dayOfWeek, slot) {
     }))
   });
   if (!res.ok) {
-    alert('Verwijderen uit weekmenu mislukt.');
+    showRecipeAddedToast('Verwijderen uit weekmenu mislukt.', 'error');
     return;
   }
   await loadWeekMenu();
@@ -2930,11 +2928,15 @@ if (installAppBtn) {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
     if (isIos && !isStandalone) {
-      alert('Op iPhone/iPad: tik op Deel en kies Zet op beginscherm.');
+      openChoiceModal({
+        title: 'Toevoegen aan beginscherm',
+        message: 'Tik op de deelknop in Safari en kies "Zet op beginscherm".',
+        choices: [{ label: 'Oké', value: true, variant: 'green' }]
+      });
       return;
     }
 
-    alert('Installeren is nu niet beschikbaar op dit apparaat of in deze browser.');
+    showRecipeAddedToast('Installeren is nu niet beschikbaar op dit apparaat of in deze browser.', 'error');
   });
 }
 
@@ -2953,13 +2955,18 @@ const fetchInfoBtn  = document.getElementById('fetchInfoBtn');
 const homeLogo      = document.getElementById('homeLogo');
 let recipeToastTimer = null;
 
-function showRecipeAddedToast(message) {
+function showRecipeAddedToast(message, type = 'success') {
   if (!recipeAddedToast || !recipeAddedToastText) return;
 
   if (recipeToastTimer) {
     clearTimeout(recipeToastTimer);
     recipeToastTimer = null;
   }
+
+  const isError = type === 'error';
+  recipeAddedToast.classList.toggle('is-error', isError);
+  const iconEl = recipeAddedToast.querySelector('.recipe-toast-icon i');
+  if (iconEl) iconEl.className = isError ? 'fas fa-exclamation-triangle' : 'fas fa-check';
 
   recipeAddedToastText.textContent = message;
   recipeAddedToast.classList.remove('hide', 'to-preview');
@@ -2993,6 +3000,87 @@ function transitionFromToastToRecipePreview(recipe) {
     // 'from-add' wordt weer verwijderd zodra de popup sluit, zodat een gewone
     // random-keuze daarna weer de normale pop-in gebruikt.
   }, 950);
+}
+
+// Generieke, in-stijl dialoog ter vervanging van alert()/confirm()/prompt().
+// Geeft een Promise terug die resolvet met de gekozen waarde (of null bij
+// annuleren/sluiten).
+function openChoiceModal({ title = '', message = '', choices = [] }) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal app-dialog';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+
+    let settled = false;
+    const finish = value => {
+      if (settled) return;
+      settled = true;
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      resolve(value);
+    };
+    const onKey = e => { if (e.key === 'Escape') finish(null); };
+
+    const content = document.createElement('div');
+    content.className = 'modal-content app-dialog-content';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'modal-close';
+    closeBtn.setAttribute('aria-label', 'Sluiten');
+    closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    closeBtn.addEventListener('click', () => finish(null));
+    content.appendChild(closeBtn);
+
+    if (title) {
+      const h = document.createElement('h3');
+      h.className = 'assign-modal-title';
+      h.textContent = title;
+      content.appendChild(h);
+    }
+    if (message) {
+      const p = document.createElement('p');
+      p.className = 'assign-modal-sub';
+      p.textContent = message;
+      content.appendChild(p);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'app-dialog-actions';
+    if (choices.length > 2) actions.classList.add('app-dialog-actions--list');
+    choices.forEach(choice => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = choice.variant === 'accent' ? 'accent-btn'
+        : choice.variant === 'ghost' ? 'overview-view-btn'
+        : 'green-btn';
+      btn.textContent = choice.label;
+      btn.addEventListener('click', () => finish(choice.value));
+      actions.appendChild(btn);
+    });
+    content.appendChild(actions);
+
+    overlay.appendChild(content);
+    overlay.addEventListener('click', e => { if (e.target === overlay) finish(null); });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+
+    actions.querySelector('.green-btn, .accent-btn')?.focus?.();
+  });
+}
+
+// Ja/nee-bevestiging. Resolvet true bij bevestigen, anders false.
+async function openConfirmModal({ title, message = '', confirmLabel = 'Bevestigen', cancelLabel = 'Annuleer', danger = false }) {
+  const result = await openChoiceModal({
+    title,
+    message,
+    choices: [
+      { label: cancelLabel, value: false, variant: 'ghost' },
+      { label: confirmLabel, value: true, variant: danger ? 'accent' : 'green' }
+    ]
+  });
+  return result === true;
 }
 
 const fieldNameToId = {
@@ -3308,7 +3396,7 @@ function renderOverviewPage() {
         <td>${dropdown(timeOpt,  r.time_required, 'Tijd')}</td>
         <td><input class="calories-field" type="number" value="${cals}" /></td>
         <td><button class="green-btn edit-btn">Opslaan</button></td>
-        <td><button class="pink-btn  delete-btn">Verwijder</button></td>
+        <td><button class="accent-btn delete-btn">Verwijder</button></td>
       </tr>`;
     gridHtml += `
       <div class="recipe-card">
@@ -3400,14 +3488,21 @@ function onUpdateRecipe(e){
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(withActiveDatabaseBody(data))
   })
-    .then(()=>alert('Recept bijgewerkt!'))
+    .then(()=>showRecipeAddedToast('Recept bijgewerkt!'))
     .catch(console.error);
 }
 
-function onDeleteRecipe(e){
-  if (!confirm('Weet je zeker dat je dit recept wilt verwijderen?')) return;
+async function onDeleteRecipe(e){
+  const trigger = e.target.closest('tr');
+  const confirmed = await openConfirmModal({
+    title: 'Recept verwijderen?',
+    message: 'Weet je zeker dat je dit recept wilt verwijderen? Dit kan niet ongedaan worden gemaakt.',
+    confirmLabel: 'Verwijderen',
+    danger: true
+  });
+  if (!confirmed) return;
   if (!ensureLoggedInOrNotify()) return;
-  const id = e.target.closest('tr').dataset.id;
+  const id = trigger.dataset.id;
   const params = new URLSearchParams();
   appendActiveDatabaseParam(params);
   fetch(`${API_BASE}/api/recipes/${id}?${params.toString()}`, {
