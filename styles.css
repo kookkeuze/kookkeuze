@@ -3627,6 +3627,15 @@ select:focus {
   display: inline-block;
 }
 
+/* Icoon in de 'Recept pakketten'-knop. */
+.recipe-pack-btn-icon {
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+  vertical-align: -3px;
+  margin-right: 6px;
+}
+
 .install-app-btn {
   color: #2f3740;
 }
