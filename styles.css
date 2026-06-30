@@ -3569,10 +3569,14 @@ select:focus {
   display: block;
 }
 
-/* Eigen SVG-iconen in de menubalk (database, app, persoon) — gelijke maat. */
+/* Eigen SVG-iconen in de menubalk (database, app, persoon) — gelijke maat.
+   !important + max-width/max-height als extra zekerheid tegen cache-races
+   met het width/height-HTML-attribuut of een gecachete oudere SVG. */
 .topbar-icon-img {
-  width: 24px;
-  height: 24px;
+  width: 24px !important;
+  height: 24px !important;
+  max-width: 24px;
+  max-height: 24px;
   object-fit: contain;
   display: block;
 }
