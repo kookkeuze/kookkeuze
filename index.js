@@ -1606,7 +1606,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
           </div>
           <div class="recipe-card-actions">
             <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
-              Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
+              Bekijk&nbsp;recept&nbsp;<img src="icons/externe-link.svg" alt="" class="recipe-link-ext-icon" /></a></p>
             <div class="recipe-secondary-actions">
               ${renderRecipeNoteButton(recipeId, r.url || '', r.title || 'Recept', 'recipe-note-trigger--card')}
               <div class="recipe-export-menu">
@@ -1675,13 +1675,13 @@ function buildRecipeCardsHtml(arr, options = {}) {
             </div>
           </div>
           <div class="recipe-meta-row">
-            <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
-            <span class="recipe-meta-pill"><i class="fas fa-fire"></i> ${r.calories ?? '-'} kcal</span>
+            <span class="recipe-meta-pill"><img src="icons/tijd.svg" alt="" class="recipe-meta-icon" /> ${r.time_required || '-'}</span>
+            <span class="recipe-meta-pill"><img src="icons/kcal.svg" alt="" class="recipe-meta-icon" /> ${r.calories ?? '-'} kcal</span>
           </div>
           <ul>
-            <li><i class="fas fa-utensils"></i> <strong>Soort:</strong> ${r.dish_type || '-'}</li>
-            <li><i class="fas fa-layer-group"></i> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
-            <li><i class="fas fa-bullseye"></i> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
+            <li><img src="icons/soort.svg" alt="" class="recipe-meta-icon" /> <strong>Soort:</strong> ${r.dish_type || '-'}</li>
+            <li><img src="icons/menugang.svg" alt="" class="recipe-meta-icon" /> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
+            <li><img src="icons/doel.svg" alt="" class="recipe-meta-icon" /> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
           </ul>
         </div>
       </div>`;
@@ -2659,15 +2659,15 @@ function openWeekmenuPreviewModal(recipeId, fallbackRecipe = null) {
         <div class="recipe-card-content">
           <h3>${displayTitle}</h3>
           <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
-            Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
+            Bekijk&nbsp;recept&nbsp;<img src="icons/externe-link.svg" alt="" class="recipe-link-ext-icon" /></a></p>
           <div class="recipe-meta-row">
-            <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${escapeHtml(recipe.time_required || '-')}</span>
-            <span class="recipe-meta-pill"><i class="fas fa-fire"></i> ${escapeHtml(recipe.calories ?? '-')} kcal</span>
+            <span class="recipe-meta-pill"><img src="icons/tijd.svg" alt="" class="recipe-meta-icon" /> ${escapeHtml(recipe.time_required || '-')}</span>
+            <span class="recipe-meta-pill"><img src="icons/kcal.svg" alt="" class="recipe-meta-icon" /> ${escapeHtml(recipe.calories ?? '-')} kcal</span>
           </div>
           <ul>
-            <li><i class="fas fa-utensils"></i> <strong>Soort:</strong> ${escapeHtml(recipe.dish_type || '-')}</li>
-            <li><i class="fas fa-layer-group"></i> <strong>Menugang:</strong> ${escapeHtml(recipe.meal_category || '-')}</li>
-            <li><i class="fas fa-bullseye"></i> <strong>Doel gerecht:</strong> ${escapeHtml(recipe.meal_type || '-')}</li>
+            <li><img src="icons/soort.svg" alt="" class="recipe-meta-icon" /> <strong>Soort:</strong> ${escapeHtml(recipe.dish_type || '-')}</li>
+            <li><img src="icons/menugang.svg" alt="" class="recipe-meta-icon" /> <strong>Menugang:</strong> ${escapeHtml(recipe.meal_category || '-')}</li>
+            <li><img src="icons/doel.svg" alt="" class="recipe-meta-icon" /> <strong>Doel gerecht:</strong> ${escapeHtml(recipe.meal_type || '-')}</li>
           </ul>
         </div>
       </div>
@@ -3439,15 +3439,15 @@ function renderOverviewPage() {
         <div class="recipe-card-content">
           <h3>${r.title}</h3>
           <p class="recipe-link"><a href="${r.url}" target="_blank" class="ext-link">
-            Bekijk&nbsp;recept&nbsp;<i class="fas fa-external-link-alt"></i></a></p>
+            Bekijk&nbsp;recept&nbsp;<img src="icons/externe-link.svg" alt="" class="recipe-link-ext-icon" /></a></p>
           <div class="recipe-meta-row">
-            <span class="recipe-meta-pill"><i class="far fa-clock"></i> ${r.time_required || '-'}</span>
-            <span class="recipe-meta-pill"><i class="fas fa-fire"></i> ${r.calories ?? '-'} kcal</span>
+            <span class="recipe-meta-pill"><img src="icons/tijd.svg" alt="" class="recipe-meta-icon" /> ${r.time_required || '-'}</span>
+            <span class="recipe-meta-pill"><img src="icons/kcal.svg" alt="" class="recipe-meta-icon" /> ${r.calories ?? '-'} kcal</span>
           </div>
           <ul>
-            <li><i class="fas fa-utensils"></i> <strong>Soort:</strong> ${r.dish_type || '-'}</li>
-            <li><i class="fas fa-layer-group"></i> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
-            <li><i class="fas fa-bullseye"></i> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
+            <li><img src="icons/soort.svg" alt="" class="recipe-meta-icon" /> <strong>Soort:</strong> ${r.dish_type || '-'}</li>
+            <li><img src="icons/menugang.svg" alt="" class="recipe-meta-icon" /> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
+            <li><img src="icons/doel.svg" alt="" class="recipe-meta-icon" /> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
           </ul>
         </div>
       </div>`;

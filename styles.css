@@ -3590,6 +3590,44 @@ select:focus {
   margin-right: 8px;
 }
 
+/* Eigen iconen op de receptenkaart (Soort/Menugang/Doel/Tijd/Kcal). */
+.recipe-meta-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* Externe-link-icoon in de groene 'Bekijk recept'-knop. Het icoon is donker
+   getekend; op de groene knop maken we het wit zodat het bij de witte tekst past. */
+.recipe-link-ext-icon {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: inline-block;
+  filter: brightness(0) invert(1);
+}
+
+/* Stap-badges in 'Hoe werkt het' (groene cirkel met wit icoon). */
+.hiw-icon-img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  display: block;
+}
+
+/* Vinkje-badges in de voordelenbalk (USP's). */
+.benefit-check-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
 .install-app-btn {
   color: #2f3740;
 }
