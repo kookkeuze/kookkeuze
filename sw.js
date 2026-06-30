@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kookkeuze-static-v20';
+const CACHE_NAME = 'kookkeuze-static-v21';
 
 // Bestanden die altijd vers opgehaald worden (network-first)
 const NETWORK_FIRST = ['/', '/index.html', '/styles.css', '/index.js'];
