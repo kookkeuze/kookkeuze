@@ -208,6 +208,11 @@ html {
   scrollbar-gutter: stable;
   overflow-y: scroll;
   overflow-x: hidden;
+  /* Forceer een lichte achtergrond op de root: anders kleurt iOS (in
+     donkere modus, standalone PWA) de safe-area/overscroll donker -- de
+     "gekke donkere balk" bovenaan op de telefoon. */
+  background-color: #f8f9fa;
+  color-scheme: light;
 }
 
 /* Container voor de hele pagina */
