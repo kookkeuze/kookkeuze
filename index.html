@@ -472,11 +472,20 @@
       </div>
 
       <div id="weekmenuGrid" class="weekmenu-grid"></div>
+    </div>
 
-      <div class="weekmenu-search">
-        <input id="weekmenuSearchInput" type="text" placeholder="Zoek in je recepten om te plannen..." />
-        <div id="weekmenuSearchResults" class="weekmenu-search-results"></div>
-        <div id="weekmenuSearchPagination" class="overview-pagination"></div>
+    <div id="weekmenuSearchModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content weekmenu-search-modal-content">
+        <button id="closeWeekmenuSearchModal" class="modal-close" aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+        <h3 class="weekmenu-search-modal-title">Kies een recept</h3>
+        <p id="weekmenuSearchModalSub" class="weekmenu-search-modal-sub"></p>
+        <div class="weekmenu-search">
+          <input id="weekmenuSearchInput" type="text" placeholder="Zoek in je recepten om te plannen..." />
+          <div id="weekmenuSearchResults" class="weekmenu-search-results"></div>
+          <div id="weekmenuSearchPagination" class="overview-pagination"></div>
+        </div>
       </div>
     </div>
 

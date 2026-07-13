@@ -2105,7 +2105,9 @@ const weekNextBtn = document.getElementById('weekNextBtn');
 const weekmenuSearchInput = document.getElementById('weekmenuSearchInput');
 const weekmenuSearchResults = document.getElementById('weekmenuSearchResults');
 const weekmenuSearchPagination = document.getElementById('weekmenuSearchPagination');
-const weekmenuSearchSection = document.querySelector('.weekmenu-search');
+const weekmenuSearchModal = document.getElementById('weekmenuSearchModal');
+const closeWeekmenuSearchModalBtn = document.getElementById('closeWeekmenuSearchModal');
+const weekmenuSearchModalSub = document.getElementById('weekmenuSearchModalSub');
 const assignModal = document.getElementById('assignModal');
 const closeAssignModal = document.getElementById('closeAssignModal');
 const assignModalRecipeTitle = document.getElementById('assignModalRecipeTitle');
@@ -2555,14 +2557,40 @@ function renderWeekMenuGrid() {
     btn.addEventListener('click', () => {
       plannerSuggestedDay = Number(btn.dataset.day || '1');
       plannerSuggestedSlot = btn.dataset.slot || 'dinner';
-      if (weekmenuSearchInput) {
-        weekmenuSearchInput.value = '';
-        renderPlannerSearchResults();
-      }
-      weekmenuSearchSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      requestAnimationFrame(() => weekmenuSearchInput?.focus({ preventScroll: true }));
+      openWeekmenuSearchModal(plannerSuggestedDay, plannerSuggestedSlot);
     });
   });
+}
+
+const WEEKMENU_SLOT_LABELS = {
+  breakfast: 'Ontbijt',
+  lunch: 'Lunch',
+  snack: 'Tussendoor',
+  dinner: 'Avondeten'
+};
+
+function openWeekmenuSearchModal(day, slot) {
+  if (!weekmenuSearchModal) return;
+  const dayName = plannerDays[Number(day) - 1] || '';
+  const slotLabel = WEEKMENU_SLOT_LABELS[slot] || '';
+  if (weekmenuSearchModalSub) {
+    weekmenuSearchModalSub.textContent = dayName && slotLabel ? `${dayName} · ${slotLabel}` : '';
+  }
+  plannerSearchCurrentPage = 1;
+  if (weekmenuSearchInput) weekmenuSearchInput.value = '';
+  renderPlannerSearchResults();
+  weekmenuSearchModal.classList.remove('hidden');
+  weekmenuSearchModal.setAttribute('aria-hidden', 'false');
+  // Scroll de resultaten weer naar boven bij (her)openen.
+  weekmenuSearchModal.querySelector('.modal-content')?.scrollTo({ top: 0 });
+  requestAnimationFrame(() => weekmenuSearchInput?.focus({ preventScroll: true }));
+}
+
+function closeWeekmenuSearchModalPanel() {
+  if (!weekmenuSearchModal) return;
+  closeAllRecipeExportMenus();
+  weekmenuSearchModal.classList.add('hidden');
+  weekmenuSearchModal.setAttribute('aria-hidden', 'true');
 }
 
 function renderPlannerSearchResults() {
@@ -2855,6 +2883,8 @@ function bindWeekPlannerUi() {
     const btn = e.target.closest('.weekmenu-assign-btn');
     if (btn) {
       closeAllRecipeExportMenus();
+      // Sluit de zoek-popup zodat het inplanvenster op de kalender terugvalt.
+      closeWeekmenuSearchModalPanel();
       openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
       return;
     }
@@ -2866,7 +2896,7 @@ function bindWeekPlannerUi() {
     if (!btn) return;
     plannerSearchCurrentPage = Number(btn.dataset.page || '1');
     renderPlannerSearchResults();
-    weekmenuSearchSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    weekmenuSearchModal?.querySelector('.modal-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   });
   weekPrevBtn?.addEventListener('click', async () => {
     plannerWeekStart = isoPlusDays(plannerWeekStart, -7);
@@ -2881,6 +2911,10 @@ function bindWeekPlannerUi() {
     await loadWeekMenu();
   });
 
+  closeWeekmenuSearchModalBtn?.addEventListener('click', closeWeekmenuSearchModalPanel);
+  weekmenuSearchModal?.addEventListener('click', e => {
+    if (e.target === weekmenuSearchModal) closeWeekmenuSearchModalPanel();
+  });
   closeAssignModal?.addEventListener('click', closeAssignModalPanel);
   assignModal?.addEventListener('click', e => {
     if (e.target === assignModal) closeAssignModalPanel();
@@ -2899,6 +2933,8 @@ function bindWeekPlannerUi() {
     if (e.key !== 'Escape') return;
     if (assignModal && !assignModal.classList.contains('hidden')) {
       closeAssignModalPanel();
+    } else if (weekmenuSearchModal && !weekmenuSearchModal.classList.contains('hidden')) {
+      closeWeekmenuSearchModalPanel();
     }
     if (weekmenuPreviewModal && !weekmenuPreviewModal.classList.contains('hidden')) {
       closeWeekmenuPreviewPanel();

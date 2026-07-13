@@ -3904,6 +3904,37 @@ select:focus {
   padding: 24px;
 }
 
+.modal-content.weekmenu-search-modal-content {
+  width: min(860px, 96vw);
+  max-width: min(860px, 96vw);
+  padding: 24px;
+}
+
+.weekmenu-search-modal-title {
+  margin: 0 32px 4px 0;
+  font-size: 20px;
+  color: var(--green-hover, #2f6a37);
+}
+
+.weekmenu-search-modal-sub {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7c70;
+}
+
+.weekmenu-search-modal-sub:empty {
+  display: none;
+}
+
+/* Binnen de popup geen dubbele omkadering: het modal-venster is al de kaart. */
+.weekmenu-search-modal-content .weekmenu-search {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
 .modal-content.recipe-pack-modal-content {
   width: min(560px, 96vw);
   max-width: min(560px, 96vw);
