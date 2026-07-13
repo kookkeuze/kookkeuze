@@ -34,6 +34,7 @@ h2 {
   --accent-color: #d97a45;        /* oranje accent */
   --accent-color-hover: #c96936;  /* oranje accent hover */
   --accent-strong: #c2632c;       /* oranje voor kleine iconen (meer contrast) */
+  --weekmenu-orange: #d18052;     /* oranje thema weekmenu (gelijk aan .benefit .highlight) */
 
   --danger: #e0392b;         /* rood voor sluiten/verwijderen */
   --danger-hover: #c5301f;   /* rood hover */
@@ -1033,6 +1034,19 @@ select:focus {
   background: #eef6ef;
   border-color: var(--green-deep);
   color: var(--green-deep);
+}
+
+/* Weekmenu: vorige/volgende week in het oranje thema. */
+.weekmenu-toolbar .overview-view-btn {
+  background: var(--weekmenu-orange);
+  border-color: var(--accent-color-hover);
+  color: #ffffff;
+}
+
+.weekmenu-toolbar .overview-view-btn:hover {
+  background: var(--accent-color-hover);
+  border-color: var(--accent-strong);
+  color: #ffffff;
 }
 
 /* Tabel container aanpassingen */
@@ -2254,7 +2268,7 @@ select:focus {
 .weekmenu-day-card {
   border: 1px solid var(--accent-color-hover);
   border-radius: var(--radius-md);
-  background: var(--accent-color);
+  background: var(--weekmenu-orange);
   display: grid;
   grid-template-rows: auto 1fr;
   overflow: hidden;
