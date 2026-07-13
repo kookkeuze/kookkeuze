@@ -2306,7 +2306,6 @@ select:focus {
 
 .weekmenu-slot-item {
   border: none;
-  border-top: 1px solid var(--field-border);
   border-bottom: 1px solid var(--field-border);
   border-radius: 0;
   padding: 8px;
@@ -2315,6 +2314,11 @@ select:focus {
   align-content: start;
   background: #ffffff;
   min-height: 0;
+}
+
+/* Geen streep onder het laatste vakje (dus niet helemaal onderaan). */
+.weekmenu-day-body .weekmenu-slot-item:last-child {
+  border-bottom: none;
 }
 
 .weekmenu-slot-item-primary {
