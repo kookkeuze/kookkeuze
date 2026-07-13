@@ -1619,7 +1619,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
                   aria-label="Open exportmenu voor ${safeTitle}"
                 >
                   <i class="fas fa-share-alt" aria-hidden="true"></i>
-                  <span>Exporteer</span>
+                  <span>Toevoegen aan...</span>
                   <i class="fas fa-chevron-down export-chevron" aria-hidden="true"></i>
                 </button>
                 <div class="recipe-export-dropdown hidden" data-export-menu>
@@ -1635,7 +1635,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
                       data-recipe-time-required="${safeTimeRequired}"
                       data-recipe-calories="${safeCalories}"
                     >
-                      <span class="export-option-icon" aria-hidden="true"><i class="fas fa-calendar-plus"></i></span>
+                      <span class="export-option-icon" aria-hidden="true"><img src="icons/plan-weekmenu.svg" alt="" class="export-option-icon-img" /></span>
                       <span>Plan in weekmenu</span>
                     </button>
                     <button
@@ -1649,25 +1649,25 @@ function buildRecipeCardsHtml(arr, options = {}) {
                       data-recipe-time-required="${safeTimeRequired}"
                       data-recipe-calories="${safeCalories}"
                     >
-                      <span class="export-option-icon" aria-hidden="true"><i class="fas fa-database"></i></span>
+                      <span class="export-option-icon" aria-hidden="true"><img src="icons/toevoegen-database.svg" alt="" class="export-option-icon-img" /></span>
                       <span>Voeg toe aan database</span>
                     </button>
                   ` : `
                     <button type="button" class="recipe-export-option plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">
-                      <span class="export-option-icon" aria-hidden="true"><i class="fas fa-calendar-plus"></i></span>
+                      <span class="export-option-icon" aria-hidden="true"><img src="icons/plan-weekmenu.svg" alt="" class="export-option-icon-img" /></span>
                       <span>Plan in weekmenu</span>
                     </button>
                     ${importMode ? `<button type="button" class="recipe-export-option import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">
-                      <span class="export-option-icon" aria-hidden="true"><i class="fas fa-database"></i></span>
+                      <span class="export-option-icon" aria-hidden="true"><img src="icons/toevoegen-database.svg" alt="" class="export-option-icon-img" /></span>
                       <span>${importLabel}</span>
                     </button>` : ''}
                   `}
                   <button type="button" class="recipe-export-option notes-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                    <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
+                    <span class="notes-button-mark" aria-hidden="true"><img src="icons/notities.svg" alt="" class="export-option-icon-img" /></span>
                     <span>Notities</span>
                   </button>
                   <button type="button" class="recipe-export-option bring-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                    <span class="export-option-icon" aria-hidden="true"><i class="fas fa-basket-shopping"></i></span>
+                    <span class="export-option-icon" aria-hidden="true"><img src="icons/bring.svg" alt="" class="export-option-icon-img" /></span>
                     <span>Stuur naar Bring</span>
                   </button>
                 </div>
@@ -2644,24 +2644,24 @@ function renderPlannerSearchResults() {
               aria-label="Open exportmenu voor ${safeTitle}"
             >
               <i class="fas fa-share-alt" aria-hidden="true"></i>
-              <span>Exporteer</span>
+              <span>Toevoegen aan...</span>
               <i class="fas fa-chevron-down export-chevron" aria-hidden="true"></i>
             </button>
             <div class="recipe-export-dropdown hidden" data-export-menu>
               <button type="button" class="recipe-export-option weekmenu-assign-btn" data-recipe-id="${recipe.id}" data-recipe-title="${safeTitle}">
-                <span class="export-option-icon" aria-hidden="true"><i class="fas fa-calendar-plus"></i></span>
+                <span class="export-option-icon" aria-hidden="true"><img src="icons/plan-weekmenu.svg" alt="" class="export-option-icon-img" /></span>
                 <span>Plan in weekmenu</span>
               </button>
               ${importMode ? `<button type="button" class="recipe-export-option weekmenu-import-btn" data-recipe-id="${recipe.id}" data-import-mode="${importMode}">
-                <span class="export-option-icon" aria-hidden="true"><i class="fas fa-database"></i></span>
+                <span class="export-option-icon" aria-hidden="true"><img src="icons/toevoegen-database.svg" alt="" class="export-option-icon-img" /></span>
                 <span>${importLabel}</span>
               </button>` : ''}
               <button type="button" class="recipe-export-option notes-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                <span class="notes-button-mark" aria-hidden="true"><i class="fas fa-note-sticky"></i></span>
+                <span class="notes-button-mark" aria-hidden="true"><img src="icons/notities.svg" alt="" class="export-option-icon-img" /></span>
                 <span>Notities</span>
               </button>
               <button type="button" class="recipe-export-option bring-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                <span class="export-option-icon" aria-hidden="true"><i class="fas fa-basket-shopping"></i></span>
+                <span class="export-option-icon" aria-hidden="true"><img src="icons/bring.svg" alt="" class="export-option-icon-img" /></span>
                 <span>Stuur naar Bring</span>
               </button>
             </div>

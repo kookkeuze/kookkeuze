@@ -1769,6 +1769,14 @@ select:focus {
   font-size: 10px;
 }
 
+/* Eigen SVG-iconen in de opties van het 'Toevoegen aan...'-menu. */
+.export-option-icon-img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  display: block;
+}
+
 .recipe-note-trigger {
   min-width: 0;
   padding: 5px 10px;
