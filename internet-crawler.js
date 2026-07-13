@@ -279,6 +279,37 @@ function slugToTitle(rawUrl) {
   }
 }
 
+// Woorden die duiden op een verzamel-/lijstpagina ("10 beste tortilla recepten")
+// in plaats van één enkel recept. Bewust het meervoud, zodat losse recepten
+// ("Tortilla met kip") niet worden geraakt.
+const ROUNDUP_NOUNS = '(?:recepten|gerechten|varianten|variaties|idee[eë]n|manieren)';
+const ROUNDUP_SUPERLATIVES = '(?:beste|lekkerste|makkelijkste|snelste|populairste|favoriete|heerlijkste|leukste|top)';
+const ROUNDUP_NUMBERED_RE = new RegExp(`\\b\\d{1,3}\\s*x?\\b[a-zà-ÿ0-9\\s&'’.-]*?\\b${ROUNDUP_NOUNS}\\b`, 'i');
+const ROUNDUP_SUPERLATIVE_RE = new RegExp(`\\b${ROUNDUP_SUPERLATIVES}\\b[a-zà-ÿ0-9\\s&'’.-]*?\\b${ROUNDUP_NOUNS}\\b`, 'i');
+const ROUNDUP_TOP_RE = /\btop[\s-]?\d{1,3}\b/i;
+
+function textLooksLikeRoundup(rawText) {
+  const text = String(rawText || '').toLowerCase().trim();
+  if (!text) return false;
+  return ROUNDUP_NUMBERED_RE.test(text) || ROUNDUP_SUPERLATIVE_RE.test(text) || ROUNDUP_TOP_RE.test(text);
+}
+
+function lastUrlSegmentText(rawUrl) {
+  try {
+    const segment = decodeURIComponent(new URL(rawUrl).pathname).split('/').filter(Boolean).pop() || '';
+    return segment.replace(/\.[a-z0-9]+$/i, '').replace(/[-_]+/g, ' ');
+  } catch {
+    return '';
+  }
+}
+
+// Herkent verzamel-/lijstartikelen op basis van titel én de laatste URL-segmenten,
+// zodat "de 10 beste tortilla recepten" nooit als los recept wordt aangeboden.
+function looksLikeRecipeRoundup(recipeLike) {
+  if (!recipeLike) return false;
+  return textLooksLikeRoundup(recipeLike.title) || textLooksLikeRoundup(lastUrlSegmentText(recipeLike.url));
+}
+
 function decodeXmlEntities(value) {
   return String(value || '')
     .replace(/&amp;/g, '&')
@@ -384,6 +415,9 @@ function isRecipeUrlForSite(site, rawUrl) {
   if (Array.isArray(site.recipePathExcludes) && site.recipePathExcludes.some(part => pathname.includes(String(part).toLowerCase()))) {
     return false;
   }
+
+  // Verzamel-/lijstpagina's ("10-beste-tortilla-recepten") uitsluiten.
+  if (looksLikeRecipeRoundup({ url: rawUrl })) return false;
 
   const includeParts = Array.isArray(site.recipePathIncludes) && site.recipePathIncludes.length
     ? site.recipePathIncludes
@@ -665,6 +699,13 @@ async function crawlInternetRecipeIndex({ fetchRecipePayload, log = () => {} }) 
 
           const normalizedUrl = normalizeUrl(recipeUrl);
           if (!normalizedUrl || seenUrls.has(normalizedUrl)) return null;
+
+          // Titel kan pas na het ophalen blijken een verzamelartikel te zijn.
+          if (looksLikeRecipeRoundup({ title: payload?.title, url: normalizedUrl })) {
+            summary.failedRecipes += 1;
+            return null;
+          }
+
           seenUrls.add(normalizedUrl);
           summary.indexedRecipes += 1;
           return buildRecipeEntry(site, normalizedUrl, payload);
@@ -706,5 +747,6 @@ module.exports = {
   crawlInternetRecipeIndex,
   loadInternetRecipeIndexSync,
   getEmptyCrawlerIndex,
+  looksLikeRecipeRoundup,
   INDEX_FILE
 };

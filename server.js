@@ -8,6 +8,7 @@ const {
   crawlInternetRecipeIndex,
   loadInternetRecipeIndexSync,
   getEmptyCrawlerIndex,
+  looksLikeRecipeRoundup,
   INDEX_FILE: INTERNET_CRAWLER_INDEX_FILE
 } = require('./internet-crawler');
 
@@ -2376,7 +2377,9 @@ async function collectInternetRecipes(filters, options = {}) {
   const activePool = getCurrentInternetRecipePool();
   if (!activePool.length) return [];
 
-  const baseCandidates = activePool.filter(candidate => candidateCouldMatchInternetFilters(candidate, filters));
+  const baseCandidates = activePool.filter(candidate =>
+    !looksLikeRecipeRoundup(candidate) && candidateCouldMatchInternetFilters(candidate, filters)
+  );
   const candidates = randomize ? shuffleArray(baseCandidates) : baseCandidates;
   const matches = [];
 
@@ -2395,6 +2398,10 @@ async function collectInternetRecipes(filters, options = {}) {
       }
       recipe = buildInternetRecipeResult(candidate, payload);
     }
+
+    // Verzamel-/lijstartikelen ("10 beste tortilla recepten") nooit aanbieden,
+    // ook niet als de titel pas na het ophalen bekend werd.
+    if (looksLikeRecipeRoundup(recipe)) continue;
 
     if (!matchesInternetRecipeFilters(recipe, filters)) continue;
 
@@ -2427,7 +2434,8 @@ app.get('/api/internet-crawl/status', (_req, res) => {
 app.get('/api/internet-recipes', async (req, res) => {
   try {
     const filters = normalizeInternetRecipeFilters(req.query);
-    const recipes = await collectInternetRecipes(filters, { limit: INTERNET_SEARCH_RECIPE_LIMIT });
+    // randomize zodat je niet telkens exact dezelfde eerste resultaten krijgt.
+    const recipes = await collectInternetRecipes(filters, { limit: INTERNET_SEARCH_RECIPE_LIMIT, randomize: true });
     return res.json(recipes);
   } catch (err) {
     console.error('❌ internet recipe search error:', err);
