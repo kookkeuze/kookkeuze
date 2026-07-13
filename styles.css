@@ -2252,34 +2252,34 @@ select:focus {
 }
 
 .weekmenu-day-card {
-  border: 1px solid #dde8df;
+  border: 1px solid var(--accent-color-hover);
   border-radius: var(--radius-md);
-  background: #f5faf6;
+  background: var(--accent-color);
   display: grid;
   grid-template-rows: auto 1fr;
   overflow: hidden;
 }
 
 .weekmenu-day-card-current {
-  border-color: rgba(99, 214, 113, 0.58);
-  box-shadow: 0 10px 24px rgba(74, 200, 88, 0.12);
+  border-color: var(--accent-strong);
+  box-shadow: 0 10px 24px rgba(194, 99, 44, 0.22);
 }
 
 .weekmenu-day-header {
   padding: 10px;
   background: transparent;
-  border-bottom: 1px solid #e6efe8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .weekmenu-day-name {
   margin: 0;
   font-weight: 700;
-  color: var(--green-deep);
+  color: #ffffff;
 }
 
 .weekmenu-day-date {
   margin: 2px 0 0;
-  color: #64706a;
+  color: rgba(255, 255, 255, 0.85);
   font-size: 12px;
 }
 
@@ -2991,7 +2991,7 @@ select:focus {
   }
 
   .weekmenu-day-card-has-planned .weekmenu-day-header {
-    background: #eef8f0;
+    background: rgba(255, 255, 255, 0.12);
   }
 
   .weekmenu-mobile-dots {
