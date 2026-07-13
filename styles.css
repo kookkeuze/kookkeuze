@@ -1036,17 +1036,19 @@ select:focus {
   color: var(--green-deep);
 }
 
-/* Weekmenu: vorige/volgende week in het oranje thema. */
+/* Weekmenu: vorige/volgende week als oranje outline-knop (geen vulling). */
 .weekmenu-toolbar .overview-view-btn {
-  background: var(--weekmenu-orange);
-  border-color: var(--accent-color-hover);
-  color: #ffffff;
+  background: transparent;
+  border-color: var(--weekmenu-orange);
+  color: var(--weekmenu-orange);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
 }
 
 .weekmenu-toolbar .overview-view-btn:hover {
-  background: var(--accent-color-hover);
+  background: rgba(209, 128, 82, 0.08);
   border-color: var(--accent-strong);
-  color: #ffffff;
+  color: var(--accent-strong);
 }
 
 /* Tabel container aanpassingen */
@@ -2266,7 +2268,7 @@ select:focus {
 }
 
 .weekmenu-day-card {
-  border: none;
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-md);
   background: #ffffff;
   display: grid;
@@ -2303,14 +2305,13 @@ select:focus {
 }
 
 .weekmenu-slot-item {
-  border: 1px solid #edf3ee;
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-sm);
   padding: 8px;
   display: grid;
   gap: 8px;
   align-content: start;
   background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   min-height: 0;
 }
 
