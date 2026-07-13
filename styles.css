@@ -1760,7 +1760,7 @@ select:focus {
   width: 20px;
   height: 20px;
   border-radius: 7px;
-  background: #fbeadf;
+  background: transparent;
   color: var(--accent-strong);
   display: inline-flex;
   align-items: center;
@@ -2146,7 +2146,7 @@ select:focus {
   width: 20px;
   height: 20px;
   border-radius: 7px;
-  background: #fbeadf;
+  background: transparent;
   color: var(--accent-strong);
   display: inline-flex;
   align-items: center;
@@ -3916,6 +3916,9 @@ select:focus {
   max-width: 400px;
   max-height: 90vh;
   overflow-y: auto;
+  /* Reserveer altijd ruimte voor de scrollbalk, zodat de inhoud niet verspringt
+     zodra de balk verschijnt (bijv. bij het openen van het 'Toevoegen aan'-menu). */
+  scrollbar-gutter: stable;
   box-shadow: 0 12px 40px rgba(0,0,0,.15);
   position: relative;
   margin: auto;
