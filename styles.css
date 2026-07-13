@@ -2276,10 +2276,6 @@ select:focus {
   overflow: hidden;
 }
 
-.weekmenu-day-card-current {
-  box-shadow: 0 10px 24px rgba(194, 99, 44, 0.22);
-}
-
 .weekmenu-day-header {
   padding: 10px;
   background: var(--weekmenu-orange);
