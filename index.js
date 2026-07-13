@@ -2136,6 +2136,9 @@ let plannerSuggestedSlot = null;
 let pendingAssignRecipeId = null;
 let assignSelectedDay = 1;
 let assignSelectedSlot = 'dinner';
+// Onthoudt of het inplanvenster vanuit de random-recept-popup is geopend, zodat
+// we daar na afloop naar terug kunnen keren.
+let assignReturnToRandomModal = false;
 let plannerMobileDayIndex = null;
 let plannerUiBound = false;
 
@@ -2307,6 +2310,14 @@ function openAssignModalForRecipe(recipeId, recipeTitle) {
   bindWeekPlannerUi();
   if (!plannerWeekStart) plannerWeekStart = toIsoDate(getMonday(new Date()));
   pendingAssignRecipeId = Number(recipeId);
+  // Komt de inplan-actie uit de random-recept-popup, dan verbergen we die popup
+  // en zetten we het inplanvenster op dezelfde plek. Na het inplannen (of
+  // annuleren) keren we terug naar de recept-popup.
+  assignReturnToRandomModal = !!(randomRecipeModal && !randomRecipeModal.classList.contains('hidden'));
+  if (assignReturnToRandomModal) {
+    randomRecipeModal.classList.add('hidden');
+    randomRecipeModal.setAttribute('aria-hidden', 'true');
+  }
   if (assignModalRecipeTitle) assignModalRecipeTitle.textContent = recipeTitle || 'Recept';
   const fallbackDay = getPlannerInitialMobileDayIndex() + 1;
   assignSelectedDay = Number(plannerSuggestedDay || fallbackDay || 1);
@@ -2320,6 +2331,14 @@ function closeAssignModalPanel() {
   pendingAssignRecipeId = null;
   assignModal?.classList.add('hidden');
   assignModal?.setAttribute('aria-hidden', 'true');
+  // Terug naar de recept-popup als we daar vandaan kwamen.
+  if (assignReturnToRandomModal) {
+    assignReturnToRandomModal = false;
+    if (randomRecipeModal) {
+      randomRecipeModal.classList.remove('hidden');
+      randomRecipeModal.setAttribute('aria-hidden', 'false');
+    }
+  }
 }
 
 async function loadPlannerRecipes() {
