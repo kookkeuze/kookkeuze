@@ -1777,6 +1777,15 @@ select:focus {
   display: block;
 }
 
+/* Eigen SVG-iconen in de trigger-knoppen (Notitie en 'Toevoegen aan...'). */
+.recipe-trigger-icon-img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  display: block;
+  flex: 0 0 auto;
+}
+
 .recipe-note-trigger {
   min-width: 0;
   padding: 5px 10px;

@@ -434,7 +434,7 @@ function renderRecipeNoteButton(recipeId, recipeUrl, recipeTitle, extraClass = '
       aria-label="${label}"
       title="${label}"
     >
-      <i class="fas fa-pen" aria-hidden="true"></i>
+      <img src="icons/notitie.svg" alt="" class="recipe-trigger-icon-img" />
       <span>Notitie</span>
     </button>
   `;
@@ -1618,7 +1618,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
                   aria-expanded="false"
                   aria-label="Open exportmenu voor ${safeTitle}"
                 >
-                  <i class="fas fa-share-alt" aria-hidden="true"></i>
+                  <img src="icons/toevoegen-aan.svg" alt="" class="recipe-trigger-icon-img" />
                   <span>Toevoegen aan...</span>
                   <i class="fas fa-chevron-down export-chevron" aria-hidden="true"></i>
                 </button>
@@ -2643,7 +2643,7 @@ function renderPlannerSearchResults() {
               aria-expanded="false"
               aria-label="Open exportmenu voor ${safeTitle}"
             >
-              <i class="fas fa-share-alt" aria-hidden="true"></i>
+              <img src="icons/toevoegen-aan.svg" alt="" class="recipe-trigger-icon-img" />
               <span>Toevoegen aan...</span>
               <i class="fas fa-chevron-down export-chevron" aria-hidden="true"></i>
             </button>
