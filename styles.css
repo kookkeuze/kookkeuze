@@ -1497,6 +1497,26 @@ select:focus {
   align-self: stretch;
   overflow: hidden;
   display: flex;
+  position: relative;
+}
+
+/* Subtiele bronvermelding onderin de receptfoto. */
+.recipe-card-image-source {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 10px 5px;
+  font-size: 10.5px;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.92);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+  text-align: right;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.01em;
 }
 
 .recipe-card-image,

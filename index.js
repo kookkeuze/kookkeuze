@@ -485,6 +485,18 @@ function setOverviewImage(cell, imageUrl, title) {
   renderImageFallback(cell, safeTitle);
 }
 
+// Leidt een nette bronvermelding (de originele site) af uit een recept-URL,
+// bijv. "https://www.lekkerensimpel.com/recept/..." -> "lekkerensimpel.com".
+function getImageSourceLabel(rawUrl) {
+  if (!rawUrl) return '';
+  try {
+    const host = new URL(rawUrl).hostname.replace(/^www\./i, '').trim();
+    return host || '';
+  } catch {
+    return '';
+  }
+}
+
 function setResultCardImage(container, imageUrl, title) {
   container.innerHTML = '';
   const safeTitle = (title || 'Recept').trim();
@@ -500,6 +512,21 @@ function setResultCardImage(container, imageUrl, title) {
       container.innerHTML = '<div class="recipe-card-image-fallback">Geen foto</div>';
     });
     container.appendChild(img);
+
+    // Subtiele bronvermelding onderin de foto (originele site).
+    let sourceUrl = '';
+    try {
+      sourceUrl = container?.dataset?.url ? decodeURIComponent(container.dataset.url) : '';
+    } catch {
+      sourceUrl = '';
+    }
+    const sourceLabel = getImageSourceLabel(sourceUrl);
+    if (sourceLabel) {
+      const caption = document.createElement('span');
+      caption.className = 'recipe-card-image-source';
+      caption.textContent = `Bron: ${sourceLabel}`;
+      container.appendChild(caption);
+    }
     return;
   }
 
