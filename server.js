@@ -1233,7 +1233,9 @@ const {
   acceptPendingInvitesForUser,
   closeDatabasePool,
   loadCrawlerIndexFromDatabase,
-  saveCrawlerIndexToDatabase
+  saveCrawlerIndexToDatabase,
+  seedDemoData,
+  getDemoDatabaseId
 } = require('./database');
 
 app.use(bodyParser.json());
@@ -2097,6 +2099,75 @@ const INTERNET_ADDITIONAL_SOURCE_SEEDS = [
   })
 ];
 
+// ===================== DEMO/VOORBEELD-DATASET ==============================
+// Niet-ingelogde bezoekers zien een vaste set voorbeeldrecepten, zodat de tool
+// en de content zichtbaar/testbaar zijn zonder account. De recepten komen uit
+// de bestaande seed-data in dit bestand (RECIPE_PACKS + de source-seeds); de
+// selectie dekt de filters zo breed als de brondata toelaat. Calorieën staan
+// nergens in de brondata en blijven daarom bewust null (niets verzonnen).
+const DEMO_USER_EMAIL = (process.env.DEMO_USER_EMAIL || 'demo@kookkeuze.nl').trim().toLowerCase();
+
+const DEMO_RECIPES = [
+  packRecipe('Bulgur met gehakt, pistache en frisse komkommersalade', 'https://www.eiwitchef.nl/bulgur-met-gehakt-pistache-en-frisse-komkommersalade/', {
+    source: 'Eiwitchef', dish_type: 'Hartig', meal_category: 'Hoofdgerecht', meal_type: 'Sporten', time_required: '30 - 45 minuten'
+  }),
+  packRecipe('Pasta pesto met kip', 'https://www.lekkerensimpel.com/pasta-pesto-met-kip/', {
+    source: 'Lekker en Simpel', dish_type: 'Pasta', meal_category: 'Hoofdgerecht', meal_type: 'Normaal', time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Kip in een pannetje', 'https://www.jumbo.com/recepten/kip-in-een-pannetje-1405714-7', {
+    source: 'Smulweb', dish_type: 'Kip', meal_category: 'Hoofdgerecht', meal_type: 'Normaal', time_required: '45 minuten - 1 uur'
+  }),
+  packRecipe('Kip-avocado salade', 'https://chickslovefood.com/recept/kip-avocado-salade/', {
+    source: 'Chickslovefood', dish_type: 'Kip', meal_category: 'Salade', meal_type: 'Normaal', time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Appeltaartkoeken', 'https://rutgerbakt.nl/koek-recepten/appeltaartkoeken-recept/', {
+    source: 'Rutger Bakt', dish_type: 'Taart & cake', meal_category: 'Bakken', meal_type: 'Cheaten', time_required: '30 - 45 minuten'
+  }),
+  packRecipe('Paella met chorizo, garnalen en kip', 'https://www.plus.nl/recept/paella-met-chorizo-garnalen-en-kip', {
+    source: 'Plus', dish_type: 'Rijst', meal_category: 'Hoofdgerecht', meal_type: 'Normaal', time_required: '45 minuten - 1 uur'
+  }),
+  packRecipe('Halloumi wraps', 'https://eatertainment.nl/recept/halloumi-wraps', {
+    source: 'Eatertainment', dish_type: 'Vegetarisch', meal_category: 'Hoofdgerecht', meal_type: 'Normaal', time_required: '30 - 45 minuten'
+  }),
+  packRecipe('Basisrecept vanillecake', 'https://www.laurasbakery.nl/basisrecept-vanillecake/', {
+    source: "Laura's Bakery", dish_type: 'Zoet', meal_category: 'Dessert', meal_type: 'Cheaten', time_required: 'Onder de 30 minuten'
+  }),
+  packRecipe('Pasta alla vodka', 'https://www.culy.nl/recepten/pasta-alla-vodka/', {
+    source: 'Culy', dish_type: 'Pasta', meal_category: 'Hoofdgerecht', meal_type: 'Normaal', time_required: '30 - 45 minuten'
+  }),
+  packRecipe('Pasta met kip en romige spinazie', 'https://www.leukerecepten.nl/recepten/pasta-met-kip-en-romige-spinazie/', {
+    source: 'LeukeRecepten', dish_type: 'Hartig', meal_category: 'Hoofdgerecht', meal_type: 'Sporten', time_required: '30 - 45 minuten'
+  })
+];
+
+// Cache voor het demo-database-id, zodat guest-requests niet elke keer opnieuw
+// hoeven te lookuppen.
+let demoDatabaseIdCache = null;
+async function resolveDemoDatabaseId() {
+  if (demoDatabaseIdCache) return demoDatabaseIdCache;
+  try {
+    demoDatabaseIdCache = await getDemoDatabaseId(DEMO_USER_EMAIL);
+  } catch (err) {
+    console.warn('⚠️ Kon demo-database-id niet ophalen:', err.message);
+    demoDatabaseIdCache = null;
+  }
+  return demoDatabaseIdCache;
+}
+
+async function seedDemoDataset() {
+  try {
+    const result = await seedDemoData(DEMO_USER_EMAIL, DEMO_RECIPES);
+    if (result?.databaseId) {
+      demoDatabaseIdCache = result.databaseId;
+      console.log(`✅ Demo-dataset klaar: ${DEMO_RECIPES.length} voorbeeldrecepten (database ${result.databaseId}).`);
+    } else {
+      console.warn('⚠️ Demo-dataset kon niet worden geïnitialiseerd (geen database-id).');
+    }
+  } catch (err) {
+    console.warn('⚠️ Seeden van demo-dataset mislukt:', err.message);
+  }
+}
+
 function getRecipePackSummaries() {
   return RECIPE_PACKS.map(pack => ({
     key: pack.key,
@@ -2568,10 +2639,13 @@ app.post('/api/recipe-packs/apply', async (req, res) => {
 // 1. Haal (gefilterde) recepten op
 app.get('/api/recipes', async (req, res) => {
   const { dish_type, meal_category, meal_type, time_required, search, calorieRange } = req.query;
-  if (!req.user) return res.json([]);
 
   try {
-    const ownerUserId = await resolveDatabaseOwnerId(req);
+    // Guests krijgen de vaste demo-database te zien i.p.v. een lege lijst.
+    const ownerUserId = req.user
+      ? await resolveDatabaseOwnerId(req)
+      : await resolveDemoDatabaseId();
+    if (!ownerUserId) return res.json([]);
     const rows = await dbCall(getRecipes, {
       dish_type,
       meal_category,
@@ -2592,12 +2666,12 @@ app.get('/api/recipes', async (req, res) => {
 app.get('/api/recipes/random', async (req, res) => {
   const { dish_type, meal_category, meal_type, time_required, search, calorieRange } = req.query;
 
-  if (!req.user) {
-    return res.json({ message: 'Geen resultaten gevonden.' });
-  }
-
   try {
-    const ownerUserId = await resolveDatabaseOwnerId(req);
+    // Guests krijgen een random recept uit de vaste demo-database.
+    const ownerUserId = req.user
+      ? await resolveDatabaseOwnerId(req)
+      : await resolveDemoDatabaseId();
+    if (!ownerUserId) return res.json({ message: 'Geen resultaten gevonden.' });
     const recipe = await dbCall(getRandomRecipe, {
       dish_type,
       meal_category,
@@ -3106,6 +3180,9 @@ async function startApp() {
   server = app.listen(PORT, () => {
     console.log(`Server draait op poort ${PORT}`);
   });
+
+  // Zorg dat de demo-dataset (voorbeeldrecepten voor guests) bestaat.
+  await seedDemoDataset();
 
   // Laad crawler-index uit database (persistenter dan JSON-bestand)
   try {

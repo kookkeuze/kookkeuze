@@ -1030,6 +1030,101 @@ async function closeDatabasePool() {
   await pool.end();
 }
 
+// ----- Demo/voorbeeld-dataset voor niet-ingelogde bezoekers -----
+// Eén vaste, herkenbare gebruiker met een eigen persoonlijke database gevuld met
+// een aantal voorbeeldrecepten. Deze gebruiker kan nooit inloggen (onbruikbare
+// wachtwoord-hash) en dient enkel als bron voor de read-only demo-weergave.
+async function ensureDemoUser(email) {
+  const insert = await pool.query(
+    `INSERT INTO users (email, password_hash, is_verified)
+     VALUES ($1, $2, TRUE)
+     ON CONFLICT (email) DO NOTHING
+     RETURNING id`,
+    [email, 'demo-account-no-login']
+  );
+  if (insert.rows[0]?.id) return insert.rows[0].id;
+  const existing = await pool.query(
+    'SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1',
+    [email]
+  );
+  return existing.rows[0]?.id || null;
+}
+
+async function ensureDemoDatabase(userId) {
+  const existing = await pool.query(
+    `SELECT id FROM recipe_databases WHERE owner_user_id = $1 AND is_personal = TRUE LIMIT 1`,
+    [userId]
+  );
+  if (existing.rows[0]?.id) return existing.rows[0].id;
+  const created = await pool.query(
+    `INSERT INTO recipe_databases (owner_user_id, name, is_personal)
+     VALUES ($1, 'Voorbeeldrecepten', TRUE)
+     RETURNING id`,
+    [userId]
+  );
+  const dbId = created.rows[0].id;
+  await pool.query(
+    `INSERT INTO database_members (database_id, user_id, role)
+     VALUES ($1, $2, 'admin')
+     ON CONFLICT (database_id, user_id) DO NOTHING`,
+    [dbId, userId]
+  );
+  return dbId;
+}
+
+async function ensureDemoRecipes(databaseId, userId, recipes) {
+  const list = Array.isArray(recipes) ? recipes : [];
+  for (const recipe of list) {
+    const title = String(recipe?.title || '').trim();
+    const url = String(recipe?.url || '').trim();
+    if (!title || !url) continue;
+
+    const existing = await pool.query(
+      `SELECT id FROM recipes WHERE database_id = $1 AND LOWER(url) = LOWER($2) LIMIT 1`,
+      [databaseId, url]
+    );
+    if (existing.rows[0]) continue;
+
+    await pool.query(
+      `INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        title,
+        url,
+        recipe.dish_type || null,
+        recipe.meal_type || null,
+        recipe.time_required || null,
+        recipe.meal_category || null,
+        recipe.calories ?? null,
+        userId,
+        databaseId
+      ]
+    );
+  }
+}
+
+// Idempotente seed: zorgt dat de demo-gebruiker, -database en -recepten bestaan.
+async function seedDemoData(email, recipes) {
+  const userId = await ensureDemoUser(email);
+  if (!userId) return null;
+  const databaseId = await ensureDemoDatabase(userId);
+  await ensureDemoRecipes(databaseId, userId, recipes);
+  return { userId, databaseId };
+}
+
+// Runtime-lookup van het database-id van de demo-gebruiker (voor guest-requests).
+async function getDemoDatabaseId(email) {
+  const res = await pool.query(
+    `SELECT rd.id
+     FROM recipe_databases rd
+     JOIN users u ON u.id = rd.owner_user_id
+     WHERE LOWER(u.email) = LOWER($1) AND rd.is_personal = TRUE
+     LIMIT 1`,
+    [email]
+  );
+  return res.rows[0]?.id || null;
+}
+
 // ----- Email verification helpers -----
 async function setVerificationToken(email, token, expires) {
   const q = `
@@ -1384,6 +1479,8 @@ module.exports = {
   setUserRecipePackOnboardingSeen,
   getRecipeCountForDatabase,
   addRecipePackToDatabase,
+  seedDemoData,
+  getDemoDatabaseId,
   setVerificationToken,          
   getUserByVerificationToken,    
   verifyUserById,

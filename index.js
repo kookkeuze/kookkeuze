@@ -158,6 +158,21 @@ function ensureLoggedInOrNotify(targetEl) {
   return false;
 }
 
+// True wanneer er geen ingelogde gebruiker is (bezoeker ziet dan demo-data).
+function isGuestUser() {
+  return !getValidToken();
+}
+
+// Subtiele banner boven demo-data voor niet-ingelogde bezoekers, met CTA naar
+// registratie.
+function guestDemoBannerHtml() {
+  return `
+    <div class="guest-demo-banner" role="note">
+      <span class="guest-demo-banner-text">Dit zijn voorbeeldrecepten. Maak een gratis account aan om je eigen receptendatabase op te bouwen.</span>
+      <button type="button" class="guest-demo-banner-cta" data-guest-register>Gratis account</button>
+    </div>`;
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -1520,8 +1535,8 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
     return;
   }
 
-  if (!ensureLoggedInOrNotify(resultDiv)) return;
-  await ensureRecipeNotesLoaded();
+  // Guests mogen de demo-database doorzoeken; notities vergen wel een account.
+  if (getValidToken()) await ensureRecipeNotesLoaded();
   const params = buildRecipeToolParams({ includeSearch: true, includeDatabase: true });
   const qs = params.toString();
   fetch(`${API_BASE}/api/recipes?` + qs, {
@@ -1556,8 +1571,8 @@ document.getElementById('randomBtn').addEventListener('click', async () => {
     return;
   }
 
-  if (!ensureLoggedInOrNotify(resultDiv)) return;
-  await ensureRecipeNotesLoaded();
+  // Guests mogen een random recept uit de demo-database opvragen.
+  if (getValidToken()) await ensureRecipeNotesLoaded();
   const params = buildRecipeToolParams({ includeSearch: false, includeDatabase: true });
   const qs = params.toString();
   fetch(`${API_BASE}/api/recipes/random?` + qs, {
@@ -1610,7 +1625,9 @@ function buildRecipeCardsHtml(arr, options = {}) {
   const importLabel = importMode === 'to-own'
     ? 'Importeer naar mijn database'
     : 'Importeer naar gedeelde database';
-  let html = `<div class="recipe-cards-container search-results${singleClass}${extraClass}">`;
+  // Voor guests in de database-modus: subtiele voorbeeld-banner boven de resultaten.
+  const guestBanner = (!isInternetMode && isGuestUser()) ? guestDemoBannerHtml() : '';
+  let html = `${guestBanner}<div class="recipe-cards-container search-results${singleClass}${extraClass}">`;
   arr.forEach(r => {
     const recipeId = Number(r.id) > 0 ? Number(r.id) : '';
     const safeUrl = encodeURIComponent(r.url || '');
@@ -3474,6 +3491,11 @@ function renderOverviewPage() {
   allRecipesDiv.innerHTML = '';
   if (overviewGridContainer) overviewGridContainer.innerHTML = '';
 
+  // Voorbeeld-banner tonen voor niet-ingelogde bezoekers.
+  const guest = isGuestUser();
+  const overviewGuestBanner = document.getElementById('overviewGuestBanner');
+  if (overviewGuestBanner) overviewGuestBanner.innerHTML = guest ? guestDemoBannerHtml() : '';
+
   if (!overviewAllRecipes || overviewAllRecipes.length === 0) {
     allRecipesDiv.innerHTML = `<tr><td colspan="10">Er zijn nog geen recepten toegevoegd.</td></tr>`;
     if (overviewGridContainer) overviewGridContainer.innerHTML = '<p>Er zijn nog geen recepten toegevoegd.</p>';
@@ -3498,21 +3520,39 @@ function renderOverviewPage() {
     const cals = r.calories ?? '';
     const safeUrl = encodeURIComponent(r.url || '');
     const safeTitle = (r.title || 'Recept').replace(/"/g, '&quot;');
-    html += `
-      <tr data-id="${r.id}">
-        <td class="overview-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
-          <div class="recipe-thumb-skeleton"></div>
-        </td>
-        <td contenteditable>${r.title}</td>
-        <td contenteditable>${r.url}</td>
-        <td>${dropdown(dishOpt,  r.dish_type, 'Soort')}</td>
-        <td>${dropdown(catOpt,   r.meal_category, 'Menugang')}</td>
-        <td>${dropdown(mealOpt,  r.meal_type, 'Doel gerecht')}</td>
-        <td>${dropdown(timeOpt,  r.time_required, 'Tijd')}</td>
-        <td><input class="calories-field" type="number" value="${cals}" /></td>
-        <td><button class="green-btn edit-btn">Opslaan</button></td>
-        <td><button class="danger-btn delete-btn">Verwijder</button></td>
-      </tr>`;
+    if (guest) {
+      // Read-only rij voor bezoekers: geen bewerkbare velden of knoppen.
+      html += `
+        <tr data-id="${r.id}">
+          <td class="overview-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
+            <div class="recipe-thumb-skeleton"></div>
+          </td>
+          <td>${r.title}</td>
+          <td><a href="${r.url}" target="_blank" rel="noopener noreferrer">${r.url}</a></td>
+          <td>${r.dish_type || '-'}</td>
+          <td>${r.meal_category || '-'}</td>
+          <td>${r.meal_type || '-'}</td>
+          <td>${r.time_required || '-'}</td>
+          <td>${cals === '' ? '-' : cals}</td>
+          <td colspan="2" class="overview-guest-locked">Alleen voorbeeld</td>
+        </tr>`;
+    } else {
+      html += `
+        <tr data-id="${r.id}">
+          <td class="overview-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
+            <div class="recipe-thumb-skeleton"></div>
+          </td>
+          <td contenteditable>${r.title}</td>
+          <td contenteditable>${r.url}</td>
+          <td>${dropdown(dishOpt,  r.dish_type, 'Soort')}</td>
+          <td>${dropdown(catOpt,   r.meal_category, 'Menugang')}</td>
+          <td>${dropdown(mealOpt,  r.meal_type, 'Doel gerecht')}</td>
+          <td>${dropdown(timeOpt,  r.time_required, 'Tijd')}</td>
+          <td><input class="calories-field" type="number" value="${cals}" /></td>
+          <td><button class="green-btn edit-btn">Opslaan</button></td>
+          <td><button class="danger-btn delete-btn">Verwijder</button></td>
+        </tr>`;
+    }
     gridHtml += `
       <div class="recipe-card">
         <div class="result-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
@@ -3550,15 +3590,7 @@ function renderOverviewPage() {
 }
 
 function fetchAllRecipes() {
-  if (!ensureLoggedInOrNotify(allRecipesDiv)) {
-    allRecipesDiv.innerHTML = `<tr><td colspan="10">Je sessie is verlopen. Log opnieuw in.</td></tr>`;
-    if (overviewGridContainer) {
-      overviewGridContainer.innerHTML = '<p>Je sessie is verlopen. Log opnieuw in.</p>';
-    }
-    if (overviewPagination) overviewPagination.innerHTML = '';
-    applyOverviewViewMode();
-    return;
-  }
+  // Guests zien hier de demo-database; ingelogde gebruikers hun eigen database.
   const params = new URLSearchParams();
   appendActiveDatabaseParam(params);
   fetch(`${API_BASE}/api/recipes?${params.toString()}`, {
@@ -3850,6 +3882,17 @@ authBtn.addEventListener('click', () => {
 
 closeAuth.addEventListener('click', () => authModal.classList.add('hidden'));
 window.addEventListener('click', e => { if (e.target === authModal) authModal.classList.add('hidden'); });
+
+/* Banner-CTA bij demo-data opent direct de registratie. */
+document.addEventListener('click', (e) => {
+  const cta = e.target.closest('[data-guest-register]');
+  if (!cta) return;
+  e.preventDefault();
+  resetForms();
+  updateAuthUI();
+  setAuthPane(registerPane);
+  authModal.classList.remove('hidden');
+});
 
 /* CTA onder stappen: "Ik wil beginnen!" opent de login/registratie */
 const startNow = document.getElementById('startNow');
