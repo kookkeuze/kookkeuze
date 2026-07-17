@@ -1235,7 +1235,8 @@ const {
   loadCrawlerIndexFromDatabase,
   saveCrawlerIndexToDatabase,
   seedDemoData,
-  getDemoDatabaseId
+  getDemoDatabaseId,
+  replaceDemoRecipes
 } = require('./database');
 
 app.use(bodyParser.json());
@@ -2126,17 +2127,22 @@ const DEMO_RECIPES = [
   packRecipe('Paella met chorizo, garnalen en kip', 'https://www.plus.nl/recept/paella-met-chorizo-garnalen-en-kip', {
     source: 'Plus', dish_type: 'Rijst', meal_category: 'Hoofdgerecht', meal_type: 'Normaal', time_required: '45 minuten - 1 uur'
   }),
-  packRecipe('Halloumi wraps', 'https://eatertainment.nl/recept/halloumi-wraps', {
-    source: 'Eatertainment', dish_type: 'Vegetarisch', meal_category: 'Hoofdgerecht', meal_type: 'Normaal', time_required: '30 - 45 minuten'
-  }),
   packRecipe('Basisrecept vanillecake', 'https://www.laurasbakery.nl/basisrecept-vanillecake/', {
     source: "Laura's Bakery", dish_type: 'Zoet', meal_category: 'Dessert', meal_type: 'Cheaten', time_required: 'Onder de 30 minuten'
   }),
-  packRecipe('Pasta alla vodka', 'https://www.culy.nl/recepten/pasta-alla-vodka/', {
-    source: 'Culy', dish_type: 'Pasta', meal_category: 'Hoofdgerecht', meal_type: 'Normaal', time_required: '30 - 45 minuten'
-  }),
   packRecipe('Pasta met kip en romige spinazie', 'https://www.leukerecepten.nl/recepten/pasta-met-kip-en-romige-spinazie/', {
     source: 'LeukeRecepten', dish_type: 'Hartig', meal_category: 'Hoofdgerecht', meal_type: 'Sporten', time_required: '30 - 45 minuten'
+  }),
+  // Vervangen 2026-07-17: 'Halloumi wraps' (Eatertainment) en 'Pasta alla vodka'
+  // (Culy) door onderstaande twee, om de tijdscategorieën '1 - 2 uur' en 'langer
+  // dan 2 uur' te dekken (voorheen 0 recepten in beide). Metadata rechtstreeks
+  // van de bronpagina overgenomen, niets verzonnen; calorieën alleen ingevuld
+  // waar de bron dat expliciet vermeldt.
+  packRecipe('Kip uit de oven', 'https://www.24kitchen.nl/recepten/kip-uit-de-oven', {
+    source: '24Kitchen', dish_type: 'Kip', meal_category: 'Hoofdgerecht', meal_type: 'Normaal', time_required: '1 - 2 uur'
+  }),
+  packRecipe('Hachee', 'https://www.keukenliefde.nl/recepten/hachee/', {
+    source: 'Keukenliefde', dish_type: 'Rund', meal_category: 'Hoofdgerecht', meal_type: 'Normaal', time_required: 'langer dan 2 uur'
   })
 ];
 
@@ -2154,11 +2160,34 @@ async function resolveDemoDatabaseId() {
   return demoDatabaseIdCache;
 }
 
+// Gerichte migratie (2026-07-17): de tijdscategorieën '1 - 2 uur' en 'langer
+// dan 2 uur' hadden 0 recepten in de demo-dataset. Vervangt 2 recepten die
+// onderling de meeste metadata-overlap hadden ('Halloumi wraps' en 'Pasta
+// alla vodka', beide Hoofdgerecht/Normaal) door 2 nieuwe met een echte lange
+// bereidingstijd. Idempotent: op een omgeving waar deze twee URL's nooit
+// bestonden voegt dit alleen de 2 nieuwe recepten toe; op een omgeving waar de
+// vervanging al is doorgevoerd, gebeurt er niets meer.
+const DEMO_RECIPE_REPLACEMENTS_2026_07_17 = [
+  {
+    removeUrl: 'https://eatertainment.nl/recept/halloumi-wraps',
+    add: packRecipe('Kip uit de oven', 'https://www.24kitchen.nl/recepten/kip-uit-de-oven', {
+      source: '24Kitchen', dish_type: 'Kip', meal_category: 'Hoofdgerecht', meal_type: 'Normaal', time_required: '1 - 2 uur'
+    })
+  },
+  {
+    removeUrl: 'https://www.culy.nl/recepten/pasta-alla-vodka/',
+    add: packRecipe('Hachee', 'https://www.keukenliefde.nl/recepten/hachee/', {
+      source: 'Keukenliefde', dish_type: 'Rund', meal_category: 'Hoofdgerecht', meal_type: 'Normaal', time_required: 'langer dan 2 uur'
+    })
+  }
+];
+
 async function seedDemoDataset() {
   try {
     const result = await seedDemoData(DEMO_USER_EMAIL, DEMO_RECIPES);
     if (result?.databaseId) {
       demoDatabaseIdCache = result.databaseId;
+      await replaceDemoRecipes(result.databaseId, result.userId, DEMO_RECIPE_REPLACEMENTS_2026_07_17);
       console.log(`✅ Demo-dataset klaar: ${DEMO_RECIPES.length} voorbeeldrecepten (database ${result.databaseId}).`);
     } else {
       console.warn('⚠️ Demo-dataset kon niet worden geïnitialiseerd (geen database-id).');

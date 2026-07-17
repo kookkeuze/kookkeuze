@@ -1112,6 +1112,25 @@ async function seedDemoData(email, recipes) {
   return { userId, databaseId };
 }
 
+// Gerichte, reproduceerbare vervang-migratie voor de demo-dataset: verwijdert
+// specifieke recepten op URL en voegt hun vervangers toe. Idempotent — opnieuw
+// draaien doet niets meer zodra de vervanging al is doorgevoerd (de oude URL
+// bestaat dan niet meer, en de nieuwe wordt niet dubbel ingevoegd).
+async function replaceDemoRecipes(databaseId, userId, replacements) {
+  const list = Array.isArray(replacements) ? replacements : [];
+  for (const { removeUrl, add } of list) {
+    if (removeUrl) {
+      await pool.query(
+        `DELETE FROM recipes WHERE database_id = $1 AND LOWER(url) = LOWER($2)`,
+        [databaseId, String(removeUrl).trim()]
+      );
+    }
+    if (add) {
+      await ensureDemoRecipes(databaseId, userId, [add]);
+    }
+  }
+}
+
 // Runtime-lookup van het database-id van de demo-gebruiker (voor guest-requests).
 async function getDemoDatabaseId(email) {
   const res = await pool.query(
@@ -1481,6 +1500,7 @@ module.exports = {
   addRecipePackToDatabase,
   seedDemoData,
   getDemoDatabaseId,
+  replaceDemoRecipes,
   setVerificationToken,          
   getUserByVerificationToken,    
   verifyUserById,
