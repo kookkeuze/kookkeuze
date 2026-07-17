@@ -3883,11 +3883,16 @@ authBtn.addEventListener('click', () => {
 closeAuth.addEventListener('click', () => authModal.classList.add('hidden'));
 window.addEventListener('click', e => { if (e.target === authModal) authModal.classList.add('hidden'); });
 
-/* Banner-CTA bij demo-data opent direct de registratie. */
+/* Banner-CTA bij demo-data opent direct de registratie. Staat de banner in de
+   random-receptenkaart, dan sluiten we die kaart eerst zodat je meteen de
+   registratiekaart ziet i.p.v. de receptenkaart die eroverheen blijft staan. */
 document.addEventListener('click', (e) => {
   const cta = e.target.closest('[data-guest-register]');
   if (!cta) return;
   e.preventDefault();
+  if (randomRecipeModal && !randomRecipeModal.classList.contains('hidden')) {
+    closeRandomRecipeModalPanel();
+  }
   resetForms();
   updateAuthUI();
   setAuthPane(registerPane);
