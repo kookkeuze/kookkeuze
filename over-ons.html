@@ -40,7 +40,7 @@
   </header>
 
   <main class="container">
-    <section class="tab-content active">
+    <section class="tab-content active info-page">
       <h2>Over Kookkeuze</h2>
 
       <p>
@@ -68,8 +68,21 @@
       <h3>Contact</h3>
       <p>
         Vragen, feedback of een bug gevonden? Stuur gerust een mail naar
-        <a href="mailto:kookkeuze@gmail.com">kookkeuze@gmail.com</a>.
+        <a href="mailto:kookkeuze@gmail.com">kookkeuze@gmail.com</a> of gebruik het formulier hieronder.
       </p>
+
+      <form id="contactForm" class="info-contact-form" novalidate>
+        <label for="cfName">Naam</label>
+        <input type="text" id="cfName" name="name" autocomplete="name" required />
+
+        <label for="cfEmail">E-mailadres</label>
+        <input type="email" id="cfEmail" name="email" autocomplete="email" required />
+
+        <label for="cfMessage">Bericht</label>
+        <textarea id="cfMessage" name="message" rows="5" required></textarea>
+
+        <button type="submit" class="green-btn">Verstuur</button>
+      </form>
 
       <p style="margin-top: 24px;">
         Meer weten over hoe Kookkeuze met je gegevens omgaat? Lees de
@@ -89,5 +102,30 @@
       </nav>
     </div>
   </footer>
+
+  <script>
+    // Simpel contactformulier: opent de eigen e-mailclient met een voorgevuld
+    // bericht naar Kookkeuze. Geen backend nodig en er wordt niets naar een
+    // server verstuurd — de gebruiker verstuurt zelf vanuit z'n mailprogramma.
+    (function () {
+      var form = document.getElementById('contactForm');
+      if (!form) return;
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var name = document.getElementById('cfName').value.trim();
+        var email = document.getElementById('cfEmail').value.trim();
+        var message = document.getElementById('cfMessage').value.trim();
+        if (!name || !email || !message) {
+          form.reportValidity();
+          return;
+        }
+        var subject = 'Contact via Kookkeuze - ' + name;
+        var body = message + '\n\n—\nNaam: ' + name + '\nE-mailadres: ' + email;
+        window.location.href = 'mailto:kookkeuze@gmail.com'
+          + '?subject=' + encodeURIComponent(subject)
+          + '&body=' + encodeURIComponent(body);
+      });
+    })();
+  </script>
 </body>
 </html>

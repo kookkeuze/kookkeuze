@@ -4996,3 +4996,84 @@ select:focus {
   font-size: 13px;
   text-align: center;
 }
+
+/* ===== Statische info-pagina's (Over Kookkeuze, Privacyverklaring) ===== */
+/* Meer lucht tussen koppen en tekst, en groene subkoppen/links in de
+   Kookkeuze-kleur. De grote titel (h2) houdt zijn eigen stijl. */
+.info-page h3 {
+  color: var(--green-deep);
+  margin: 30px 0 8px;
+}
+
+.info-page h3:first-of-type {
+  margin-top: 22px;
+}
+
+.info-page p {
+  margin: 0 0 16px;
+  line-height: 1.65;
+  color: #3a433d;
+}
+
+.info-page ul {
+  line-height: 1.65;
+  color: #3a433d;
+}
+
+.info-page ul li {
+  margin-bottom: 4px;
+}
+
+.info-page a {
+  color: var(--green-deep);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.info-page a:hover {
+  color: var(--green-hover);
+}
+
+/* Simpel contactformulier op de Over Kookkeuze-pagina. */
+.info-contact-form {
+  display: grid;
+  gap: 4px;
+  max-width: 480px;
+  margin-top: 10px;
+}
+
+.info-contact-form label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #3a433d;
+  margin-top: 10px;
+}
+
+.info-contact-form input,
+.info-contact-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--field-border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+.info-contact-form input:focus,
+.info-contact-form textarea:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.16);
+}
+
+.info-contact-form textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.info-contact-form button {
+  margin-top: 14px;
+  justify-self: start;
+}
