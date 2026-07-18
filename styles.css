@@ -5039,14 +5039,37 @@ select:focus {
 .contact-block {
   margin-top: 34px;
   padding: 22px 24px 26px;
-  border: 1.5px solid var(--green);
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, #f2fdf4 0%, #eafaee 100%);
-  box-shadow: 0 8px 22px rgba(99, 214, 113, 0.14);
+  background: var(--green);
+  box-shadow: 0 8px 22px rgba(99, 214, 113, 0.25);
 }
 
 .contact-block h3 {
   margin-top: 0;
+  color: #1a1a1a;
+}
+
+.contact-block p,
+.contact-block .info-contact-form label {
+  color: #ffffff;
+}
+
+.contact-block p a {
+  color: #ffffff;
+}
+
+.contact-block p a:hover {
+  color: #1a1a1a;
+}
+
+/* Witte knop zodat 'Verstuur' zichtbaar blijft op de groene achtergrond. */
+.contact-block .green-btn {
+  background-color: #ffffff;
+  color: var(--green-hover);
+}
+
+.contact-block .green-btn:hover {
+  background-color: #f2f2f2;
 }
 
 /* Simpel contactformulier op de Over Kookkeuze-pagina. */
