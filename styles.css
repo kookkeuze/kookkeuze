@@ -5046,11 +5046,40 @@ select:focus {
 
 .contact-block h3 {
   margin-top: 0;
-  color: #1a1a1a;
+  color: var(--green-deep);
 }
 
 .contact-block p {
   color: #ffffff;
+}
+
+/* Op computer/laptop staat de tekst naast het formulier; op tablet en
+   mobiel breekt dit af naar onder elkaar. */
+.contact-block-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+.contact-block-intro {
+  flex: 1 1 260px;
+  margin: 0;
+}
+
+.contact-block-layout .info-contact-form {
+  flex: 1 1 320px;
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .contact-block-layout {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .contact-block-intro {
+    margin: 0 0 8px;
+  }
 }
 
 .contact-block .info-contact-form label {
