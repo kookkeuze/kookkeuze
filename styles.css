@@ -5001,7 +5001,7 @@ select:focus {
 /* Meer lucht tussen koppen en tekst, en groene subkoppen/links in de
    Kookkeuze-kleur. De grote titel (h2) houdt zijn eigen stijl. */
 .info-page h3 {
-  color: var(--green-deep);
+  color: var(--green);
   margin: 30px 0 8px;
 }
 
@@ -5025,7 +5025,7 @@ select:focus {
 }
 
 .info-page a {
-  color: var(--green-deep);
+  color: var(--green);
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -5033,6 +5033,20 @@ select:focus {
 
 .info-page a:hover {
   color: var(--green-hover);
+}
+
+/* Opvallend contactblok onderaan de Over Kookkeuze-pagina. */
+.contact-block {
+  margin-top: 34px;
+  padding: 22px 24px 26px;
+  border: 1.5px solid var(--green);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #f2fdf4 0%, #eafaee 100%);
+  box-shadow: 0 8px 22px rgba(99, 214, 113, 0.14);
+}
+
+.contact-block h3 {
+  margin-top: 0;
 }
 
 /* Simpel contactformulier op de Over Kookkeuze-pagina. */
@@ -5056,6 +5070,7 @@ select:focus {
   padding: 10px 12px;
   border: 1.5px solid var(--field-border);
   border-radius: var(--radius-sm);
+  background: #ffffff;
   font-family: inherit;
   font-size: 15px;
   box-sizing: border-box;
