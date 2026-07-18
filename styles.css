@@ -5049,9 +5049,12 @@ select:focus {
   color: #1a1a1a;
 }
 
-.contact-block p,
-.contact-block .info-contact-form label {
+.contact-block p {
   color: #ffffff;
+}
+
+.contact-block .info-contact-form label {
+  color: var(--green-deep);
 }
 
 .contact-block p a {
@@ -5062,14 +5065,14 @@ select:focus {
   color: #1a1a1a;
 }
 
-/* Witte knop zodat 'Verstuur' zichtbaar blijft op de groene achtergrond. */
+/* Donkergroene knop zodat 'Verstuur' goed afsteekt tegen de lichtgroene achtergrond. */
 .contact-block .green-btn {
-  background-color: #ffffff;
-  color: var(--green-hover);
+  background-color: var(--green-deep);
+  color: #ffffff;
 }
 
 .contact-block .green-btn:hover {
-  background-color: #f2f2f2;
+  background-color: #1c4a22;
 }
 
 /* Simpel contactformulier op de Over Kookkeuze-pagina. */
