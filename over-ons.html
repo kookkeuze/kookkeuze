@@ -39,6 +39,13 @@
     </div>
   </header>
 
+  <!-- Bevestiging na het versturen van het contactformulier. Zelfde toast als
+       bij 'Recept toegevoegd!' op de hoofdpagina. -->
+  <div id="contactToast" class="recipe-toast" role="status" aria-live="polite">
+    <div class="recipe-toast-icon"><i class="fas fa-check"></i></div>
+    <p id="contactToastText" class="recipe-toast-text">Bedankt voor je bericht!</p>
+  </div>
+
   <main class="container">
     <section class="tab-content active info-page">
       <h2>Over Kookkeuze</h2>
@@ -187,7 +194,6 @@
             </div>
 
             <button type="submit" class="green-btn" id="cfSubmit">Verstuur</button>
-            <p id="cfStatus" class="cf-status" role="status" aria-live="polite"></p>
           </form>
         </div>
       </div>
@@ -219,12 +225,34 @@
       var form = document.getElementById('contactForm');
       if (!form) return;
 
-      var statusEl = document.getElementById('cfStatus');
       var submitBtn = document.getElementById('cfSubmit');
+      var toast = document.getElementById('contactToast');
+      var toastText = document.getElementById('contactToastText');
+      var toastTimer = null;
 
-      function setStatus(text, kind) {
-        statusEl.textContent = text;
-        statusEl.className = 'cf-status' + (kind ? ' cf-status--' + kind : '');
+      // Zelfde gedrag als showRecipeAddedToast() op de hoofdpagina: groen
+      // vinkje bij succes, rood icoon bij een fout, en foutmeldingen blijven
+      // langer staan zodat je ze zeker kunt lezen.
+      function showToast(message, type) {
+        var isError = type === 'error';
+
+        if (toastTimer) {
+          clearTimeout(toastTimer);
+          toastTimer = null;
+        }
+
+        toast.classList.toggle('is-error', isError);
+        var iconEl = toast.querySelector('.recipe-toast-icon i');
+        if (iconEl) iconEl.className = isError ? 'fas fa-exclamation-triangle' : 'fas fa-check';
+
+        toastText.textContent = message;
+        toast.classList.remove('hide');
+        toast.classList.add('show');
+
+        toastTimer = setTimeout(function () {
+          toast.classList.remove('show');
+          toast.classList.add('hide');
+        }, isError ? 4800 : 2200);
       }
 
       form.addEventListener('submit', function (e) {
@@ -241,7 +269,6 @@
         }
 
         submitBtn.disabled = true;
-        setStatus('Bezig met versturen...', '');
 
         fetch('/api/contact', {
           method: 'POST',
@@ -255,14 +282,14 @@
           })
           .then(function (result) {
             if (!result.ok) {
-              setStatus(result.data.error || 'Versturen lukt nu even niet. Probeer het later nog eens.', 'error');
+              showToast(result.data.error || 'Versturen lukt nu even niet. Probeer het later nog eens.', 'error');
               return;
             }
             form.reset();
-            setStatus(result.data.message || 'Bedankt voor je bericht!', 'ok');
+            showToast(result.data.message || 'Bedankt voor je bericht!', 'success');
           })
           .catch(function () {
-            setStatus('Geen verbinding met de server. Probeer het later nog eens.', 'error');
+            showToast('Geen verbinding met de server. Probeer het later nog eens.', 'error');
           })
           .then(function () {
             submitBtn.disabled = false;

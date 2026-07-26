@@ -5341,21 +5341,3 @@ select:focus {
   overflow: hidden;
 }
 
-.cf-status {
-  margin: 12px 0 0;
-  font-size: 0.95rem;
-  min-height: 1.2em;
-  color: #3a433d;
-}
-
-/* Extra klasse in de selector, anders wint .contact-block p qua specificiteit
-   en blijft de melding gewoon donkergrijs. */
-.info-page .cf-status--ok {
-  color: var(--green-deep);
-  font-weight: 600;
-}
-
-.info-page .cf-status--error {
-  color: #b3402a;
-  font-weight: 600;
-}
