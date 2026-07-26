@@ -180,7 +180,14 @@
             <label for="cfMessage">Bericht</label>
             <textarea id="cfMessage" name="message" rows="5" required></textarea>
 
-            <button type="submit" class="green-btn">Verstuur</button>
+            <!-- Honeypot: onzichtbaar voor mensen, bots vullen het vaak wel in. -->
+            <div class="cf-hp" aria-hidden="true">
+              <label for="cfWebsite">Laat dit veld leeg</label>
+              <input type="text" id="cfWebsite" name="website" tabindex="-1" autocomplete="off" />
+            </div>
+
+            <button type="submit" class="green-btn" id="cfSubmit">Verstuur</button>
+            <p id="cfStatus" class="cf-status" role="status" aria-live="polite"></p>
           </form>
         </div>
       </div>
@@ -205,26 +212,61 @@
   </footer>
 
   <script>
-    // Simpel contactformulier: opent de eigen e-mailclient met een voorgevuld
-    // bericht naar Kookkeuze. Geen backend nodig en er wordt niets naar een
-    // server verstuurd — de gebruiker verstuurt zelf vanuit z'n mailprogramma.
+    // Contactformulier: verstuurt het bericht naar onze server, die de mail
+    // via Brevo naar Kookkeuze stuurt. De bezoeker hoeft dus geen eigen
+    // mailprogramma te hebben.
     (function () {
       var form = document.getElementById('contactForm');
       if (!form) return;
+
+      var statusEl = document.getElementById('cfStatus');
+      var submitBtn = document.getElementById('cfSubmit');
+
+      function setStatus(text, kind) {
+        statusEl.textContent = text;
+        statusEl.className = 'cf-status' + (kind ? ' cf-status--' + kind : '');
+      }
+
       form.addEventListener('submit', function (e) {
         e.preventDefault();
+
         var name = document.getElementById('cfName').value.trim();
         var email = document.getElementById('cfEmail').value.trim();
         var message = document.getElementById('cfMessage').value.trim();
+        var website = document.getElementById('cfWebsite').value;
+
         if (!name || !email || !message) {
           form.reportValidity();
           return;
         }
-        var subject = 'Contact via Kookkeuze - ' + name;
-        var body = message + '\n\n—\nNaam: ' + name + '\nE-mailadres: ' + email;
-        window.location.href = 'mailto:kookkeuze@gmail.com'
-          + '?subject=' + encodeURIComponent(subject)
-          + '&body=' + encodeURIComponent(body);
+
+        submitBtn.disabled = true;
+        setStatus('Bezig met versturen...', '');
+
+        fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, email: email, message: message, website: website })
+        })
+          .then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (data) {
+              return { ok: r.ok, data: data };
+            });
+          })
+          .then(function (result) {
+            if (!result.ok) {
+              setStatus(result.data.error || 'Versturen lukt nu even niet. Probeer het later nog eens.', 'error');
+              return;
+            }
+            form.reset();
+            setStatus(result.data.message || 'Bedankt voor je bericht!', 'ok');
+          })
+          .catch(function () {
+            setStatus('Geen verbinding met de server. Probeer het later nog eens.', 'error');
+          })
+          .then(function () {
+            submitBtn.disabled = false;
+          });
       });
     })();
   </script>

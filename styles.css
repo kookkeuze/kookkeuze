@@ -5325,3 +5325,37 @@ select:focus {
   margin-top: 14px;
   justify-self: start;
 }
+
+.info-contact-form button[disabled] {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Honeypot: uit beeld halen zonder display:none, want sommige bots slaan
+   verborgen velden over en trappen er dan niet in. */
+.cf-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.cf-status {
+  margin: 12px 0 0;
+  font-size: 0.95rem;
+  min-height: 1.2em;
+  color: #3a433d;
+}
+
+/* Extra klasse in de selector, anders wint .contact-block p qua specificiteit
+   en blijft de melding gewoon donkergrijs. */
+.info-page .cf-status--ok {
+  color: var(--green-deep);
+  font-weight: 600;
+}
+
+.info-page .cf-status--error {
+  color: #b3402a;
+  font-weight: 600;
+}

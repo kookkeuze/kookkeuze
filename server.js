@@ -29,6 +29,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'changeme-in-prod';
   - BREVO_API_KEY
   - BREVO_FROM_EMAIL      (optioneel, fallback: SMTP_FROM of SMTP_USER)
   - BREVO_FROM_NAME       (optioneel, fallback: Kookkeuze)
+  - CONTACT_TO_EMAIL      (optioneel, fallback: kookkeuze@gmail.com)
   - CORS_ORIGINS          (optioneel, comma-separated lijst)
 */
 const APP_BASE_URL  = process.env.APP_BASE_URL  || `http://localhost:${PORT}`;
@@ -37,6 +38,7 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER;
 const BREVO_FROM_NAME  = process.env.BREVO_FROM_NAME || 'Kookkeuze';
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+const CONTACT_TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'kookkeuze@gmail.com';
 const DEFAULT_HTML_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -1155,7 +1157,7 @@ if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
   console.log('✅ Brevo API mail geconfigureerd.');
 }
 
-async function sendBrevoEmail({ to, subject, html, text }) {
+async function sendBrevoEmail({ to, subject, html, text, replyTo }) {
   const response = await fetch(BREVO_API_URL, {
     method: 'POST',
     headers: {
@@ -1166,6 +1168,10 @@ async function sendBrevoEmail({ to, subject, html, text }) {
     body: JSON.stringify({
       sender: { email: BREVO_FROM_EMAIL, name: BREVO_FROM_NAME },
       to: [{ email: to }],
+      // Bij het contactformulier gaat de mail vanaf ons eigen geverifieerde
+      // afzenderadres (anders keurt Brevo/SPF hem af), maar antwoorden moeten
+      // bij de invuller terechtkomen.
+      ...(replyTo ? { replyTo } : {}),
       subject,
       htmlContent: html,
       textContent: text
@@ -1261,6 +1267,89 @@ app.get('/health', (_req, res) => {
     date: new Date().toISOString()
   });
 });
+
+/* -------------------- CONTACTFORMULIER -------------------- */
+// Het contactformulier op de Over Kookkeuze-pagina verstuurt de mail via de
+// server (Brevo) naar CONTACT_TO_EMAIL. De afzender is ons eigen geverifieerde
+// adres; de invuller staat in replyTo zodat 'Beantwoorden' bij hen uitkomt.
+const CONTACT_RATE_WINDOW_MS = 15 * 60 * 1000;
+const CONTACT_RATE_MAX = 5;
+const contactRateHits = new Map();
+
+function getClientIp(req) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwarded || req.socket?.remoteAddress || 'onbekend';
+}
+
+// Simpele in-memory limiter. Genoeg om formulier-spam af te remmen; bij een
+// herstart begint de teller opnieuw en bij meerdere instances telt elke
+// instance apart, wat voor dit doel prima is.
+function contactRateLimited(ip) {
+  const now = Date.now();
+  const hits = (contactRateHits.get(ip) || []).filter(t => now - t < CONTACT_RATE_WINDOW_MS);
+  if (hits.length >= CONTACT_RATE_MAX) {
+    contactRateHits.set(ip, hits);
+    return true;
+  }
+  hits.push(now);
+  contactRateHits.set(ip, hits);
+
+  if (contactRateHits.size > 500) {
+    for (const [key, times] of contactRateHits) {
+      if (!times.some(t => now - t < CONTACT_RATE_WINDOW_MS)) contactRateHits.delete(key);
+    }
+  }
+  return false;
+}
+
+app.post('/api/contact', async (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  const email = String(req.body?.email || '').trim();
+  const message = String(req.body?.message || '').trim();
+  // Verborgen veld dat mensen nooit invullen, bots vaak wel. Stilletjes
+  // "geslaagd" teruggeven zodat de bot niet leert dat hij geblokkeerd is.
+  const honeypot = String(req.body?.website || '').trim();
+
+  if (honeypot) return res.json({ message: 'Bedankt voor je bericht!' });
+
+  if (!name || !email || !message) {
+    return res.status(400).json({ error: 'Vul je naam, e-mailadres en bericht in.' });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Vul een geldig e-mailadres in.' });
+  }
+  if (name.length > 100 || email.length > 150 || message.length > 5000) {
+    return res.status(400).json({ error: 'Je bericht is te lang. Houd het wat korter.' });
+  }
+
+  if (contactRateLimited(getClientIp(req))) {
+    return res.status(429).json({ error: 'Je hebt net al een bericht gestuurd. Probeer het over een kwartier nog eens.' });
+  }
+
+  if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
+    console.error('❌ Contactformulier: Brevo-config ontbreekt, mail niet verstuurd.');
+    return res.status(500).json({ error: 'Versturen lukt nu even niet. Mail ons gerust rechtstreeks.' });
+  }
+
+  try {
+    await sendBrevoEmail({
+      to: CONTACT_TO_EMAIL,
+      replyTo: { email, name },
+      subject: `Contact via Kookkeuze - ${name}`,
+      html: `
+        <p><strong>Naam:</strong> ${escapeHtml(name)}<br>
+        <strong>E-mailadres:</strong> ${escapeHtml(email)}</p>
+        <p><strong>Bericht:</strong><br>${escapeHtml(message).replace(/\n/g, '<br>')}</p>`,
+      text: `Naam: ${name}\nE-mailadres: ${email}\n\nBericht:\n${message}`
+    });
+
+    return res.json({ message: 'Bedankt voor je bericht!' });
+  } catch (err) {
+    console.error('❌ Contactformulier versturen mislukt:', err);
+    return res.status(500).json({ error: 'Versturen lukt nu even niet. Mail ons gerust rechtstreeks.' });
+  }
+});
+/* ---------------------------------------------------------- */
 
 // Receptinfo ophalen via JSON-LD (recipe schema)
 app.get('/api/recipe-info', async (req, res) => {
