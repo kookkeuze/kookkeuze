@@ -340,86 +340,121 @@
         </button>
       </div>
       <form id="addRecipeForm">
-        <div class="add-recipe-field-full">
-          <label for="url">URL:</label>
-          <p class="url-help-text">Plak een link en klik op <strong>Haal informatie op</strong> om velden automatisch te vullen.</p>
-          <div class="url-fetch-row">
-            <input id="url" type="url" placeholder="Plak hier je recept-URL (bijv. website, Instagram of Pinterest)" required />
-            <button id="fetchInfoBtn" type="button" class="green-btn fetch-info-btn">Haal informatie op</button>
+        <!-- Stap 1: link plakken -->
+        <section class="add-recipe-section">
+          <div class="add-recipe-section-head">
+            <span class="add-recipe-step-badge" aria-hidden="true">1</span>
+            <div class="add-recipe-section-title">
+              <h3>Plak een link</h3>
+              <p>We vullen dan zo veel mogelijk vast voor je in. Werkt met de meeste receptensites, Instagram en Pinterest.</p>
+            </div>
           </div>
-          <p class="url-manual-note">Wordt niet alles automatisch gevonden? Je kunt de velden ook handmatig invullen. Dat hoeft niet direct, en je kunt dit later altijd nog aanpassen.</p>
-        </div>
-        <div>
-          <label for="title">Titel:</label>
-          <input id="title" type="text" required />
-        </div>
-        <div>
-          <label for="dishTypeNew">Soort gerecht:</label>
-          <select id="dishTypeNew">
-            <option>maak een keuze</option>
-            <option>Kip</option>
-            <option>Rund</option>
-            <option>Varken</option>
-            <option>Brood</option>
-            <option>Hartig</option>
-            <option>Hartige taart</option>
-            <option>Ovenschotel</option>
-            <option>Pasta</option>
-            <option>Rijst</option>
-            <option>Soep</option>
-            <option>Taart &amp; cake</option>
-            <option>Vegetarisch</option>
-            <option>Vis</option>
-            <option>Wraps</option>
-            <option>Zoet</option>
-          </select>
-        </div>
-        <div>
-          <label for="mealCategoryNew">Menugang:</label>
-          <select id="mealCategoryNew">
-            <option>maak een keuze</option>
-            <option>Bakken</option>
-            <option>Dessert</option>
-            <option>Dressings, sauzen & dips</option>
-            <option>Drinken</option>
-            <option>Hoofdgerecht</option>
-            <option>Lunch</option>
-            <option>Ontbijt</option>
-            <option>Salade</option>
-            <option>Snacks</option>
-          </select>
-        </div>
-        <div>
-          <label for="mealTypeNew">Doel gerecht:</label>
-          <select id="mealTypeNew">
-            <option>maak een keuze</option>
-            <option>Sporten</option>
-            <option>Normaal</option>
-            <option>Cheaten</option>
-          </select>
-        </div>
-        <div>
-          <label for="timeRequiredNew">Tijd:</label>
-          <select id="timeRequiredNew">
-            <option>maak een keuze</option>
-            <option>Onder de 30 minuten</option>
-            <option>30 - 45 minuten</option>
-            <option>45 minuten - 1 uur</option>
-            <option>1 - 2 uur</option>
-            <option>langer dan 2 uur</option>
-          </select>
-        </div>
-        <div>
-          <label for="caloriesNew">Calorieën (per persoon):</label>
-          <input id="caloriesNew" type="number" placeholder="bijv. 450" />
-        </div>
-        <div class="add-recipe-note-block">
-          <label for="recipeNoteNew">Notities bij dit recept</label>
-          <p class="add-recipe-note-help">Optioneel. Handig voor je eigen twist, extra ingrediënten of kleine aanpassingen zoals “kip toevoegen” of “extra chili”.</p>
-          <textarea id="recipeNoteNew" rows="4" maxlength="500" placeholder="Bijvoorbeeld: kip toevoegen, extra knoflook, saus verdubbelen..."></textarea>
-        </div>
-       
-        <button type="submit" class="green-btn">Toevoegen</button>
+
+          <div class="add-recipe-field">
+            <label for="url">Recept-URL</label>
+            <div class="url-fetch-row">
+              <input id="url" type="url" placeholder="Plak hier je recept-URL" required />
+              <button id="fetchInfoBtn" type="button" class="green-btn fetch-info-btn">Haal informatie op</button>
+            </div>
+            <p class="add-recipe-hint">Niet alles gevonden? Je vult het hieronder gewoon zelf aan — en je kunt het later altijd nog aanpassen.</p>
+          </div>
+        </section>
+
+        <!-- Stap 2: gegevens controleren -->
+        <section class="add-recipe-section">
+          <div class="add-recipe-section-head">
+            <span class="add-recipe-step-badge" aria-hidden="true">2</span>
+            <div class="add-recipe-section-title">
+              <h3>Controleer de gegevens</h3>
+              <p>Hiermee kun je later gericht filteren op wat je zoekt.</p>
+            </div>
+          </div>
+
+          <div class="add-recipe-grid">
+            <div class="add-recipe-field">
+              <label for="title">Titel</label>
+              <input id="title" type="text" required />
+            </div>
+            <div class="add-recipe-field">
+              <label for="dishTypeNew">Soort gerecht</label>
+              <select id="dishTypeNew">
+                <option>maak een keuze</option>
+                <option>Kip</option>
+                <option>Rund</option>
+                <option>Varken</option>
+                <option>Brood</option>
+                <option>Hartig</option>
+                <option>Hartige taart</option>
+                <option>Ovenschotel</option>
+                <option>Pasta</option>
+                <option>Rijst</option>
+                <option>Soep</option>
+                <option>Taart &amp; cake</option>
+                <option>Vegetarisch</option>
+                <option>Vis</option>
+                <option>Wraps</option>
+                <option>Zoet</option>
+              </select>
+            </div>
+            <div class="add-recipe-field">
+              <label for="mealCategoryNew">Menugang</label>
+              <select id="mealCategoryNew">
+                <option>maak een keuze</option>
+                <option>Bakken</option>
+                <option>Dessert</option>
+                <option>Dressings, sauzen & dips</option>
+                <option>Drinken</option>
+                <option>Hoofdgerecht</option>
+                <option>Lunch</option>
+                <option>Ontbijt</option>
+                <option>Salade</option>
+                <option>Snacks</option>
+              </select>
+            </div>
+            <div class="add-recipe-field">
+              <label for="mealTypeNew">Doel gerecht</label>
+              <select id="mealTypeNew">
+                <option>maak een keuze</option>
+                <option>Sporten</option>
+                <option>Normaal</option>
+                <option>Cheaten</option>
+              </select>
+            </div>
+            <div class="add-recipe-field">
+              <label for="timeRequiredNew">Tijd</label>
+              <select id="timeRequiredNew">
+                <option>maak een keuze</option>
+                <option>Onder de 30 minuten</option>
+                <option>30 - 45 minuten</option>
+                <option>45 minuten - 1 uur</option>
+                <option>1 - 2 uur</option>
+                <option>langer dan 2 uur</option>
+              </select>
+            </div>
+            <div class="add-recipe-field">
+              <label for="caloriesNew">Calorieën <span class="add-recipe-optional">optioneel</span></label>
+              <input id="caloriesNew" type="number" placeholder="bijv. 450 per persoon" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Stap 3: eigen notitie -->
+        <section class="add-recipe-section">
+          <div class="add-recipe-section-head">
+            <span class="add-recipe-step-badge" aria-hidden="true">3</span>
+            <div class="add-recipe-section-title">
+              <h3>Eigen notitie <span class="add-recipe-optional">optioneel</span></h3>
+              <p>Voor je eigen twist, zoals “extra knoflook” of “saus verdubbelen”.</p>
+            </div>
+          </div>
+
+          <div class="add-recipe-field">
+            <label for="recipeNoteNew" class="sr-only">Notities bij dit recept</label>
+            <textarea id="recipeNoteNew" rows="4" maxlength="500" placeholder="Bijvoorbeeld: kip toevoegen, extra knoflook, saus verdubbelen..."></textarea>
+          </div>
+        </section>
+
+        <button type="submit" class="green-btn">Recept toevoegen</button>
       </form>
       <div id="addMessage"></div>
     </div>

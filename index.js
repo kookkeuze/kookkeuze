@@ -3247,7 +3247,7 @@ function setMissingState(input, message) {
   if (input.tagName === 'SELECT' && input._multiSelectApi) {
     input.nextElementSibling?.classList.add('field-missing');
   }
-  const fieldWrap = input.closest('#addRecipeForm > div') || input.parentElement;
+  const fieldWrap = input.closest('.add-recipe-field') || input.parentElement;
   if (!fieldWrap) return;
   const text = document.createElement('p');
   text.className = 'field-error-text';
@@ -3264,7 +3264,7 @@ Object.values(fieldNameToId).concat('url').forEach(id => {
     if (input.tagName === 'SELECT' && input._multiSelectApi) {
       input.nextElementSibling?.classList.remove('field-missing');
     }
-    const fieldWrap = input.closest('#addRecipeForm > div') || input.parentElement;
+    const fieldWrap = input.closest('.add-recipe-field') || input.parentElement;
     const err = fieldWrap ? fieldWrap.querySelector('.field-error-text') : null;
     if (err && isFilled(input)) err.remove();
   });
