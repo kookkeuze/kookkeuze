@@ -736,9 +736,10 @@ button {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #f1faf3;
+  /* Rand in dezelfde kleur als de vulling, zodat de bol even groot blijft. */
+  background: var(--green);
   border: 1.5px solid var(--green);
-  color: var(--green-deep);
+  color: #ffffff;
   font-family: 'EatingPasta', Arial, sans-serif;
   font-size: 1.05rem;
   line-height: 1;
@@ -749,7 +750,8 @@ button {
 }
 
 .add-recipe-section-title h3 {
-  margin: 3px 0 5px;
+  /* Bovenmarge lijnt de kop uit met het midden van het stapbolletje. */
+  margin: 5px 0 5px;
   font-size: 1.05rem;
   color: #2f3a35;
 }
@@ -759,6 +761,15 @@ button {
   font-size: 13px;
   line-height: 1.55;
   color: #5f6b63;
+}
+
+/* Zonder subtekst zetten de marges het bolletje scheef. */
+.add-recipe-section-title h3:last-child {
+  margin: 0;
+}
+
+.add-recipe-section-head:has(.add-recipe-section-title h3:last-child) {
+  align-items: center;
 }
 
 .add-recipe-field {
@@ -820,13 +831,6 @@ button {
 .add-recipe-section-title h3 .add-recipe-optional {
   vertical-align: middle;
   margin-left: 4px;
-}
-
-.add-recipe-hint {
-  margin: 1px 0 0;
-  color: #5f6b63;
-  font-size: 12px;
-  line-height: 1.5;
 }
 
 /* Iets zwaardere selector dan de oudere regels verderop in dit bestand,
