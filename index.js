@@ -3431,11 +3431,36 @@ const overviewGridBtn = document.getElementById('overviewGridBtn');
 const overviewListContainer = document.getElementById('overviewListContainer');
 const overviewGridContainer = document.getElementById('overviewGridContainer');
 const overviewPagination = document.getElementById('overviewPagination');
+const overviewSearchInput = document.getElementById('overviewSearchInput');
+const overviewSearchClear = document.getElementById('overviewSearchClear');
 const OVERVIEW_PAGE_SIZE = 9;
 let overviewAllRecipes = [];
 let overviewCurrentPage = 1;
 let overviewViewMode = 'list';
+let overviewSearchTerm = '';
 if (refreshBtn) refreshBtn.addEventListener('click', fetchAllRecipes);
+
+if (overviewSearchInput) {
+  overviewSearchInput.addEventListener('input', () => {
+    overviewSearchTerm = overviewSearchInput.value.trim().toLowerCase();
+    if (overviewSearchClear) overviewSearchClear.hidden = overviewSearchTerm === '';
+    overviewCurrentPage = 1;
+    renderOverviewPage();
+  });
+}
+overviewSearchClear?.addEventListener('click', () => {
+  overviewSearchTerm = '';
+  if (overviewSearchInput) overviewSearchInput.value = '';
+  overviewSearchClear.hidden = true;
+  overviewCurrentPage = 1;
+  renderOverviewPage();
+  overviewSearchInput?.focus();
+});
+
+function getOverviewFilteredRecipes() {
+  if (!overviewSearchTerm) return overviewAllRecipes;
+  return overviewAllRecipes.filter(r => (r.title || '').toLowerCase().includes(overviewSearchTerm));
+}
 openRecipePacksBtn?.addEventListener('click', () => {
   openRecipePackFlow({ fromOnboarding: false });
 });
@@ -3504,15 +3529,26 @@ function renderOverviewPage() {
     return;
   }
 
+  const filteredRecipes = getOverviewFilteredRecipes();
+
+  if (filteredRecipes.length === 0) {
+    const msg = `Geen recepten gevonden voor “${overviewSearchInput?.value.trim() || ''}”.`;
+    allRecipesDiv.innerHTML = `<tr><td colspan="10">${msg}</td></tr>`;
+    if (overviewGridContainer) overviewGridContainer.innerHTML = `<p>${msg}</p>`;
+    renderOverviewPagination(0);
+    applyOverviewViewMode();
+    return;
+  }
+
   const dishOpt  = ["Kip","Rund","Varken","Brood","Hartig","Hartige taart","Ovenschotel","Pasta","Rijst","Soep","Taart & cake","Vegetarisch","Vis","Wraps","Zoet"];
   const catOpt   = ["Bakken","Dessert","Dressings, sauzen & dips","Drinken","Hoofdgerecht","Lunch","Ontbijt","Salade","Snacks"];
   const mealOpt  = ["Sporten","Normaal","Cheaten"];
   const timeOpt  = ["Onder de 30 minuten","30 - 45 minuten","45 minuten - 1 uur","1 - 2 uur","langer dan 2 uur"];
 
-  const totalPages = Math.max(1, Math.ceil(overviewAllRecipes.length / OVERVIEW_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filteredRecipes.length / OVERVIEW_PAGE_SIZE));
   if (overviewCurrentPage > totalPages) overviewCurrentPage = totalPages;
   const startIdx = (overviewCurrentPage - 1) * OVERVIEW_PAGE_SIZE;
-  const pageRecipes = overviewAllRecipes.slice(startIdx, startIdx + OVERVIEW_PAGE_SIZE);
+  const pageRecipes = filteredRecipes.slice(startIdx, startIdx + OVERVIEW_PAGE_SIZE);
 
   let html = '';
   let gridHtml = '<div class="recipe-cards-container overview-grid-cards">';
@@ -3583,7 +3619,7 @@ function renderOverviewPage() {
   document.querySelectorAll('.overview-multi-select').forEach(select => {
     createMultiSelect(select, select.dataset.placeholder || 'Selecteer');
   });
-  renderOverviewPagination(overviewAllRecipes.length);
+  renderOverviewPagination(filteredRecipes.length);
   applyOverviewViewMode();
   document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', onUpdateRecipe));
   document.querySelectorAll('.delete-btn').forEach(b => b.addEventListener('click', onDeleteRecipe));
