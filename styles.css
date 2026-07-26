@@ -726,6 +726,30 @@ button {
 }
 
 
+/* Vanaf tablet/laptop de korte velden naast elkaar, zodat ze niet onnodig
+   de volle breedte hoeven te vullen. URL en notities blijven volle breedte:
+   die hebben de ruimte wel nodig. Onder de breekpunten valt alles vanzelf
+   weer onder elkaar. */
+@media (min-width: 769px) {
+  #addRecipeForm {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 20px;
+    align-items: start;
+  }
+
+  #addRecipeForm > .add-recipe-field-full,
+  #addRecipeForm > .add-recipe-note-block,
+  #addRecipeForm > button[type="submit"] {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1100px) {
+  #addRecipeForm {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 #addRecipeForm > div > label {
   font-weight: 700;
   color: #3f4e45;
@@ -792,7 +816,8 @@ button {
   padding: 14px;
   border: 1px solid #e3ece5;
   border-radius: var(--radius-md);
-  background: linear-gradient(180deg, #fbfdfb 0%, #f6fbf7 100%);
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(47, 106, 55, 0.07);
 }
 
 #addRecipeForm .add-recipe-note-block > label {
