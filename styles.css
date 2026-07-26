@@ -5104,22 +5104,94 @@ select:focus {
   color: var(--green-hover);
 }
 
-/* Opvallend contactblok onderaan de Over Kookkeuze-pagina. */
+/* Stappenplan op de info-pagina: genummerde bolletjes in dezelfde stijl als
+   het stappenplan op de homepage (wit bolletje, donkergroene rand en cijfer
+   in het merklettertype). */
+.info-steps {
+  list-style: none;
+  margin: 18px 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.info-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 18px;
+  background: #ffffff;
+  border: 1px solid #e3efe6;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 14px rgba(47, 106, 55, 0.07);
+}
+
+.info-step-number {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--green-deep);
+  border: 2px solid var(--green-deep);
+  font-family: 'EatingPasta', Arial, sans-serif;
+  font-size: 1.5rem;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+.info-step-body {
+  min-width: 0;
+}
+
+.info-page .info-step-body h4 {
+  margin: 2px 0 6px;
+  font-size: 1.05rem;
+  color: var(--green-deep);
+}
+
+.info-page .info-step-body p {
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .info-step {
+    gap: 13px;
+    padding: 14px 15px;
+  }
+
+  .info-step-number {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+
+  .info-page .info-step-body h4 {
+    font-size: 1rem;
+  }
+}
+
+/* Contactblok onderaan de Over Kookkeuze-pagina: wit kaartje met schaduw,
+   zodat het rustig oogt en aansluit op de andere kaarten in de app. */
 .contact-block {
   margin-top: 34px;
   padding: 22px 24px 26px;
   border-radius: var(--radius-lg);
-  background: var(--green);
-  box-shadow: 0 8px 22px rgba(99, 214, 113, 0.25);
+  background: #ffffff;
+  border: 1px solid #e3efe6;
+  box-shadow: 0 10px 26px rgba(47, 106, 55, 0.12);
 }
 
 .contact-block h3 {
   margin-top: 0;
-  color: var(--green-deep);
+  color: var(--green);
 }
 
 .contact-block p {
-  color: #ffffff;
+  color: #3a433d;
 }
 
 /* Op computer/laptop staat de tekst naast het formulier; op tablet en
@@ -5143,11 +5215,18 @@ select:focus {
 @media (max-width: 900px) {
   .contact-block-layout {
     flex-direction: column;
+    /* stretch i.p.v. flex-start, anders krimpt het formulier naar de
+       intrinsieke breedte van de velden i.p.v. de volle blokbreedte. */
+    align-items: stretch;
     gap: 4px;
   }
 
   .contact-block-intro {
     margin: 0 0 8px;
+  }
+
+  .contact-block-layout .info-contact-form {
+    max-width: none;
   }
 }
 
@@ -5156,21 +5235,11 @@ select:focus {
 }
 
 .contact-block p a {
-  color: #ffffff;
+  color: var(--green);
 }
 
 .contact-block p a:hover {
-  color: #1a1a1a;
-}
-
-/* Donkergroene knop zodat 'Verstuur' goed afsteekt tegen de lichtgroene achtergrond. */
-.contact-block .green-btn {
-  background-color: var(--green-deep);
-  color: #ffffff;
-}
-
-.contact-block .green-btn:hover {
-  background-color: #1c4a22;
+  color: var(--green-hover);
 }
 
 /* Simpel contactformulier op de Over Kookkeuze-pagina. */
