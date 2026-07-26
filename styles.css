@@ -4618,22 +4618,28 @@ select:focus {
   box-sizing: border-box;
 }
 
+/* Native horizontaal scrollen met snap-punten. De browser handelt het
+   veeggebaar zelf af, waardoor een schuine veeg niet meer hoeft te "winnen"
+   van verticaal scrollen -- dat was de oorzaak van het vastlopen op telefoon. */
 .hiw-viewport{
-  overflow: hidden;
   flex: 1 1 auto;
   min-width: 0;
-  /* Horizontale swipe reserveren voor de slider (verticaal scrollen blijft). */
-  touch-action: pan-y;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  /* Scrollbalk verbergen; de dots geven de positie al aan. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hiw-viewport::-webkit-scrollbar{
+  display: none;
 }
 
 .hiw-track{
   display: flex;
   width: 100%;
-  transition: transform .4s cubic-bezier(.4, 0, .2, 1);
-  will-change: transform;
-  /* Horizontale swipe is voor de slider; verticaal scrollen blijft van de
-     browser. Zonder dit kaapt de browser de swipe als scroll (touchcancel). */
-  touch-action: pan-y;
 }
 
 .hiw-slide{
@@ -4644,7 +4650,9 @@ select:focus {
   justify-content: center;
   align-items: flex-start;
   padding: 14px 10px 22px;
-  touch-action: pan-y;
+  scroll-snap-align: start;
+  /* Eén stap per veeg, zodat je niet per ongeluk stappen overslaat. */
+  scroll-snap-stop: always;
 }
 
 .hiw-card{

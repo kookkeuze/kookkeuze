@@ -4005,50 +4005,40 @@ function initHowItWorksSlider() {
     return dot;
   });
 
-  function goTo(index) {
+  // Alleen de markering bijwerken; het scrollen zelf gebeurt door de browser.
+  function setActive(index) {
     current = Math.max(0, Math.min(slides.length - 1, index));
-    track.style.transform = `translateX(${-current * viewport.offsetWidth}px)`;
     dots.forEach((dot, i) => dot.classList.toggle('active', i === current));
     if (prevBtn) prevBtn.disabled = current === 0;
     if (nextBtn) nextBtn.disabled = current === slides.length - 1;
   }
 
+  function goTo(index, smooth = true) {
+    const target = Math.max(0, Math.min(slides.length - 1, index));
+    viewport.scrollTo({
+      left: target * viewport.clientWidth,
+      behavior: smooth ? 'smooth' : 'auto'
+    });
+    setActive(target);
+  }
+
   prevBtn?.addEventListener('click', () => goTo(current - 1));
   nextBtn?.addEventListener('click', () => goTo(current + 1));
 
-  window.addEventListener('resize', () => { applyWidths(); goTo(current); });
+  // Swipen laat de browser scrollen; hier volgen alleen de dots de positie.
+  let scrollFrame = null;
+  viewport.addEventListener('scroll', () => {
+    if (scrollFrame) return;
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = null;
+      const width = viewport.clientWidth;
+      if (width > 0) setActive(Math.round(viewport.scrollLeft / width));
+    });
+  }, { passive: true });
 
-  // Swipe-ondersteuning via Pointer Events (mobiel/tablet/muis). Robuuster dan
-  // touch-events: elk gebaar her-armt zichzelf op pointerdown, en zowel
-  // pointerup als pointercancel ronden de swipe af.
-  let dragActive = false;
-  let dragPointerId = null;
-  let dragStartX = 0;
-  let dragDeltaX = 0;
+  window.addEventListener('resize', () => { applyWidths(); goTo(current, false); });
 
-  track.addEventListener('pointerdown', e => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    dragActive = true;
-    dragPointerId = e.pointerId;
-    dragStartX = e.clientX;
-    dragDeltaX = 0;
-  });
-  track.addEventListener('pointermove', e => {
-    if (!dragActive || e.pointerId !== dragPointerId) return;
-    dragDeltaX = e.clientX - dragStartX;
-  });
-  const endDrag = e => {
-    if (!dragActive || (e && e.pointerId !== dragPointerId)) return;
-    dragActive = false;
-    dragPointerId = null;
-    if (Math.abs(dragDeltaX) > 40) {
-      goTo(current + (dragDeltaX < 0 ? 1 : -1));
-    }
-  };
-  track.addEventListener('pointerup', endDrag);
-  track.addEventListener('pointercancel', endDrag);
-
-  requestAnimationFrame(() => { applyWidths(); goTo(0); });
+  requestAnimationFrame(() => { applyWidths(); goTo(0, false); });
 }
 initHowItWorksSlider();
 
