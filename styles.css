@@ -5104,9 +5104,49 @@ select:focus {
   color: var(--green-hover);
 }
 
+/* Opsomming met vinkjes in plaats van standaard bullets, voor lijstjes met
+   voordelen. Gebruikt hetzelfde lichtgroene check-icoon als de rest van de
+   app. Niet op alle .info-page-lijsten toegepast: op de privacypagina zijn
+   het neutrale opsommingen waar een vinkje niet klopt. */
+.info-check-list {
+  list-style: none;
+  margin: 14px 0 16px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.info-page .info-check-list li {
+  position: relative;
+  margin-bottom: 0;
+  padding-left: 34px;
+  line-height: 1.55;
+}
+
+.info-check-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.12em;
+  width: 22px;
+  height: 22px;
+  background: url('icons/check.svg') no-repeat center / contain;
+}
+
+@media (max-width: 600px) {
+  .info-page .info-check-list li {
+    padding-left: 30px;
+  }
+
+  .info-check-list li::before {
+    width: 20px;
+    height: 20px;
+  }
+}
+
 /* Stappenplan op de info-pagina: genummerde bolletjes in dezelfde stijl als
-   het stappenplan op de homepage (wit bolletje, donkergroene rand en cijfer
-   in het merklettertype). */
+   het stappenplan op de homepage, met het cijfer en de rand in het
+   lichtgroen van de huisstijl. */
 .info-steps {
   list-style: none;
   margin: 18px 0 10px;
@@ -5135,8 +5175,8 @@ select:focus {
   justify-content: center;
   border-radius: 50%;
   background: #ffffff;
-  color: var(--green-deep);
-  border: 2px solid var(--green-deep);
+  color: var(--green);
+  border: 2px solid var(--green);
   font-family: 'EatingPasta', Arial, sans-serif;
   font-size: 1.5rem;
   line-height: 1;
