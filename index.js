@@ -1960,13 +1960,16 @@ function isInstagramSource(url) {
 
 // Bronnen waarvan Bring de ingrediënten niet zelf uit de pagina kan lezen
 // (Instagram heeft geen schema.org; AH en Jumbo leveren hun ingrediënten via
-// JS / blokkeren Bring's crawler). Voor deze sturen we Bring naar onze eigen
-// export-pagina, die de door ons uitgelezen ingrediënten als schema.org serveert.
+// JS / blokkeren Bring's crawler; keukenliefde.nl publiceert wel een
+// schema.org Recipe maar zónder recipeIngredient, waardoor Bring afhaakt).
+// Voor deze sturen we Bring naar onze eigen export-pagina, die de door ons
+// uitgelezen ingrediënten als schema.org serveert.
 const BRING_PROXY_HOSTS = [
   /(^|\.)instagram\.com$/i,
   /(^|\.)ah\.nl$/i,
   /(^|\.)albertheijn\.nl$/i,
-  /(^|\.)jumbo\.com$/i
+  /(^|\.)jumbo\.com$/i,
+  /(^|\.)keukenliefde\.nl$/i
 ];
 
 function bringNeedsProxy(url) {
