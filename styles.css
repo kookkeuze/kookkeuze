@@ -1185,9 +1185,11 @@ select:focus {
   gap: 8px;
 }
 
-.recipe-packs-btn {
+/* Beide klassen in de selector: .overview-view-btn staat verderop in dit
+   bestand en zou anders de rand en achtergrond terugzetten. */
+.overview-view-btn.recipe-packs-btn {
   background: #eef8f0;
-  border-color: #c9e8cf;
+  border: 1px solid #235b2a;
   color: #1f5b2c;
 }
 
@@ -4190,7 +4192,7 @@ select:focus {
   border: 1px solid #e6efe8;
   border-radius: var(--radius-md);
   padding: 24px 22px;
-  background: #ffffff;
+  background: #f8f9fa;
   box-shadow: 0 4px 16px rgba(47, 106, 55, 0.07);
   text-align: center;
   animation: recipePackIn 260ms cubic-bezier(.22, .61, .36, 1) both;
@@ -4353,7 +4355,7 @@ select:focus {
   border: 1px solid #e6efe8;
   border-radius: var(--radius-md);
   padding: 22px;
-  background: #ffffff;
+  background: #f8f9fa;
   box-shadow: 0 4px 16px rgba(47, 106, 55, 0.07);
 }
 
