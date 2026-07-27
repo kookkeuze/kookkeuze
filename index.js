@@ -1038,6 +1038,36 @@ function renderRecipePackSummary() {
   document.getElementById('recipePackDoneBtn')?.addEventListener('click', closeRecipePackModal);
 }
 
+// Laat de kaart naar links (overslaan) of rechts (toevoegen) wegvliegen en
+// wacht tot dat klaar is, zodat de volgende kaart er niet doorheen springt.
+function flyOutRecipePackCard(direction) {
+  const card = recipePackModalBody?.querySelector('.recipe-pack-card');
+  if (!card) return Promise.resolve();
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return Promise.resolve();
+
+  card.classList.add(direction === 'right' ? 'is-leaving-right' : 'is-leaving-left');
+
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    card.addEventListener('animationend', finish, { once: true });
+    // Vangnet: als de animatie niet draait (bv. tabblad op de achtergrond)
+    // blijft de flow anders hangen.
+    setTimeout(finish, 600);
+  });
+}
+
+function setRecipePackActionsDisabled(disabled) {
+  ['recipePackSkipBtn', 'recipePackAddBtn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = disabled;
+  });
+}
+
 function renderRecipePackStep() {
   if (!recipePackModalBody) return;
   if (!recipePackList.length || recipePackIndex >= recipePackList.length) {
@@ -1072,7 +1102,9 @@ function renderRecipePackStep() {
     </div>
   `;
 
-  document.getElementById('recipePackSkipBtn')?.addEventListener('click', () => {
+  document.getElementById('recipePackSkipBtn')?.addEventListener('click', async () => {
+    setRecipePackActionsDisabled(true);
+    await flyOutRecipePackCard('left');
     recipePackStats.skipped += 1;
     recipePackIndex += 1;
     renderRecipePackStep();
@@ -1080,8 +1112,10 @@ function renderRecipePackStep() {
 
   document.getElementById('recipePackAddBtn')?.addEventListener('click', async (e) => {
     const addBtn = e.currentTarget;
-    addBtn.disabled = true;
+    setRecipePackActionsDisabled(true);
     addBtn.classList.add('is-loading');
+    // Meteen laten wegvliegen; het opslaan loopt ondertussen door.
+    const flying = flyOutRecipePackCard('right');
     try {
       const res = await fetch(`${API_BASE}/api/recipe-packs/apply`, {
         method: 'POST',
@@ -1102,6 +1136,7 @@ function renderRecipePackStep() {
     } catch (_err) {
       showRecipeAddedToast('Pakket toevoegen mislukt.', 'error');
     } finally {
+      await flying;
       recipePackIndex += 1;
       renderRecipePackStep();
     }

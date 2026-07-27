@@ -4184,18 +4184,56 @@ select:focus {
   font-size: 15px;
 }
 
-/* Zelfde kaartstijl als de stappen bij 'Voeg een recept toe': wit, zachte
-   schaduw, en een lichtgroen rondje met het icoon links naast de titel. */
+/* Zelfde kaartstijl als de stappen bij 'Voeg een recept toe': wit met een
+   zachte schaduw. Inhoud gecentreerd, met het icoon groot bovenaan. */
 .recipe-pack-card {
   border: 1px solid #e6efe8;
   border-radius: var(--radius-md);
-  padding: 22px;
+  padding: 24px 22px;
   background: #ffffff;
   box-shadow: 0 4px 16px rgba(47, 106, 55, 0.07);
+  text-align: center;
+  animation: recipePackIn 260ms cubic-bezier(.22, .61, .36, 1) both;
+}
+
+/* Weg-swipen naar links (overslaan) of rechts (toevoegen), zoals bij Tinder. */
+.recipe-pack-card.is-leaving-left {
+  animation: recipePackOutLeft 380ms cubic-bezier(.4, 0, .7, .3) forwards;
+}
+
+.recipe-pack-card.is-leaving-right {
+  animation: recipePackOutRight 380ms cubic-bezier(.4, 0, .7, .3) forwards;
+}
+
+@keyframes recipePackIn {
+  from { opacity: 0; transform: translateY(14px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes recipePackOutLeft {
+  to { opacity: 0; transform: translateX(-115%) rotate(-13deg); }
+}
+
+@keyframes recipePackOutRight {
+  to { opacity: 0; transform: translateX(115%) rotate(13deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recipe-pack-card,
+  .recipe-pack-card.is-leaving-left,
+  .recipe-pack-card.is-leaving-right {
+    animation: none;
+  }
+}
+
+/* Houdt de wegvliegende kaart binnen de modal, zodat er geen horizontale
+   scrollbalk verschijnt tijdens de animatie. */
+#recipePackModalBody {
+  overflow-x: clip;
 }
 
 .recipe-pack-progress {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   color: #7a8a80;
   font-weight: 600;
   font-size: 13px;
@@ -4203,6 +4241,7 @@ select:focus {
 
 .recipe-pack-head {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 13px;
 }
@@ -4210,8 +4249,8 @@ select:focus {
 /* Het lichtgroene rondje zit al in de SVG zelf, dus hier geen achtergrond. */
 .recipe-pack-icon {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 76px;
+  height: 76px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4270,8 +4309,8 @@ select:focus {
   }
 
   .recipe-pack-icon {
-    width: 40px;
-    height: 40px;
+    width: 64px;
+    height: 64px;
   }
 }
 
