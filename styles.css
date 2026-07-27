@@ -1184,15 +1184,42 @@ select:focus {
 
 .overview-view-switch {
   display: inline-flex;
-  gap: 8px;
+  gap: 18px;
 }
 
-/* Beide klassen in de selector: .overview-view-btn staat verderop in dit
-   bestand en zou anders de rand en achtergrond terugzetten. */
+/* 'Raster', 'Recepten bewerken' en 'Recept pakketten' zijn klikbare tekst in
+   plaats van omkaderde knoppen. Beide klassen in de selector, omdat
+   .overview-view-btn verderop in dit bestand de rand en vulling weer zet. */
+.overview-view-switch .overview-view-btn,
 .overview-view-btn.recipe-packs-btn {
-  background: #ffffff;
-  border: 1px solid #235b2a;
-  color: #1f5b2c;
+  min-width: 0;
+  height: auto;
+  padding: 4px 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: #6f7f74;
+}
+
+.overview-view-btn.recipe-packs-btn {
+  color: var(--green-deep);
+}
+
+.overview-view-switch .overview-view-btn:hover,
+.overview-view-btn.recipe-packs-btn:hover {
+  background: none;
+  color: var(--green-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Actieve weergave: donkergroen en onderstreept. */
+.overview-view-switch .overview-view-btn.active {
+  background: none;
+  color: var(--green-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .overview-view-btn {
@@ -3610,13 +3637,18 @@ select:focus {
     font-size: 16px;
   }
 
+  /* Tekstlinks vullen niet de volle breedte, die blijven links staan. */
   .recipe-packs-btn,
   .overview-view-switch {
-    width: 100%;
+    width: auto;
   }
 
   .overview-view-switch .overview-view-btn {
-    flex: 1;
+    flex: 0 0 auto;
+  }
+
+  .overview-controls .overview-view-switch {
+    justify-content: flex-start;
   }
 
 }
