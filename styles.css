@@ -1188,7 +1188,7 @@ select:focus {
 /* Beide klassen in de selector: .overview-view-btn staat verderop in dit
    bestand en zou anders de rand en achtergrond terugzetten. */
 .overview-view-btn.recipe-packs-btn {
-  background: #eef8f0;
+  background: #ffffff;
   border: 1px solid #235b2a;
   color: #1f5b2c;
 }
@@ -4174,6 +4174,12 @@ select:focus {
   width: min(560px, 96vw);
   max-width: min(560px, 96vw);
   padding: 26px 24px;
+  /* Grijze achtergrond zodat de witte kaart eruit springt. */
+  background: #f8f9fa;
+  /* .modal-content reserveert ruimte voor de scrollbalk aan één kant, waardoor
+     de kaart 15px links van het midden uitkwam. Aan beide kanten reserveren
+     houdt hem gecentreerd en voorkomt nog steeds het verspringen. */
+  scrollbar-gutter: stable both-edges;
 }
 
 .recipe-pack-modal-header {
@@ -4192,7 +4198,7 @@ select:focus {
   border: 1px solid #e6efe8;
   border-radius: var(--radius-md);
   padding: 24px 22px;
-  background: #f8f9fa;
+  background: #ffffff;
   box-shadow: 0 4px 16px rgba(47, 106, 55, 0.07);
   text-align: center;
   animation: recipePackIn 260ms cubic-bezier(.22, .61, .36, 1) both;
@@ -4355,7 +4361,7 @@ select:focus {
   border: 1px solid #e6efe8;
   border-radius: var(--radius-md);
   padding: 22px;
-  background: #f8f9fa;
+  background: #ffffff;
   box-shadow: 0 4px 16px rgba(47, 106, 55, 0.07);
 }
 
