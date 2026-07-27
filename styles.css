@@ -1111,19 +1111,20 @@ select:focus {
   margin-bottom: 32px;
 }
 
-.overview-toolbar {
-  margin-top: 8px;
+/* Zoekbalk links, weergaveknoppen rechts, verticaal op één lijn. Wordt het
+   te krap, dan breekt de rij af en gaan beide over de volle breedte. */
+.overview-controls {
+  margin-top: 18px;
   display: flex;
   align-items: center;
-  /* Alleen de weergaveschakelaar nog; die houdt zijn plek rechts. */
-  justify-content: flex-end;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
 .overview-search {
   position: relative;
-  margin-top: 18px;
+  flex: 1 1 260px;
   max-width: 420px;
 }
 
@@ -1220,8 +1221,10 @@ select:focus {
   flex: 0 0 auto;
 }
 
+/* Actieve weergave alleen aan de donkergroene rand en tekst herkenbaar,
+   zonder groene vulling. */
 .overview-view-btn.active {
-  background: #eef6ef;
+  background: #ffffff;
   border-color: var(--green-deep);
   color: var(--green-deep);
 }
@@ -3592,14 +3595,15 @@ select:focus {
     grid-template-columns: 1fr;
   }
 
-  .overview-toolbar {
+  .overview-controls {
     align-items: stretch;
-    gap: 10px;
+    gap: 12px;
+    margin-top: 14px;
   }
 
   .overview-search {
     max-width: none;
-    margin-top: 14px;
+    flex: 1 1 100%;
   }
 
   .overview-search input {
