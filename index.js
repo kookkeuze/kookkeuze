@@ -1051,7 +1051,9 @@ function renderRecipePackStep() {
     <div class="recipe-pack-card">
       <p class="recipe-pack-progress">${progress}</p>
       <div class="recipe-pack-head">
-        <div class="recipe-pack-icon"><i class="fas ${pack.icon || 'fa-box-open'}"></i></div>
+        <div class="recipe-pack-icon">
+          <img src="icons/${pack.icon || 'recepten-pakket.svg'}" alt="" class="recipe-pack-icon-img" />
+        </div>
         <div class="recipe-pack-head-text">
           <h4>${pack.title}</h4>
           <p class="recipe-pack-subtitle">${pack.subtitle || ''}</p>
