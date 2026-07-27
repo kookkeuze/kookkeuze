@@ -1667,7 +1667,9 @@ function buildRecipeCardsHtml(arr, options = {}) {
     ? 'Importeer naar mijn database'
     : 'Importeer naar gedeelde database';
   // Voor guests in de database-modus: subtiele voorbeeld-banner boven de resultaten.
-  const guestBanner = (!isInternetMode && isGuestUser()) ? guestDemoBannerHtml() : '';
+  const guestBanner = (!isInternetMode && !options.hideGuestBanner && isGuestUser())
+    ? guestDemoBannerHtml()
+    : '';
   let html = `${guestBanner}<div class="recipe-cards-container search-results${singleClass}${extraClass}">`;
   arr.forEach(r => {
     const recipeId = Number(r.id) > 0 ? Number(r.id) : '';
@@ -3468,7 +3470,6 @@ addRecipeForm.addEventListener('submit', async e => {
 
 /* ========= OVERZICHT RECEPTEN (TAB 3) ========= */
 const allRecipesDiv = document.getElementById('allRecipes');
-const refreshBtn    = document.getElementById('refreshBtn');
 const openRecipePacksBtn = document.getElementById('openRecipePacksBtn');
 const overviewListBtn = document.getElementById('overviewListBtn');
 const overviewGridBtn = document.getElementById('overviewGridBtn');
@@ -3480,9 +3481,12 @@ const overviewSearchClear = document.getElementById('overviewSearchClear');
 const OVERVIEW_PAGE_SIZE = 9;
 let overviewAllRecipes = [];
 let overviewCurrentPage = 1;
-let overviewViewMode = 'list';
+// Raster is de standaardweergave; de lijst is er voor het bewerken.
+let overviewViewMode = 'grid';
 let overviewSearchTerm = '';
-if (refreshBtn) refreshBtn.addEventListener('click', fetchAllRecipes);
+
+// Zelfde kaartacties (notitie, 'Toevoegen aan...') als bij 'Kies een recept'.
+overviewGridContainer?.addEventListener('click', onRecipeCardClick);
 
 if (overviewSearchInput) {
   overviewSearchInput.addEventListener('input', () => {
@@ -3595,7 +3599,6 @@ function renderOverviewPage() {
   const pageRecipes = filteredRecipes.slice(startIdx, startIdx + OVERVIEW_PAGE_SIZE);
 
   let html = '';
-  let gridHtml = '<div class="recipe-cards-container overview-grid-cards">';
   pageRecipes.forEach(r => {
     const cals = r.calories ?? '';
     const safeUrl = encodeURIComponent(r.url || '');
@@ -3633,33 +3636,22 @@ function renderOverviewPage() {
           <td><button class="danger-btn delete-btn">Verwijder</button></td>
         </tr>`;
     }
-    gridHtml += `
-      <div class="recipe-card">
-        <div class="result-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
-          <div class="recipe-card-image-skeleton"></div>
-        </div>
-        <div class="recipe-card-content">
-          <h3>${r.title}</h3>
-          <p class="recipe-link"><a href="${r.url}" target="_blank" class="ext-link">
-            Bekijk&nbsp;recept&nbsp;<img src="icons/externe-link.svg" alt="" class="recipe-link-ext-icon" /></a></p>
-          <div class="recipe-meta-row">
-            <span class="recipe-meta-pill"><img src="icons/tijd.svg" alt="" class="recipe-meta-icon" /> ${r.time_required || '-'}</span>
-            <span class="recipe-meta-pill"><img src="icons/kcal.svg" alt="" class="recipe-meta-icon" /> ${r.calories ?? '-'} kcal</span>
-          </div>
-          <ul>
-            <li><img src="icons/soort.svg" alt="" class="recipe-meta-icon" /> <strong>Soort:</strong> ${r.dish_type || '-'}</li>
-            <li><img src="icons/menugang.svg" alt="" class="recipe-meta-icon" /> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
-            <li><img src="icons/doel.svg" alt="" class="recipe-meta-icon" /> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
-          </ul>
-        </div>
-      </div>`;
   });
-  gridHtml += '</div>';
+
+  // Dezelfde kaarten als bij 'Kies een recept', zodat het raster ook de
+  // notitie-knop en 'Toevoegen aan...' heeft. De guest-banner staat hier al
+  // boven het overzicht, dus die niet nog een keer.
+  const gridHtml = buildRecipeCardsHtml(pageRecipes, {
+    extraClass: 'overview-grid-cards',
+    hideGuestBanner: true
+  });
+
   allRecipesDiv.innerHTML = html;
   if (overviewGridContainer) overviewGridContainer.innerHTML = gridHtml;
 
   hydrateOverviewImages();
   hydrateResultImages();
+  refreshRecipeNoteButtons();
   document.querySelectorAll('.overview-multi-select').forEach(select => {
     createMultiSelect(select, select.dataset.placeholder || 'Selecteer');
   });

@@ -1115,7 +1115,8 @@ select:focus {
   margin-top: 8px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* Alleen de weergaveschakelaar nog; die houdt zijn plek rechts. */
+  justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -3601,17 +3602,6 @@ select:focus {
 
 /* om de icon-positionering te behouden nu het select buiten .container staat */
 .mobile-nav-wrap { position: relative; }
-
-/* link-stijl voor “Vernieuw het overzicht” */
-.refresh-link{
-  color: var(--accent-color);
-  text-decoration:underline;
-  font-weight:600;
-  cursor:pointer;
-  background:none;
-  border:none;
-  padding: 20px 0px;
-}
 
 
 /* ══════════════ TOP-BAR ══════════════ */
