@@ -1213,6 +1213,13 @@ select:focus {
   margin-right: 6px;
 }
 
+.overview-view-btn-icon {
+  width: 17px;
+  height: 17px;
+  margin-right: 7px;
+  flex: 0 0 auto;
+}
+
 .overview-view-btn.active {
   background: #eef6ef;
   border-color: var(--green-deep);
@@ -1594,6 +1601,16 @@ select:focus {
   position: relative;
   box-shadow: 0 6px 18px rgba(15, 30, 18, 0.08);
   transition: transform 0.2s ease;
+}
+
+/* Zie closeAllRecipeExportMenus(): een open exportmenu mag buiten de kaart
+   vallen, anders klipt overflow:hidden de onderste optie (Stuur naar Bring)
+   weg. Beide selectors omdat '.overview-grid-cards .recipe-card' verderop
+   overflow weer op hidden zet. */
+.recipe-card.has-open-export,
+.overview-grid-cards .recipe-card.has-open-export {
+  overflow: visible;
+  z-index: 2;
 }
 
 .overview-grid-cards .recipe-card {
@@ -4341,6 +4358,12 @@ select:focus {
 
 .recipe-pack-add-btn {
   color: #2c8e45;
+}
+
+.recipe-pack-action-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
 .recipe-pack-add-btn.is-loading {

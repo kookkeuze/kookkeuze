@@ -1093,10 +1093,10 @@ function renderRecipePackStep() {
       <p class="recipe-pack-count">${pack.total_recipes || 0} recepten</p>
       <div class="recipe-pack-actions">
         <button id="recipePackSkipBtn" type="button" class="recipe-pack-skip-btn" aria-label="Pakket overslaan">
-          <i class="fas fa-times"></i>
+          <img src="icons/pakket-overslaan.svg" alt="" class="recipe-pack-action-icon" />
         </button>
         <button id="recipePackAddBtn" type="button" class="recipe-pack-add-btn" aria-label="Pakket toevoegen">
-          <i class="fas fa-check"></i>
+          <img src="icons/pakket-toevoegen.svg" alt="" class="recipe-pack-action-icon" />
         </button>
       </div>
     </div>
@@ -2074,6 +2074,9 @@ function closeAllRecipeExportMenus(exceptMenu = null) {
     const trigger = wrapper?.querySelector('[data-export-toggle]');
     trigger?.setAttribute('aria-expanded', shouldKeepOpen ? 'true' : 'false');
     wrapper?.classList.toggle('is-open', !!shouldKeepOpen);
+    // De kaart klipt zijn inhoud af; zolang het menu openstaat moet dat even
+    // niet, anders valt de onderste optie (Stuur naar Bring) weg.
+    menu.closest('.recipe-card')?.classList.toggle('has-open-export', !!shouldKeepOpen);
   });
 }
 
