@@ -1106,11 +1106,6 @@ select:focus {
   width: 120px;
 }
 
-/* Vernieuw overzicht knop spacing */
-#overzichtRecepten button:first-child {
-  margin-bottom: 32px;
-}
-
 /* Zoekbalk links, weergaveknoppen rechts, verticaal op één lijn. Wordt het
    te krap, dan breekt de rij af en gaan beide over de volle breedte. */
 .overview-controls {
@@ -1184,7 +1179,10 @@ select:focus {
 
 .overview-view-switch {
   display: inline-flex;
+  align-items: center;
   gap: 18px;
+  /* Niet laten krimpen; wordt het te krap, dan breekt .overview-controls af. */
+  flex: 0 0 auto;
 }
 
 /* 'Raster', 'Recepten bewerken' en 'Recept pakketten' zijn klikbare tekst in
@@ -1200,6 +1198,11 @@ select:focus {
   background: none;
   box-shadow: none;
   color: #6f7f74;
+  /* Vaste regelhoogte: het merklettertype geeft met 'normal' een veel te hoge
+     regel, waardoor de twee links niet meer op één lijn stonden. */
+  line-height: 1.2;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .overview-view-btn.recipe-packs-btn {
