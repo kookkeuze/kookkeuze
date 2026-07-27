@@ -3595,9 +3595,6 @@ select:focus {
     flex: 1;
   }
 
-  .recipe-pack-card h4 {
-    font-size: 28px;
-  }
 }
 
 /* om de icon-positionering te behouden nu het select buiten .container staat */
@@ -4187,59 +4184,99 @@ select:focus {
   font-size: 15px;
 }
 
+/* Zelfde kaartstijl als de stappen bij 'Voeg een recept toe': wit, zachte
+   schaduw, en een lichtgroen rondje met het icoon links naast de titel. */
 .recipe-pack-card {
-  border: 1px solid #dcebe0;
-  border-radius: 18px;
-  padding: 20px;
-  text-align: center;
-  background: #fbfdfb;
+  border: 1px solid #e6efe8;
+  border-radius: var(--radius-md);
+  padding: 22px;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(47, 106, 55, 0.07);
 }
 
 .recipe-pack-progress {
-  margin: 0 0 8px;
+  margin: 0 0 14px;
   color: #7a8a80;
   font-weight: 600;
   font-size: 13px;
 }
 
+.recipe-pack-head {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
 .recipe-pack-icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 12px;
-  border-radius: 999px;
-  background: #e9f7eb;
-  color: #2c7b3d;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 19px;
+}
+
+.recipe-pack-head-text {
+  min-width: 0;
 }
 
 .recipe-pack-card h4 {
   margin: 0;
-  font-size: 32px;
-  color: #27332c;
+  font-size: 1.25rem;
+  color: #2f3a35;
 }
 
 .recipe-pack-subtitle {
-  margin: 6px 0 0;
-  color: #3f5e4b;
-  font-weight: 700;
+  margin: 3px 0 0;
+  color: #5f6b63;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .recipe-pack-description {
-  margin: 10px 0 0;
+  margin: 14px 0 0;
   color: #58685f;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
+/* Aantal recepten als rustig pilletje, net als het 'optioneel'-label. */
 .recipe-pack-count {
-  margin: 10px 0 0;
-  color: #1f5b2c;
+  margin: 12px 0 0;
+  display: inline-block;
+  color: var(--green-deep);
+  background: #f1faf3;
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
+/* Moet ná de basisregels hierboven staan, anders wint de bredere variant. */
+@media (max-width: 767px) {
+  .recipe-pack-card {
+    padding: 18px 16px;
+  }
+
+  .recipe-pack-card h4 {
+    font-size: 1.15rem;
+  }
+
+  .recipe-pack-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 17px;
+  }
+}
+
 .recipe-pack-actions {
-  margin-top: 18px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #eef4f0;
   display: flex;
   justify-content: center;
   gap: 16px;
@@ -4272,10 +4309,11 @@ select:focus {
 }
 
 .recipe-pack-summary {
-  border: 1px solid #dcebe0;
-  border-radius: 18px;
-  padding: 20px;
-  background: #fbfdfb;
+  border: 1px solid #e6efe8;
+  border-radius: var(--radius-md);
+  padding: 22px;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(47, 106, 55, 0.07);
 }
 
 .recipe-pack-summary h4 {

@@ -1952,7 +1952,7 @@ const RECIPE_PACKS = [
     key: 'sporten',
     title: 'Sporten',
     subtitle: 'Eiwitrijk en voedzaam',
-    description: '8 Nederlandse recepten met focus op eiwitten en herstel.',
+    description: '8 recepten met focus op eiwitten en herstel.',
     icon: 'fa-dumbbell',
     recipes: [
       ['Pasta met kip en romige spinazie', 'https://www.leukerecepten.nl/recepten/pasta-met-kip-en-romige-spinazie/'],
@@ -1974,7 +1974,7 @@ const RECIPE_PACKS = [
     key: 'snacks-toetjes',
     title: 'Snacks en toetjes',
     subtitle: 'Lekkere tussendoortjes',
-    description: '8 Nederlandse snacks en desserts voor elk moment.',
+    description: '8 snacks en desserts voor elk moment.',
     icon: 'fa-ice-cream',
     recipes: [
       ['Basisrecept vanillecake', 'https://www.laurasbakery.nl/basisrecept-vanillecake/'],
@@ -1996,7 +1996,7 @@ const RECIPE_PACKS = [
     key: 'snel-klaar',
     title: 'Snel klaar',
     subtitle: 'Binnen 30 minuten op tafel',
-    description: '8 snelle Nederlandse recepten voor drukke dagen.',
+    description: '8 snelle recepten voor drukke dagen.',
     icon: 'fa-bolt',
     recipes: [
       ['Gezonde wrap', 'https://eatertainment.nl/recept/gezonde-wrap'],
@@ -2018,7 +2018,7 @@ const RECIPE_PACKS = [
     key: 'budget',
     title: 'Budget',
     subtitle: 'Voordelig en vullend',
-    description: '8 betaalbare Nederlandse recepten met simpele ingrediënten.',
+    description: '8 betaalbare recepten met simpele ingrediënten.',
     icon: 'fa-coins',
     recipes: [
       ['Traybake kip pesto', 'https://www.leukerecepten.nl/recepten/traybake-kip-pesto/'],
@@ -2040,7 +2040,7 @@ const RECIPE_PACKS = [
     key: 'vega',
     title: 'Vega',
     subtitle: 'Vol smaak, zonder vlees',
-    description: '8 vegetarische Nederlandse recepten voor variatie in je week.',
+    description: '8 vegetarische recepten voor variatie in je week.',
     icon: 'fa-seedling',
     recipes: [
       ['Halloumi wraps', 'https://eatertainment.nl/recept/halloumi-wraps'],

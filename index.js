@@ -1050,9 +1050,13 @@ function renderRecipePackStep() {
   recipePackModalBody.innerHTML = `
     <div class="recipe-pack-card">
       <p class="recipe-pack-progress">${progress}</p>
-      <div class="recipe-pack-icon"><i class="fas ${pack.icon || 'fa-box-open'}"></i></div>
-      <h4>${pack.title}</h4>
-      <p class="recipe-pack-subtitle">${pack.subtitle || ''}</p>
+      <div class="recipe-pack-head">
+        <div class="recipe-pack-icon"><i class="fas ${pack.icon || 'fa-box-open'}"></i></div>
+        <div class="recipe-pack-head-text">
+          <h4>${pack.title}</h4>
+          <p class="recipe-pack-subtitle">${pack.subtitle || ''}</p>
+        </div>
+      </div>
       <p class="recipe-pack-description">${pack.description || ''}</p>
       <p class="recipe-pack-count">${pack.total_recipes || 0} recepten</p>
       <div class="recipe-pack-actions">
