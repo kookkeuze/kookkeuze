@@ -1197,16 +1197,12 @@ select:focus {
   border-radius: 0;
   background: none;
   box-shadow: none;
-  color: #6f7f74;
+  color: var(--green-deep);
   /* Vaste regelhoogte: het merklettertype geeft met 'normal' een veel te hoge
      regel, waardoor de twee links niet meer op één lijn stonden. */
   line-height: 1.2;
   flex: 0 0 auto;
   white-space: nowrap;
-}
-
-.overview-view-btn.recipe-packs-btn {
-  color: var(--green-deep);
 }
 
 .overview-view-switch .overview-view-btn:hover,
@@ -1217,7 +1213,7 @@ select:focus {
   text-underline-offset: 3px;
 }
 
-/* Actieve weergave: donkergroen en onderstreept. */
+/* Actieve weergave: alleen aan de onderstreping te herkennen. */
 .overview-view-switch .overview-view-btn.active {
   background: none;
   color: var(--green-deep);
