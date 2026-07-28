@@ -2288,10 +2288,12 @@ select:focus {
   gap: 12px;
 }
 
+/* Titel altijd bóven de knop: foto en titel op één regel, daaronder de
+   actieknoppen. Anders wordt een lange titel naast de knop platgedrukt. */
 .weekmenu-search-item {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: 12px;
   background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
   border: 1px solid #dfe9e2;
@@ -2303,17 +2305,18 @@ select:focus {
 .weekmenu-search-main {
   min-width: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  flex: 1 1 auto;
+  width: 100%;
 }
 
 .weekmenu-search-actions {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  margin-top: auto;
 }
 
 .weekmenu-search-item:hover {
@@ -2327,13 +2330,12 @@ select:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
   }
+}
 
-  .weekmenu-search-item {
-    align-items: center;
-  }
-
-  .weekmenu-search-actions {
-    flex: 0 0 auto;
+/* Op een breed scherm past er een derde kolom bij. */
+@media (min-width: 1200px) {
+  .weekmenu-search-results {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -4185,6 +4187,15 @@ select:focus {
   width: min(860px, 96vw);
   max-width: min(860px, 96vw);
   padding: 24px;
+}
+
+/* Meer recepten in beeld op een groot scherm. */
+@media (min-width: 1200px) {
+  .modal-content.weekmenu-search-modal-content {
+    width: min(1140px, 92vw);
+    max-width: min(1140px, 92vw);
+    max-height: 88vh;
+  }
 }
 
 .weekmenu-search-modal-title {
