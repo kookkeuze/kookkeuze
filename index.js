@@ -3893,6 +3893,89 @@ document.getElementById('login-form').addEventListener('submit', async e => {
   }
 });
 
+/* ========= INLOGGEN MET GOOGLE ========= */
+// De knop verschijnt alleen als de server een GOOGLE_CLIENT_ID heeft; zonder
+// die instelling wordt het script van Google ook niet geladen.
+async function initGoogleSignIn() {
+  let config;
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/google/config`);
+    config = await res.json();
+  } catch (_err) {
+    return;
+  }
+  if (!config?.enabled || !config.clientId) return;
+
+  try {
+    await loadGoogleIdentityScript();
+  } catch (_err) {
+    return;
+  }
+  if (!window.google?.accounts?.id) return;
+
+  window.google.accounts.id.initialize({
+    client_id: config.clientId,
+    callback: onGoogleCredential
+  });
+
+  document.querySelectorAll('.google-signin-slot').forEach(slot => {
+    window.google.accounts.id.renderButton(slot, {
+      theme: 'outline',
+      size: 'large',
+      shape: 'pill',
+      text: slot.id === 'googleRegisterBtn' ? 'signup_with' : 'signin_with',
+      locale: 'nl',
+      width: 280
+    });
+  });
+  document.querySelectorAll('.google-auth-block').forEach(el => el.classList.remove('hidden'));
+}
+
+function loadGoogleIdentityScript() {
+  if (window.google?.accounts?.id) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Google-script kon niet geladen worden.'));
+    document.head.appendChild(script);
+  });
+}
+
+async function onGoogleCredential(response) {
+  const credential = response?.credential;
+  if (!credential) {
+    showMsg('Google gaf geen inloggegevens terug.', false);
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential })
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data.token) {
+      localStorage.setItem('token', data.token);
+      showMsg(data.isNew ? 'Account aangemaakt. Welkom!' : 'Ingelogd!', true);
+      resetForms();
+      updateAuthUI();
+      authModal.classList.add('hidden');
+    } else {
+      showMsg(data.error || 'Inloggen met Google mislukt.', false);
+    }
+  } catch (err) {
+    console.error(err);
+    showMsg('Server niet bereikbaar.', false);
+  }
+}
+
+initGoogleSignIn();
+
 /* — Wachtwoord reset aanvragen — */
 document.getElementById('forgot-form')?.addEventListener('submit', async e => {
   e.preventDefault();

@@ -4777,6 +4777,31 @@ select:focus {
   display:flex; justify-content:center; align-items:center; gap:4px;
 }
 
+/* Scheiding tussen het formulier en 'Inloggen met Google'. */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 16px;
+  color: #8a978f;
+  font-size: 0.85rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: #e3ece5;
+}
+
+/* Google rendert de knop zelf in dit vak; wij centreren hem alleen. */
+.google-signin-slot {
+  display: flex;
+  justify-content: center;
+  min-height: 40px;
+}
+
 .auth-switch-single {
   margin-top: 14px;
 }

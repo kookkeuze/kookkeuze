@@ -42,11 +42,18 @@ async function initializeDatabase() {
         ADD COLUMN IF NOT EXISTS token_expires TIMESTAMP,
         ADD COLUMN IF NOT EXISTS reset_token TEXT,
         ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP,
-        ADD COLUMN IF NOT EXISTS recipe_pack_onboarding_seen BOOLEAN DEFAULT FALSE
+        ADD COLUMN IF NOT EXISTS recipe_pack_onboarding_seen BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255)
     `);
+    // Wie via Google inlogt heeft geen wachtwoord, dus password_hash mag leeg.
+    await pool.query(`ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`);
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_users_verification_token
       ON users (verification_token)
+    `);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub
+      ON users (google_sub) WHERE google_sub IS NOT NULL
     `);
     console.log('✅ Email verification columns/index ensured');
 
@@ -878,8 +885,39 @@ function addUser(email, passwordHash, callback) {
       }
       return callback(err);
     }
-    const userId = result.rows[0].id;
-    pool.query(`
+    createPersonalDatabase(result.rows[0].id, callback);
+  });
+}
+
+// Google-account: geen wachtwoord, en het e-mailadres is al door Google
+// geverifieerd. Verder krijgt zo'n account precies dezelfde opzet.
+function addGoogleUser(email, googleSub, callback) {
+  const query = `
+    INSERT INTO users (email, password_hash, google_sub, is_verified)
+    VALUES ($1, NULL, $2, TRUE)
+    RETURNING id
+  `;
+  pool.query(query, [email, googleSub], (err, result) => {
+    if (err) {
+      console.error('❌ Fout bij toevoegen Google-gebruiker:', err);
+      return callback(err);
+    }
+    createPersonalDatabase(result.rows[0].id, callback);
+  });
+}
+
+// Bestaand account koppelen aan Google (zelfde e-mailadres).
+function linkGoogleAccount(userId, googleSub, callback) {
+  pool.query(
+    `UPDATE users SET google_sub = $2, is_verified = TRUE WHERE id = $1`,
+    [userId, googleSub],
+    err => callback(err || null)
+  );
+}
+
+// Persoonlijke database + lidmaatschap aanmaken voor een nieuwe gebruiker.
+function createPersonalDatabase(userId, callback) {
+  pool.query(`
       INSERT INTO recipe_databases (owner_user_id, name, is_personal)
       VALUES ($1, 'Mijn persoonlijke database', TRUE)
       ON CONFLICT DO NOTHING
@@ -919,7 +957,6 @@ function addUser(email, passwordHash, callback) {
         console.log('✅ User added with ID:', userId);
         callback(null, { id: userId });
       });
-    });
   });
 }
 
@@ -1493,6 +1530,8 @@ module.exports = {
   getRecipeByIdForOwner,
   importRecipeToUserDatabase,
   addUser,
+  addGoogleUser,
+  linkGoogleAccount,
   getUserByEmail,
   getUserRecipePackOnboardingSeen,
   setUserRecipePackOnboardingSeen,

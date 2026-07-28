@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const cors       = require('cors');
 const path       = require('path');
 const crypto     = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const {
   crawlInternetRecipeIndex,
   loadInternetRecipeIndexSync,
@@ -30,6 +31,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'changeme-in-prod';
   - BREVO_FROM_EMAIL      (optioneel, fallback: SMTP_FROM of SMTP_USER)
   - BREVO_FROM_NAME       (optioneel, fallback: Kookkeuze)
   - CONTACT_TO_EMAIL      (optioneel, fallback: kookkeuze@gmail.com)
+  - GOOGLE_CLIENT_ID      (optioneel; zonder deze waarde is 'Inloggen met
+                           Google' uitgeschakeld en blijft de knop verborgen)
   - CORS_ORIGINS          (optioneel, comma-separated lijst)
 */
 const APP_BASE_URL  = process.env.APP_BASE_URL  || `http://localhost:${PORT}`;
@@ -39,6 +42,7 @@ const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL || process.env.SMTP_FROM |
 const BREVO_FROM_NAME  = process.env.BREVO_FROM_NAME || 'Kookkeuze';
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 const CONTACT_TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'kookkeuze@gmail.com';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const DEFAULT_HTML_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -1207,6 +1211,8 @@ const {
   deleteRecipe,
   addUser,
   getUserByEmail,
+  addGoogleUser,
+  linkGoogleAccount,
   getUserRecipePackOnboardingSeen,
   setUserRecipePackOnboardingSeen,
   getRecipeCountForDatabase,
@@ -1818,6 +1824,13 @@ app.post('/api/login', (req, res) => {
       return res.status(403).json({ error: 'Verifieer eerst je e-mailadres (check je inbox).' });
     }
 
+    // Account is via Google aangemaakt en heeft (nog) geen wachtwoord.
+    if (!user.password_hash) {
+      return res.status(401).json({
+        error: 'Dit account gebruikt Inloggen met Google. Gebruik die knop, of stel via "Wachtwoord vergeten" een wachtwoord in.'
+      });
+    }
+
     bcrypt.compare(password, user.password_hash, (err, same) => {
       if (err || !same) {
         return res.status(401).json({ error: 'Combinatie klopt niet.' });
@@ -1828,6 +1841,79 @@ app.post('/api/login', (req, res) => {
     });
   });
 });
+
+/* -------------------- INLOGGEN MET GOOGLE -------------------- */
+// De frontend haalt hier op of de knop getoond kan worden.
+app.get('/api/auth/google/config', (_req, res) => {
+  res.json({ clientId: GOOGLE_CLIENT_ID, enabled: !!GOOGLE_CLIENT_ID });
+});
+
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+
+// De browser stuurt het ID-token van Google mee; dat verifiëren we hier tegen
+// Google's publieke sleutels voordat we er een eigen sessie voor uitgeven.
+app.post('/api/auth/google', async (req, res) => {
+  if (!googleClient) {
+    return res.status(503).json({ error: 'Inloggen met Google is niet geconfigureerd.' });
+  }
+
+  const credential = String(req.body?.credential || '').trim();
+  if (!credential) return res.status(400).json({ error: 'Google-token ontbreekt.' });
+
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: GOOGLE_CLIENT_ID
+    });
+    payload = ticket.getPayload();
+  } catch (err) {
+    console.error('❌ Google-token ongeldig:', err.message);
+    return res.status(401).json({ error: 'Google-login kon niet worden geverifieerd.' });
+  }
+
+  const email = String(payload?.email || '').trim().toLowerCase();
+  const googleSub = String(payload?.sub || '');
+
+  if (!email || !googleSub) {
+    return res.status(400).json({ error: 'Google gaf geen e-mailadres terug.' });
+  }
+  // Zonder bevestigd adres zou iemand een account van een ander kunnen claimen.
+  if (payload.email_verified !== true) {
+    return res.status(403).json({ error: 'Je Google-account heeft geen bevestigd e-mailadres.' });
+  }
+
+  try {
+    const existing = await new Promise((resolve, reject) => {
+      getUserByEmail(email, (err, user) => (err ? reject(err) : resolve(user || null)));
+    });
+
+    let userId;
+    if (existing) {
+      userId = existing.id;
+      // Bestaat het account al met een wachtwoord? Dan koppelen we Google eraan;
+      // het e-mailadres is immers door Google bevestigd.
+      if (existing.google_sub !== googleSub || !existing.is_verified) {
+        await new Promise((resolve, reject) => {
+          linkGoogleAccount(userId, googleSub, err => (err ? reject(err) : resolve()));
+        });
+      }
+    } else {
+      const created = await new Promise((resolve, reject) => {
+        addGoogleUser(email, googleSub, (err, result) => (err ? reject(err) : resolve(result)));
+      });
+      userId = created.id;
+    }
+
+    acceptPendingInvitesForUser(userId, email, () => {});
+    const token = jwt.sign({ id: userId, email }, JWT_SECRET, { expiresIn: '7d' });
+    return res.json({ message: 'Inloggen gelukt!', token, isNew: !existing });
+  } catch (err) {
+    console.error('❌ Google-login mislukt:', err);
+    return res.status(500).json({ error: 'Inloggen met Google lukte niet.' });
+  }
+});
+/* ------------------------------------------------------------- */
 
 // 2b. Reset wachtwoord aanvragen
 app.post('/api/password-reset/request', async (req, res) => {
