@@ -3693,6 +3693,67 @@ select:focus {
   display: none;
 }
 
+/* Ruimer aanraakvlak en wat lucht t.o.v. de inlogknop ernaast. Beide klassen
+   in de selector, want .topbar-action-btn zet de padding verderop op 0. */
+.topbar-action-btn.mobile-menu-btn {
+  min-width: 46px;
+  min-height: 46px;
+  padding: 11px;
+  margin-left: 6px;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s ease;
+}
+
+.topbar-action-btn.mobile-menu-btn:active {
+  background: #f1f6f2;
+}
+
+/* Drie streepjes die bij het openen in een kruisje overgaan. */
+.burger-icon {
+  width: 22px;
+  height: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  flex-shrink: 0;
+}
+
+.burger-line {
+  display: block;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: #2f3740;
+  transform-origin: center;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.16s ease;
+}
+
+.mobile-menu-btn[aria-expanded="true"] .burger-line:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.mobile-menu-btn[aria-expanded="true"] .burger-line:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0.3);
+}
+
+.mobile-menu-btn[aria-expanded="true"] .burger-line:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .burger-line,
+  .mobile-header-menu,
+  .mobile-header-menu.hidden,
+  .mobile-header-menu:not(.hidden) {
+    transition: none;
+  }
+}
+
 .mobile-active-tab-label {
   display: none;
 }
@@ -3715,13 +3776,39 @@ select:focus {
   overflow-y: auto;
 }
 
-.mobile-header-menu:not(.hidden) {
-  transform: translateY(0);
+/* De globale .hidden zet display:none, en dan loopt de animatie niet. Voor dit
+   paneel houden we het in beeld en verbergen we het met visibility/opacity. */
+.mobile-header-menu.hidden {
+  display: flex !important;
+  transform: translateY(-100%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.22s ease,
+              visibility 0s linear 0.32s;
 }
 
-.mobile-header-menu.hidden {
-  transform: translateY(-100%);
-  pointer-events: none;
+.mobile-header-menu:not(.hidden) {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.22s ease,
+              visibility 0s;
+}
+
+/* De topbar blijft zichtbaar bovenop het menu; de inhoud begint eronder. */
+body.mobile-menu-open .topbar {
+  z-index: 1300;
+}
+
+.mobile-header-menu {
+  padding-top: var(--topbar-height, 64px);
+}
+
+body.mobile-menu-open .mobile-nav-header {
+  display: none;
 }
 
 .mobile-nav-header {

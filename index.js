@@ -714,7 +714,20 @@ function closeMobileHeaderMenu() {
   mobileHeaderMenu.classList.add('hidden');
   mobileHeaderMenu.setAttribute('aria-hidden', 'true');
   mobileMenuBtn.setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('mobile-menu-open');
   document.body.style.overflow = '';
+}
+
+// Het menu schuift over het hele scherm; de topbar komt er dan bovenop te
+// liggen zodat je de hamburger ziet veranderen in een kruisje. De echte
+// hoogte van de topbar geven we door, zodat de menu-inhoud er netjes
+// onder begint.
+function markMobileMenuOpen() {
+  const topbar = document.querySelector('.topbar');
+  if (topbar) {
+    document.documentElement.style.setProperty('--topbar-height', `${topbar.offsetHeight}px`);
+  }
+  document.body.classList.add('mobile-menu-open');
 }
 
 mobileMenuCloseBtn?.addEventListener('click', closeMobileHeaderMenu);
@@ -802,6 +815,7 @@ mobileMenuBtn?.addEventListener('click', e => {
   if (!mobileHeaderMenu) return;
   const willOpen = mobileHeaderMenu.classList.contains('hidden');
   if (willOpen) {
+    markMobileMenuOpen();
     mobileHeaderMenu.classList.remove('hidden');
     mobileHeaderMenu.setAttribute('aria-hidden', 'false');
     mobileMenuBtn.setAttribute('aria-expanded', 'true');
