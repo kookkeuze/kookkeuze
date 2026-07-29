@@ -3793,6 +3793,19 @@ select:focus {
   font-family: 'EatingPasta', Arial, sans-serif;
   letter-spacing: 0.4px;
   cursor: pointer;
+  /* Icoon en tekst netjes op één lijn, ongeacht de lengte van het label. */
+  display: flex;
+  align-items: center;
+}
+
+/* De vier tabbladen onderaan het menu; app en database staan bovenin. */
+.mobile-nav-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #ebf2ed;
 }
 
 .mobile-header-menu-link.active {
@@ -3805,12 +3818,9 @@ select:focus {
   background: #f4faf5;
 }
 
-.mobile-header-install-link {
-  margin-top: 8px;
-  border-top: 1px solid #ebf2ed;
-  padding-top: 20px;
-}
-
+/* Stond onderaan met een scheidingslijn erboven; die lijn hoort nu bij de
+   tabbladen onderin. */
+.mobile-header-install-link,
 .mobile-header-database-link {
   margin-top: 0;
 }
