@@ -3798,13 +3798,14 @@ select:focus {
   align-items: center;
 }
 
-/* De vier tabbladen onderaan het menu; app en database staan bovenin. */
+/* De vier tabbladen volgen ná app en database, met een scheidingslijn
+   ertussen maar zonder ze naar de onderkant van het scherm te duwen. */
 .mobile-nav-tabs {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: auto;
-  padding-top: 16px;
+  margin-top: 8px;
+  padding-top: 14px;
   border-top: 1px solid #ebf2ed;
 }
 
