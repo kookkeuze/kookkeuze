@@ -3798,9 +3798,16 @@ select:focus {
               visibility 0s;
 }
 
-/* De topbar blijft zichtbaar bovenop het menu; de inhoud begint eronder. */
+/* De topbar blijft zichtbaar bovenop het menu; de inhoud begint eronder.
+   Bij het sluiten zakt hij pas terug ná de schuifanimatie, anders glijdt het
+   menu er tijdens het dichtgaan overheen. Openen gebeurt wel direct. */
 body.mobile-menu-open .topbar {
   z-index: 1300;
+  transition: z-index 0s;
+}
+
+.topbar {
+  transition: z-index 0s linear 0.34s;
 }
 
 .mobile-header-menu {
