@@ -715,6 +715,7 @@ function closeMobileHeaderMenu() {
   mobileHeaderMenu.setAttribute('aria-hidden', 'true');
   mobileMenuBtn.setAttribute('aria-expanded', 'false');
   document.body.classList.remove('mobile-menu-open');
+  document.documentElement.classList.remove('mobile-menu-open');
   document.body.style.overflow = '';
 }
 
@@ -725,9 +726,15 @@ function closeMobileHeaderMenu() {
 function markMobileMenuOpen() {
   const topbar = document.querySelector('.topbar');
   if (topbar) {
-    document.documentElement.style.setProperty('--topbar-height', `${topbar.offsetHeight}px`);
+    // Onderkant t.o.v. de bovenkant van het scherm: de balk staat zelf ook een
+    // paar pixels van boven, dus alleen de hoogte is niet genoeg.
+    const onderkant = Math.round(topbar.getBoundingClientRect().bottom);
+    document.documentElement.style.setProperty('--topbar-height', `${onderkant}px`);
   }
+  // Ook op <html>: dát is het element dat scrollt, dus alleen de body
+  // vergrendelen laat de pagina (en de topbar) alsnog wegschuiven.
   document.body.classList.add('mobile-menu-open');
+  document.documentElement.classList.add('mobile-menu-open');
 }
 
 mobileMenuCloseBtn?.addEventListener('click', closeMobileHeaderMenu);

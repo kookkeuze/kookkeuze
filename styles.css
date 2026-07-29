@@ -3798,6 +3798,22 @@ select:focus {
               visibility 0s;
 }
 
+/* Pagina op slot terwijl het menu open is. Scrollen binnen het menu zelf blijft
+   werken; dat paneel heeft zijn eigen overflow. */
+html.mobile-menu-open,
+body.mobile-menu-open {
+  overflow: hidden;
+}
+
+/* Sticky werkt niet meer zodra een voorouder overflow:hidden heeft, dus zetten
+   we de balk zolang het menu open is vast. De 'top' blijft staan zoals hij is,
+   anders verspringt de balk bij het openen. */
+body.mobile-menu-open .topbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+}
+
 /* De topbar blijft zichtbaar bovenop het menu; de inhoud begint eronder.
    Bij het sluiten zakt hij pas terug ná de schuifanimatie, anders glijdt het
    menu er tijdens het dichtgaan overheen. Openen gebeurt wel direct. */
