@@ -559,12 +559,13 @@ function setWeekmenuSlotImage(container, imageUrl) {
     img.referrerPolicy = 'no-referrer';
     img.src = imageUrl;
     img.addEventListener('error', () => {
-      container.innerHTML = '<div class="weekmenu-slot-thumb-fallback">Geen foto</div>';
+      container.innerHTML = '<div class="weekmenu-slot-thumb-fallback"></div>';
     });
     container.appendChild(img);
     return;
   }
-  container.innerHTML = '<div class="weekmenu-slot-thumb-fallback">Geen foto</div>';
+  // Klein vlak: geen tekst, alleen een rustige tint als er geen foto is.
+  container.innerHTML = '<div class="weekmenu-slot-thumb-fallback"></div>';
 }
 
 function hydrateWeekmenuImages() {
@@ -2547,7 +2548,12 @@ function renderWeekMenuGrid() {
                 <i class="fas fa-times" aria-hidden="true"></i>
               </button>
             </div>
-            ${titleMarkup}
+            <div class="weekmenu-slot-main">
+              <div class="weekmenu-slot-thumb-wrap" data-url="${safeUrl}">
+                <div class="weekmenu-slot-thumb-skeleton"></div>
+              </div>
+              ${titleMarkup}
+            </div>
             <div class="weekmenu-cell-actions">
               <button
                 type="button"
@@ -2602,6 +2608,7 @@ function renderWeekMenuGrid() {
     </div>
   `;
   weekmenuGrid.innerHTML = html;
+  hydrateWeekmenuImages();
 
   const calendar = weekmenuGrid.querySelector('.weekmenu-calendar');
   const cards = Array.from(weekmenuGrid.querySelectorAll('.weekmenu-day-card'));

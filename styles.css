@@ -3054,8 +3054,27 @@ select:focus {
   font-size: 11px;
 }
 
+/* Kleine receptfoto naast de titel: genoeg om het gerecht te herkennen,
+   zonder dat de weekkalender een fotogalerij wordt. */
+.weekmenu-slot-main {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+/* De titel krijgt de resterende ruimte en duwt het fotootje niet weg. */
+.weekmenu-slot-main .weekmenu-open-link {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .weekmenu-slot-thumb-wrap {
-  width: 100%;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  overflow: hidden;
   display: block;
 }
 
@@ -3063,8 +3082,8 @@ select:focus {
 .weekmenu-slot-thumb-fallback,
 .weekmenu-slot-thumb-skeleton {
   width: 100%;
-  height: 84px;
-  border-radius: var(--radius-sm);
+  height: 100%;
+  border-radius: 9px;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -3073,13 +3092,10 @@ select:focus {
 
 .weekmenu-slot-thumb {
   object-fit: cover;
-  border: 1px solid rgba(99, 214, 113, 0.35);
+  border: 1px solid #e4eee7;
 }
 
 .weekmenu-slot-thumb-fallback {
-  font-size: 11px;
-  font-weight: 700;
-  color: #708079;
   background: #f3f8f4;
   border: 1px solid #e2ece5;
 }
