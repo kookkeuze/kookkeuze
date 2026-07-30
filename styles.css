@@ -3056,24 +3056,18 @@ select:focus {
 
 /* Kleine receptfoto naast de titel: genoeg om het gerecht te herkennen,
    zonder dat de weekkalender een fotogalerij wordt. */
+/* Foto bóven de titel: de dagkolommen zijn smal, en naast elkaar hield de
+   titel zo weinig ruimte over dat woorden middenin afbraken. */
 .weekmenu-slot-main {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-}
-
-/* De titel krijgt de resterende ruimte en duwt het fotootje niet weg. */
-.weekmenu-slot-main .weekmenu-open-link {
-  flex: 1 1 auto;
+  display: grid;
+  gap: 8px;
   min-width: 0;
 }
 
 .weekmenu-slot-thumb-wrap {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 auto;
-  border-radius: 9px;
+  width: 100%;
+  height: 56px;
+  border-radius: 10px;
   overflow: hidden;
   display: block;
 }
@@ -3083,7 +3077,7 @@ select:focus {
 .weekmenu-slot-thumb-skeleton {
   width: 100%;
   height: 100%;
-  border-radius: 9px;
+  border-radius: 10px;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -3098,6 +3092,14 @@ select:focus {
 .weekmenu-slot-thumb-fallback {
   background: #f3f8f4;
   border: 1px solid #e2ece5;
+}
+
+/* Op mobiel is een dagkolom veel breder; een iets hogere foto oogt daar
+   minder als een streepje. */
+@media (max-width: 900px) {
+  .weekmenu-slot-thumb-wrap {
+    height: 76px;
+  }
 }
 
 .weekmenu-slot-thumb-skeleton {
