@@ -2242,7 +2242,9 @@ weekmenuGrid?.addEventListener('click', e => {
 });
 
 const plannerDays = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
-const WEEKMENU_SEARCH_PAGE_SIZE = 10;
+// 12 deelt zowel door 3 (brede schermen) als door 2 (tablet), zodat een volle
+// pagina niet eindigt met een rij waar maar één recept in staat.
+const WEEKMENU_SEARCH_PAGE_SIZE = 12;
 let plannerWeekStart = null;
 let plannerInitialized = false;
 let plannerRecipes = [];
