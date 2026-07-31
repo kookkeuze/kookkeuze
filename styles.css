@@ -3083,23 +3083,52 @@ select:focus {
   color: #ffffff;
 }
 
-.weekmenu-search-item .plan-weekmenu-btn.weekmenu-assign-btn {
-  min-width: 188px;
-  min-height: 36px;
-  padding: 7px 12px;
-  font-size: 11px;
-}
-
 .recipe-export-dropdown .plan-recipe-btn,
 .recipe-export-dropdown .weekmenu-assign-btn {
   justify-content: flex-start;
 }
 
-.weekmenu-search-item .plan-weekmenu-btn.weekmenu-import-btn {
-  min-width: 188px;
-  min-height: 36px;
-  padding: 7px 12px;
-  font-size: 11px;
+/* Rustige knop in de kies-een-recept popup: geen zware omlijning en niet het
+   merklettertype, want per kaart staat hier maar één actie. */
+.weekmenu-plan-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 15px;
+  border: 1px solid #dfe9e2;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--green-deep);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.weekmenu-plan-btn:hover {
+  border-color: var(--green);
+  background: #f4faf5;
+}
+
+.weekmenu-plan-icon {
+  width: 17px;
+  height: 17px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Op telefoon iets hoger, zodat het een comfortabel aanraakvlak blijft. */
+@media (max-width: 767px) {
+  .weekmenu-plan-btn {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
 }
 
 /* Kleine receptfoto naast de titel: genoeg om het gerecht te herkennen,
@@ -3424,18 +3453,6 @@ select:focus {
     justify-content: flex-start;
   }
 
-  .weekmenu-search-item .plan-weekmenu-btn.weekmenu-assign-btn,
-  .weekmenu-search-item .plan-weekmenu-btn.weekmenu-import-btn {
-    min-width: 0;
-    width: 100%;
-    white-space: normal;
-    line-height: 1.15;
-    text-align: center;
-    padding: 7px 8px;
-    font-size: 10px;
-    letter-spacing: 0.2px;
-  }
-
   .recipe-card-actions {
     gap: 8px;
   }
@@ -3606,20 +3623,6 @@ select:focus {
 
   .weekmenu-export-menu {
     width: 100%;
-  }
-
-  .weekmenu-search-item .plan-weekmenu-btn.weekmenu-assign-btn,
-  .weekmenu-search-item .plan-weekmenu-btn.weekmenu-import-btn {
-    width: 100%;
-    min-width: 0;
-    min-height: 44px;
-    padding: 10px 8px;
-    font-size: 10px;
-    letter-spacing: 0.1px;
-    white-space: nowrap;
-    line-height: 1.1;
-    text-align: center;
-    overflow-wrap: anywhere;
   }
 
   .mobile-nav-wrap {

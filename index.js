@@ -2767,12 +2767,13 @@ function renderPlannerSearchResults() {
         <div class="weekmenu-search-actions">
           <button
             type="button"
-            class="plan-weekmenu-btn weekmenu-assign-btn"
+            class="weekmenu-plan-btn weekmenu-assign-btn"
             data-recipe-id="${recipe.id}"
             data-recipe-title="${safeTitle}"
+            title="Plan ${safeTitle} in je weekmenu"
           >
-            <img src="icons/plan-weekmenu.svg" alt="" class="export-option-icon-img" />
-            <span>Plan in weekmenu</span>
+            <img src="icons/pakket-toevoegen.svg" alt="" class="weekmenu-plan-icon" />
+            <span>Inplannen</span>
           </button>
         </div>
       </div>`;
