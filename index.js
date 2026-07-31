@@ -1771,14 +1771,6 @@ function buildRecipeCardsHtml(arr, options = {}) {
                       <span>${importLabel}</span>
                     </button>` : ''}
                   `}
-                  <button type="button" class="recipe-export-option notes-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                    <span class="notes-button-mark" aria-hidden="true"><img src="icons/notities.svg" alt="" class="export-option-icon-img" /></span>
-                    <span>Notities</span>
-                  </button>
-                  <button type="button" class="recipe-export-option bring-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                    <span class="export-option-icon" aria-hidden="true"><img src="icons/bring.svg" alt="" class="export-option-icon-img" /></span>
-                    <span>Stuur naar Bring</span>
-                  </button>
                 </div>
               </div>
             </div>
@@ -1792,6 +1784,31 @@ function buildRecipeCardsHtml(arr, options = {}) {
             <li><img src="icons/menugang.svg" alt="" class="recipe-meta-icon" /> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
             <li><img src="icons/doel.svg" alt="" class="recipe-meta-icon" /> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
           </ul>
+          <div class="recipe-shopping">
+            <p class="recipe-shopping-label">Maak boodschappenlijst</p>
+            <div class="recipe-shopping-actions">
+              <button
+                type="button"
+                class="recipe-shopping-btn notes-export-option"
+                data-recipe-url="${safeUrl}"
+                data-recipe-title="${safeTitle}"
+                title="Deel de ingrediënten als notitie"
+                aria-label="Boodschappenlijst van ${safeTitle} delen als notitie"
+              >
+                <img src="icons/notities.svg" alt="" class="recipe-shopping-icon" />
+              </button>
+              <button
+                type="button"
+                class="recipe-shopping-btn bring-export-option"
+                data-recipe-url="${safeUrl}"
+                data-recipe-title="${safeTitle}"
+                title="Stuur de ingrediënten naar Bring"
+                aria-label="Ingrediënten van ${safeTitle} naar Bring sturen"
+              >
+                <img src="icons/bring.svg" alt="" class="recipe-shopping-icon" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>`;
   });

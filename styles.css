@@ -1860,6 +1860,53 @@ select:focus {
   min-width: 16px;
 }
 
+/* Boodschappenlijst-acties onder de receptgegevens: los van 'Toevoegen aan...'
+   omdat het een ander soort actie is. */
+.recipe-shopping {
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid #eef4f0;
+}
+
+.recipe-shopping-label {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #5f6b63;
+}
+
+.recipe-shopping-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.recipe-shopping-btn {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid #dfe9e2;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.recipe-shopping-btn:hover {
+  border-color: var(--green);
+  background: #f4faf5;
+}
+
+.recipe-shopping-icon {
+  width: 21px;
+  height: 21px;
+  display: block;
+}
+
 .recipe-secondary-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2056,7 +2103,8 @@ select:focus {
 
 @media (min-width: 980px) {
   .recipe-cards-container {
-    --recipe-card-desktop-height: 390px;
+    /* Ruimte erbij voor het blok 'Maak boodschappenlijst' onder de gegevens. */
+    --recipe-card-desktop-height: 500px;
     --recipe-card-title-height: calc(1.2em * 3);
   }
 
