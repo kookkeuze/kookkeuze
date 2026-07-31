@@ -2736,17 +2736,8 @@ function closeWeekmenuSearchModalPanel() {
 function renderPlannerSearchResults() {
   if (!weekmenuSearchResults) return;
   const term = (weekmenuSearchInput?.value || '').trim().toLowerCase();
-  const compactMobileLabels = isMobileViewport();
   const filtered = plannerRecipes
     .filter(r => (r.title || '').toLowerCase().includes(term));
-  const sharedTargets = getSharedDatabaseTargets();
-  const importMode = isSharedDatabaseActive()
-    ? 'to-own'
-    : (sharedTargets.length ? 'to-shared' : null);
-  const importLabel = importMode === 'to-own'
-    ? (compactMobileLabels ? 'Naar mijn db' : 'Importeer naar mijn database')
-    : (compactMobileLabels ? 'Naar gedeelde db' : 'Importeer naar gedeelde database');
-
   if (filtered.length === 0) {
     weekmenuSearchResults.innerHTML = '<p class="weekmenu-search-empty">Geen recepten gevonden.</p>';
     if (weekmenuSearchPagination) weekmenuSearchPagination.innerHTML = '';
@@ -2774,38 +2765,15 @@ function renderPlannerSearchResults() {
           <button type="button" class="weekmenu-search-title weekmenu-preview-title" data-recipe-id="${recipe.id}">${displayTitle}</button>
         </div>
         <div class="weekmenu-search-actions">
-          <div class="recipe-export-menu weekmenu-export-menu">
-            <button
-              type="button"
-              class="recipe-export-trigger"
-              data-export-toggle
-              aria-haspopup="true"
-              aria-expanded="false"
-              aria-label="Open exportmenu voor ${safeTitle}"
-            >
-              <img src="icons/toevoegen-aan.svg" alt="" class="recipe-trigger-icon-img" />
-              <span>Toevoegen aan...</span>
-              <i class="fas fa-chevron-down export-chevron" aria-hidden="true"></i>
-            </button>
-            <div class="recipe-export-dropdown hidden" data-export-menu>
-              <button type="button" class="recipe-export-option weekmenu-assign-btn" data-recipe-id="${recipe.id}" data-recipe-title="${safeTitle}">
-                <span class="export-option-icon" aria-hidden="true"><img src="icons/plan-weekmenu.svg" alt="" class="export-option-icon-img" /></span>
-                <span>Plan in weekmenu</span>
-              </button>
-              ${importMode ? `<button type="button" class="recipe-export-option weekmenu-import-btn" data-recipe-id="${recipe.id}" data-import-mode="${importMode}">
-                <span class="export-option-icon" aria-hidden="true"><img src="icons/toevoegen-database.svg" alt="" class="export-option-icon-img" /></span>
-                <span>${importLabel}</span>
-              </button>` : ''}
-              <button type="button" class="recipe-export-option notes-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                <span class="notes-button-mark" aria-hidden="true"><img src="icons/notities.svg" alt="" class="export-option-icon-img" /></span>
-                <span>Notities</span>
-              </button>
-              <button type="button" class="recipe-export-option bring-export-option" data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}">
-                <span class="export-option-icon" aria-hidden="true"><img src="icons/bring.svg" alt="" class="export-option-icon-img" /></span>
-                <span>Stuur naar Bring</span>
-              </button>
-            </div>
-          </div>
+          <button
+            type="button"
+            class="plan-weekmenu-btn weekmenu-assign-btn"
+            data-recipe-id="${recipe.id}"
+            data-recipe-title="${safeTitle}"
+          >
+            <img src="icons/plan-weekmenu.svg" alt="" class="export-option-icon-img" />
+            <span>Plan in weekmenu</span>
+          </button>
         </div>
       </div>`;
   });
