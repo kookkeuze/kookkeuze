@@ -1807,7 +1807,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
                 aria-label="Ingrediënten van ${safeTitle} naar Bring sturen"
               >
                 <img src="icons/bring.svg" alt="" class="recipe-shopping-icon" />
-                <span class="recipe-shopping-name">Bring</span>
+                <span class="recipe-shopping-name">Bring!</span>
               </button>
             </div>
           </div>
@@ -3761,7 +3761,6 @@ const forgotPane   = document.getElementById('forgotPane');
 const resetPane    = document.getElementById('resetPane');
 const loggedInPane = document.getElementById('loggedInPane');
 const logoutBtn    = document.getElementById('logoutBtn');
-const authBtnIcon  = document.querySelector('#authBtn .auth-main-icon');
 const authStatusBadge = document.getElementById('authStatusBadge');
 const authModal    = document.getElementById('authModal');
 const loginText    = document.querySelector('.login-text');
@@ -3807,7 +3806,9 @@ function updateAuthUI(){
   msgBox.textContent = '';
   msgBox.classList.remove('success','error');
 
-  if (authBtnIcon) authBtnIcon.className = 'far fa-user auth-main-icon';
+  // Het personage-icoon is een eigen SVG (<img>) met vaste maatvoering via
+  // .topbar-icon-img; hier stond nog een Font Awesome-className uit de tijd dat
+  // het een <i> was, die die klasse er juist af sloopte.
   if (loginText) loginText.textContent = loggedIn ? 'Ingelogd' : 'Inloggen';
   if (authStatusBadge) {
     authStatusBadge.classList.toggle('is-logged-in', loggedIn);
