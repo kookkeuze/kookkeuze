@@ -1253,6 +1253,25 @@ const {
 
 app.use(bodyParser.json());
 
+// Schone URL's voor de statische pagina's (moeten vóór express.static staan,
+// anders serveert die de .html-bestanden direct op hun bestandsnaam)
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'privacy.html'));
+});
+
+app.get('/over-ons', (req, res) => {
+  res.sendFile(path.join(__dirname, 'over-ons.html'));
+});
+
+// Oude .html-URL's permanent doorsturen naar de schone variant
+app.get('/privacy.html', (req, res) => {
+  res.redirect(301, '/privacy');
+});
+
+app.get('/over-ons.html', (req, res) => {
+  res.redirect(301, '/over-ons');
+});
+
 // Statische bestanden serveren (zonder cache voor HTML)
 app.use(express.static(path.join(__dirname), {
   setHeaders: (res, filePath) => {
