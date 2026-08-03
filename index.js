@@ -1796,6 +1796,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
                 aria-label="Boodschappenlijst van ${safeTitle} delen als notitie"
               >
                 <img src="icons/notities.svg" alt="" class="recipe-shopping-icon" />
+                <span class="recipe-shopping-name">Notities</span>
               </button>
               <button
                 type="button"
@@ -1806,6 +1807,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
                 aria-label="Ingrediënten van ${safeTitle} naar Bring sturen"
               >
                 <img src="icons/bring.svg" alt="" class="recipe-shopping-icon" />
+                <span class="recipe-shopping-name">Bring</span>
               </button>
             </div>
           </div>
