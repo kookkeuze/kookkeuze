@@ -16,6 +16,11 @@ const {
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// Railway zet een reverse proxy voor de app; zonder dit ziet Express elk
+// verzoek als http vanaf het proxy-IP en kloppen req.protocol, req.secure,
+// req.hostname en req.ip niet. Moet vóór alle middleware staan.
+app.set('trust proxy', 1);
+
 // --- AUTH libs --------------------------------------------------------------
 const bcrypt     = require('bcryptjs');
 const jwt        = require('jsonwebtoken');
@@ -1250,6 +1255,19 @@ const {
   getDemoDatabaseId,
   replaceDemoRecipes
 } = require('./database');
+
+// Canonieke hostnaam: kookkeuze.nl stuurt door naar www.kookkeuze.nl, anders
+// indexeert Google dezelfde pagina's op twee hostnames. Staat vóór alle routes
+// en express.static, want die zouden de content anders gewoon serveren.
+// req.originalUrl houdt pad én query-parameters intact. Host mag hoofdletters
+// en een poortnummer bevatten, dus die normaliseren we eerst weg.
+app.use((req, res, next) => {
+  const host = (req.headers.host || '').toLowerCase().split(':')[0];
+  if (host === 'kookkeuze.nl') {
+    return res.redirect(301, `https://www.kookkeuze.nl${req.originalUrl}`);
+  }
+  next();
+});
 
 app.use(bodyParser.json());
 
