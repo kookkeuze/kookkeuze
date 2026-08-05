@@ -780,7 +780,7 @@ function activateTab(targetId) {
   // '#kiesRecept' is de starttab en dus wat een bezoeker (en Google, die JS
   // uitvoert) op / te zien krijgt. Die moet daarom gelijk zijn aan de <title>
   // in index.html, anders overschrijft dit de SEO-titel meteen na het laden.
-  const HOME_TITLE = 'Kookkeuze – Gratis weekmenu planner & recepten kiezen op filters';
+  const HOME_TITLE = 'Kookkeuze – Van recept naar weekmenu en boodschappenlijst';
   const tabTitles = {
     '#kiesRecept': HOME_TITLE,
     '#voegReceptToe': 'Kookkeuze – Voeg recept toe',

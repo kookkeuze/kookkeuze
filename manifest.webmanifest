@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#f8f9fa",
   "theme_color": "#63D671",
-  "description": "Persoonlijke recepten kiezen, bewaren en random laten selecteren.",
+  "description": "Recepten verzamelen, je weekmenu plannen en de ingrediënten van een recept doorsturen naar je boodschappenlijst.",
   "icons": [
     {
       "src": "Logo/icon-kookkeuze-192.png",
