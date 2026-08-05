@@ -777,13 +777,17 @@ function activateTab(targetId) {
     mobileActiveTabLabel.textContent = getTabLabel(targetId);
   }
 
+  // '#kiesRecept' is de starttab en dus wat een bezoeker (en Google, die JS
+  // uitvoert) op / te zien krijgt. Die moet daarom gelijk zijn aan de <title>
+  // in index.html, anders overschrijft dit de SEO-titel meteen na het laden.
+  const HOME_TITLE = 'Kookkeuze – Gratis weekmenu planner & recepten kiezen op filters';
   const tabTitles = {
-    '#kiesRecept': 'Kookkeuze – Kies een recept',
+    '#kiesRecept': HOME_TITLE,
     '#voegReceptToe': 'Kookkeuze – Voeg recept toe',
     '#overzichtRecepten': 'Kookkeuze – Overzicht recepten',
     '#weekmenuPlanner': 'Kookkeuze – Weekmenu planner'
   };
-  document.title = tabTitles[targetId] || 'Kookkeuze';
+  document.title = tabTitles[targetId] || HOME_TITLE;
 
   if (targetId === '#overzichtRecepten') fetchAllRecipes();
   if (targetId === '#weekmenuPlanner') initWeekPlanner();
