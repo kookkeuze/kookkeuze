@@ -1,2 +1,6 @@
 node_modules/
 .env
+
+# Persoonlijke Claude Code-instellingen (permissies e.d.); launch.json is wel
+# gedeeld, want daar start de dev-server mee.
+.claude/settings.local.json
