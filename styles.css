@@ -5338,10 +5338,14 @@ body.mobile-menu-open .mobile-nav-header {
   display: block;
 }
 
+/* Wrap is nodig sinds er een derde link bij kwam: op smalle telefoons
+   (320px) liep de rij anders buiten het scherm en scrolde de pagina zijwaarts. */
 .footer-links {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  justify-content: center;
+  gap: 8px 14px;
 }
 
 .footer-current {

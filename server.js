@@ -1281,6 +1281,10 @@ app.get('/over-ons', (req, res) => {
   res.sendFile(path.join(__dirname, 'over-ons.html'));
 });
 
+app.get('/voorwaarden', (req, res) => {
+  res.sendFile(path.join(__dirname, 'voorwaarden.html'));
+});
+
 // Oude .html-URL's permanent doorsturen naar de schone variant
 app.get('/privacy.html', (req, res) => {
   res.redirect(301, '/privacy');
@@ -1288,6 +1292,10 @@ app.get('/privacy.html', (req, res) => {
 
 app.get('/over-ons.html', (req, res) => {
   res.redirect(301, '/over-ons');
+});
+
+app.get('/voorwaarden.html', (req, res) => {
+  res.redirect(301, '/voorwaarden');
 });
 
 // Statische bestanden serveren (zonder cache voor HTML)
