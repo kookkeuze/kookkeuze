@@ -30,8 +30,7 @@ h2 {
   --green-hover: #4ac858;    /* hover/donkerder voor primaire groen */
   --green-bright: #43FD68;   /* extra felle hover-accenten */
   --green-deep: #235b2a;     /* donkergroen voor tekst, randen, iconen */
-  --green-soft: #3a8547;     /* lichter groen voor bijrol-tekst (footer);
-                                het merkgroen zelf is op wit onleesbaar */
+  --green-soft: #4ac858;     /* lichtgroen voor bijrol-tekst (footer) */
 
   --accent-color: #d97a45;        /* oranje accent */
   --accent-color-hover: #c96936;  /* oranje accent hover */
@@ -5324,14 +5323,16 @@ body.mobile-menu-open .mobile-nav-header {
   padding: 10px 0;
 }
 
+/* Logo boven de links, op elk schermformaat — niet alleen op mobiel. */
 .site-footer-inner {
   width: min(1200px, 95%);
   margin: 0 auto;
   min-height: 68px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: center;
+  gap: 10px;
 }
 
 .footer-logo {
@@ -5375,11 +5376,11 @@ body.mobile-menu-open .mobile-nav-header {
 }
 
 @media (max-width: 767px) {
+  /* Kolomrichting en centrering staan al in de basisregel; hier alleen nog
+     de krappere maatvoering voor kleine schermen. */
   .site-footer-inner {
     min-height: unset;
     padding: 14px 0;
-    flex-direction: column;
-    align-items: center;
     gap: 6px;
   }
 }
