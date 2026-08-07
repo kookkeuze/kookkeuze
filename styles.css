@@ -30,6 +30,8 @@ h2 {
   --green-hover: #4ac858;    /* hover/donkerder voor primaire groen */
   --green-bright: #43FD68;   /* extra felle hover-accenten */
   --green-deep: #235b2a;     /* donkergroen voor tekst, randen, iconen */
+  --green-soft: #3a8547;     /* lichter groen voor bijrol-tekst (footer);
+                                het merkgroen zelf is op wit onleesbaar */
 
   --accent-color: #d97a45;        /* oranje accent */
   --accent-color-hover: #c96936;  /* oranje accent hover */
@@ -5348,22 +5350,27 @@ body.mobile-menu-open .mobile-nav-header {
   gap: 8px 14px;
 }
 
+/* De footer is bijzaak: lichter groen en minder zwaar gezet dan de rest,
+   zodat hij niet met de inhoud concurreert. */
 .footer-current {
-  color: var(--green-deep);
-  font-size: 0.95rem;
+  color: var(--green-soft);
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
 .footer-links a {
-  color: var(--green-deep);
+  color: var(--green-soft);
   text-decoration: none;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   border-bottom: 1px solid transparent;
-  transition: border-color .15s ease;
+  transition: border-color .15s ease, color .15s ease;
 }
 
+/* Bij hover wél het donkerder groen: de links zijn nu zo rustig dat ze
+   anders nauwelijks als klikbaar aanvoelen. */
 .footer-links a:hover {
+  color: var(--green-deep);
   border-color: var(--green-deep);
 }
 
