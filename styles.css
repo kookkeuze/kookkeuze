@@ -817,14 +817,15 @@ button {
   gap: 8px;
 }
 
-/* Rustig labeltje bij velden die je gerust mag overslaan. */
+/* Labeltje bij velden die je gerust mag overslaan. Oranje accent met witte
+   tekst, zodat in één oogopslag duidelijk is welke velden niet verplicht zijn. */
 .add-recipe-optional {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 600;
   font-size: 11px;
   letter-spacing: .2px;
-  color: #6b7a70;
-  background: #f2f6f3;
+  color: #ffffff;
+  background: var(--accent-strong);
   border-radius: 999px;
   padding: 2px 8px;
 }
@@ -4546,7 +4547,7 @@ body.mobile-menu-open .mobile-nav-header {
   line-height: 1.55;
 }
 
-/* Aantal recepten als rustig pilletje, net als het 'optioneel'-label. */
+/* Aantal recepten als rustig groen pilletje. */
 .recipe-pack-count {
   margin: 12px 0 0;
   display: inline-block;
