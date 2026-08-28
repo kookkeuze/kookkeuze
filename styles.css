@@ -4735,10 +4735,15 @@ body.mobile-menu-open .mobile-nav-header {
 }
 
 /* Op desktop (horizontale kaart) de afbeelding altijd dezelfde, vaste uitsnede
-   geven -- onafhankelijk van de titellengte. De kaart mag in hoogte meegroeien
-   voor lange titels, maar de foto blijft een nette landscape-crop bovenaan.
+   geven -- onafhankelijk van de titellengte, de beeldverhouding van de foto of
+   het wel/niet aanwezig zijn van een bronvermelding. De kaart mag in hoogte
+   meegroeien voor lange titels, maar de foto houdt altijd exact dezelfde hoogte.
    Op mobiel staat de afbeelding bovenaan met een eigen vaste hoogte. */
 @media (min-width: 980px) {
+  .random-recipe-modal-content {
+    --random-recipe-image-height: 420px;
+  }
+
   .random-recipe-modal-content .result-image-cell {
     align-self: start;
   }
@@ -4747,9 +4752,9 @@ body.mobile-menu-open .mobile-nav-header {
   .random-recipe-modal-content .recipe-card-image,
   .random-recipe-modal-content .recipe-card-image-skeleton,
   .random-recipe-modal-content .recipe-card-image-fallback {
-    height: 360px;
-    min-height: 360px;
-    max-height: 360px;
+    height: var(--random-recipe-image-height);
+    min-height: var(--random-recipe-image-height);
+    max-height: var(--random-recipe-image-height);
   }
 }
 

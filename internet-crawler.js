@@ -233,6 +233,14 @@ const DEFAULT_RECIPE_PATH_EXCLUDES = [
   '/nieuws/',
   '/artikel/',
   '/blog/',
+  // Verzamel-/menupagina's: nooit als los recept aanbieden.
+  '/weekmenu',
+  '/weekmenus',
+  '/maandmenu',
+  '/collectie',
+  '/collecties',
+  '/overzicht',
+  '/inspiratie',
   '/contact',
   '/about',
   '/privacy',
@@ -281,17 +289,57 @@ function slugToTitle(rawUrl) {
 
 // Woorden die duiden op een verzamel-/lijstpagina ("10 beste tortilla recepten")
 // in plaats van één enkel recept. Bewust het meervoud, zodat losse recepten
-// ("Tortilla met kip") niet worden geraakt.
-const ROUNDUP_NOUNS = '(?:recepten|gerechten|varianten|variaties|idee[eë]n|manieren)';
-const ROUNDUP_SUPERLATIVES = '(?:beste|lekkerste|makkelijkste|snelste|populairste|favoriete|heerlijkste|leukste|top)';
-const ROUNDUP_NUMBERED_RE = new RegExp(`\\b\\d{1,3}\\s*x?\\b[a-zà-ÿ0-9\\s&'’.-]*?\\b${ROUNDUP_NOUNS}\\b`, 'i');
-const ROUNDUP_SUPERLATIVE_RE = new RegExp(`\\b${ROUNDUP_SUPERLATIVES}\\b[a-zà-ÿ0-9\\s&'’.-]*?\\b${ROUNDUP_NOUNS}\\b`, 'i');
+// ("Tortilla met kip") niet worden geraakt. De naamwoorden mogen ook aan een
+// ander woord vastzitten, zodat "12 pastarecepten" en "5 ovengerechten" ook
+// worden herkend.
+const ROUNDUP_NOUN_BASE = '(?:recepten|gerechten|varianten|variaties|idee[eë]n|manieren|klassiekers|toppers|favorieten)';
+const ROUNDUP_NOUNS = `[a-zà-ÿ]*${ROUNDUP_NOUN_BASE}`;
+const ROUNDUP_SUPERLATIVES = '(?:aller)?(?:beste|lekkerste|makkelijkste|snelste|populairste|favoriete|heerlijkste|leukste|mooiste|gezondste|simpelste|handigste|ultieme|top)';
+const ROUNDUP_DETERMINERS = '(?:onze|mijn|alle|allerlei|diverse|verschillende)';
+// Vulling tussen telwoord/bijvoeglijk naamwoord en het meervoud. Bewust
+// begrensd, zodat een getal vooraan de titel niet toevallig gekoppeld wordt aan
+// een meervoud helemaal achteraan.
+const ROUNDUP_FILLER = "[a-zà-ÿ0-9\\s&'’,:+.-]{0,32}?";
+
+const ROUNDUP_NUMBERED_RE = new RegExp(`\\b\\d{1,3}\\s*(?:x|keer)?\\b${ROUNDUP_FILLER}\\b${ROUNDUP_NOUNS}\\b`, 'i');
+const ROUNDUP_SUPERLATIVE_RE = new RegExp(`\\b${ROUNDUP_SUPERLATIVES}\\b${ROUNDUP_FILLER}\\b${ROUNDUP_NOUNS}\\b`, 'i');
+const ROUNDUP_DETERMINER_RE = new RegExp(`\\b${ROUNDUP_DETERMINERS}\\b${ROUNDUP_FILLER}\\b${ROUNDUP_NOUNS}\\b`, 'i');
 const ROUNDUP_TOP_RE = /\btop[\s-]?\d{1,3}\b/i;
+// "5x pasta", "3 keer anders": een telling in de titel is vrijwel altijd een
+// opsomming. Maten ("20 x 30 cm", "2 x 250 gram") vallen er bewust buiten.
+const ROUNDUP_COUNT_RE = /\b\d{1,3}\s*(?:x|keer)\b(?!\s*\d)(?!\s*(?:cm|mm|centimeter|gram|gr|kg|ml|cl|dl|liter|minuten|min|uur|personen)\b)/i;
+// Meervoud gevolgd door een voorzetsel: "recepten met kip", "gerechten voor de bbq".
+const ROUNDUP_PHRASE_RE = new RegExp(`\\b${ROUNDUP_NOUNS}\\b\\s+(?:met|voor|om|uit|van|die|zonder|op|in|bij)\\b`, 'i');
+// Titel die eindigt op een meervoud ("Pastarecepten", "Snelle ovengerechten").
+const ROUNDUP_TRAILING_NOUN_RE = new RegExp(`\\b${ROUNDUP_NOUNS}\\s*$`, 'i');
+// Titels die met een telwoord + meervoud beginnen en daarna een voorzetsel
+// krijgen ("24 soepen voor de winter") zijn een opsomming. Maten en
+// bereidingstijden ("5 minuten mugcake", "1 pans pasta") vallen erbuiten,
+// net als gerechtnamen met een telwoord ("4 kazen pasta").
+const ROUNDUP_UNIT_WORDS = '(?:uur|uurs|uren|minuten|minuut|min|seconden|sec|pans|pan|laags|lagen|ingredi[eë]nten|stappen|personen|porties|stuks|dagen|weken|graden|gram|kilo|liter|ml|cl|dl|cm|mm)';
+const ROUNDUP_LEADING_COUNT_RE = new RegExp(`^\\s*\\d{1,3}\\s+(?!${ROUNDUP_UNIT_WORDS}\\b)[a-zà-ÿ]{3,}(?:en|s)\\s+(?:voor|met|om|die|dat|uit|van|op|in|bij|waar|zonder|op een rij)\\b`, 'i');
+// "7 verschillende wraps", "3 versies van ...": expliciet meerdere uitvoeringen.
+const ROUNDUP_VARIETY_RE = /\b\d{1,3}\s+(?:verschillende|versies|uitvoeringen)\b/i;
+// Trefwoorden die alleen op verzamel-/menupagina's voorkomen.
+const ROUNDUP_KEYWORD_RE = /\b(?:weekmenu'?s?|maandmenu|weekplanner|menu van de week|verzameling|verzamelpost|collectie|overzicht|inspiratielijst|inspiratie|round-?up|receptenbundels?|bundel|lijstje|kookboek)\b/i;
+
+const ROUNDUP_PATTERNS = [
+  ROUNDUP_NUMBERED_RE,
+  ROUNDUP_SUPERLATIVE_RE,
+  ROUNDUP_DETERMINER_RE,
+  ROUNDUP_TOP_RE,
+  ROUNDUP_COUNT_RE,
+  ROUNDUP_PHRASE_RE,
+  ROUNDUP_TRAILING_NOUN_RE,
+  ROUNDUP_LEADING_COUNT_RE,
+  ROUNDUP_VARIETY_RE,
+  ROUNDUP_KEYWORD_RE
+];
 
 function textLooksLikeRoundup(rawText) {
   const text = String(rawText || '').toLowerCase().trim();
   if (!text) return false;
-  return ROUNDUP_NUMBERED_RE.test(text) || ROUNDUP_SUPERLATIVE_RE.test(text) || ROUNDUP_TOP_RE.test(text);
+  return ROUNDUP_PATTERNS.some(pattern => pattern.test(text));
 }
 
 function lastUrlSegmentText(rawUrl) {
@@ -303,11 +351,53 @@ function lastUrlSegmentText(rawUrl) {
   }
 }
 
-// Herkent verzamel-/lijstartikelen op basis van titel én de laatste URL-segmenten,
-// zodat "de 10 beste tortilla recepten" nooit als los recept wordt aangeboden.
+// Paginatitels dragen bijna altijd de sitenaam mee ("Griekse wraps met feta -
+// Leuke Recepten"). Die staart zou de meervoudsregels hierboven ten onrechte
+// laten aanslaan, dus knippen we hem eraf zodra hij overeenkomt met het domein.
+function stripSiteNameFromTitle(rawTitle, rawUrl) {
+  const title = String(rawTitle || '').trim();
+  if (!title) return '';
+
+  let hostKey = '';
+  try {
+    hostKey = new URL(rawUrl).hostname
+      .toLowerCase()
+      .replace(/^www\./, '')
+      .replace(/\.[a-z.]+$/, '')
+      .replace(/[^a-z0-9]/g, '');
+  } catch {
+    hostKey = '';
+  }
+  if (!hostKey) return title;
+
+  const parts = title.split(/\s+[|·»–—]\s+|\s+-\s+/).map(part => part.trim()).filter(Boolean);
+  if (parts.length < 2) return title;
+
+  const kept = parts.filter(part => {
+    const key = part.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return key && !hostKey.includes(key) && !key.includes(hostKey);
+  });
+  return (kept.length ? kept : parts).join(' - ');
+}
+
+// Vanaf drie verschillende recept-objecten in één pagina gaat het onmiskenbaar
+// om een verzamelartikel; één of twee komt ook voor bij een enkel recept met een
+// variant of een "ook lekker"-blok.
+const RECIPE_BUNDLE_SCHEMA_THRESHOLD = 3;
+
+function looksLikeRecipeBundlePayload(payloadLike) {
+  const count = Number(payloadLike?.recipe_schema_count);
+  return Number.isFinite(count) && count >= RECIPE_BUNDLE_SCHEMA_THRESHOLD;
+}
+
+// Herkent verzamel-/lijstartikelen op basis van titel, de laatste URL-segmenten
+// en het aantal recepten in de pagina zelf, zodat "de 10 beste tortilla recepten"
+// nooit als los recept wordt aangeboden.
 function looksLikeRecipeRoundup(recipeLike) {
   if (!recipeLike) return false;
-  return textLooksLikeRoundup(recipeLike.title) || textLooksLikeRoundup(lastUrlSegmentText(recipeLike.url));
+  if (looksLikeRecipeBundlePayload(recipeLike)) return true;
+  if (textLooksLikeRoundup(stripSiteNameFromTitle(recipeLike.title, recipeLike.url))) return true;
+  return textLooksLikeRoundup(lastUrlSegmentText(recipeLike.url));
 }
 
 function decodeXmlEntities(value) {
@@ -700,8 +790,13 @@ async function crawlInternetRecipeIndex({ fetchRecipePayload, log = () => {} }) 
           const normalizedUrl = normalizeUrl(recipeUrl);
           if (!normalizedUrl || seenUrls.has(normalizedUrl)) return null;
 
-          // Titel kan pas na het ophalen blijken een verzamelartikel te zijn.
-          if (looksLikeRecipeRoundup({ title: payload?.title, url: normalizedUrl })) {
+          // Titel of paginastructuur kan pas na het ophalen verraden dat het om
+          // een verzamelartikel gaat.
+          if (looksLikeRecipeRoundup({
+            title: payload?.title,
+            url: normalizedUrl,
+            recipe_schema_count: payload?.recipe_schema_count
+          })) {
             summary.failedRecipes += 1;
             return null;
           }

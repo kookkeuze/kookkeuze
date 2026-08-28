@@ -846,7 +846,7 @@ function mapMealType(text) {
   return 'Normaal';
 }
 
-function buildRecipePayload(recipe, html = '', url = '') {
+function buildRecipePayload(recipe, html = '', url = '', recipeSchemaCount = 0) {
   let fallbackTitle;
   let fallbackIngredients;
   const getFallbackTitle = () => {
@@ -883,6 +883,9 @@ function buildRecipePayload(recipe, html = '', url = '') {
     time_required: mapTimeRequired(totalMinutes),
     calories,
     ingredients: recipe ? extractRecipeIngredients(recipe) : [],
+    // Aantal losse schema.org-recepten op de pagina: meer dan een paar betekent
+    // dat het om een verzamelartikel gaat in plaats van om één recept.
+    recipe_schema_count: Number(recipeSchemaCount) || 0,
     missing: []
   };
 
@@ -1151,7 +1154,14 @@ async function getRecipeInfoPayload(targetUrl) {
     ? allRecipes.reduce((best, cur) => (scoreRecipe(cur) > scoreRecipe(best) ? cur : best), allRecipes[0])
     : null;
 
-  const payload = buildRecipePayload(recipe, html, targetUrl);
+  // Tel op naam ontdubbeld: sommige sites zetten hetzelfde recept in meerdere
+  // JSON-LD-blokken, dat mag geen bundel lijken.
+  const distinctRecipeNames = new Set(
+    allRecipes.map(item => String(item?.name || '').trim().toLowerCase()).filter(Boolean)
+  );
+  const recipeSchemaCount = distinctRecipeNames.size || allRecipes.length;
+
+  const payload = buildRecipePayload(recipe, html, targetUrl, recipeSchemaCount);
   recipeInfoCache.set(cacheKey, {
     payload,
     expiresAt: Date.now() + RECIPE_INFO_TTL_MS
@@ -2627,6 +2637,7 @@ function buildInternetRecipeResult(candidate, payload = null) {
     time_required: payload?.time_required || candidate.time_required || null,
     calories: payload?.calories ?? candidate.calories ?? null,
     ingredients_preview: ingredients,
+    recipe_schema_count: payload?.recipe_schema_count ?? 0,
     _search_blob: searchBlob
   };
 }
