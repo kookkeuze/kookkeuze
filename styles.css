@@ -697,7 +697,8 @@ button {
   flex: 0 0 auto;
 }
 
-#addRecipeForm {
+#addRecipeForm,
+#ownRecipeForm {
   width: 100%;
   max-width: none;
   margin: 0;
@@ -807,7 +808,8 @@ button {
   }
 }
 
-#addRecipeForm .add-recipe-field > label {
+#addRecipeForm .add-recipe-field > label,
+#ownRecipeForm .add-recipe-field > label {
   font-weight: 700;
   color: #3f4e45;
   margin-top: 0;
@@ -837,7 +839,8 @@ button {
 
 /* Iets zwaardere selector dan de oudere regels verderop in dit bestand,
    zodat de hoofdknop hier bepaald wordt en niet half in twee regels hangt. */
-#addRecipeForm > button.green-btn[type="submit"] {
+#addRecipeForm > button.green-btn[type="submit"],
+#ownRecipeForm > button.green-btn[type="submit"] {
   justify-self: start;
   width: auto;
   min-width: 230px;
@@ -847,7 +850,8 @@ button {
 }
 
 @media (max-width: 600px) {
-  #addRecipeForm > button.green-btn[type="submit"] {
+  #addRecipeForm > button.green-btn[type="submit"],
+  #ownRecipeForm > button.green-btn[type="submit"] {
     width: 100%;
     min-width: 0;
   }
@@ -883,7 +887,10 @@ button {
 
 #addRecipeForm input,
 #addRecipeForm select,
-#addRecipeForm textarea {
+#addRecipeForm textarea,
+#ownRecipeForm input,
+#ownRecipeForm select,
+#ownRecipeForm textarea {
   width: 100%;
   padding: 11px 13px;
   border: 1.5px solid var(--field-border);
@@ -896,13 +903,17 @@ button {
 
 #addRecipeForm input:focus,
 #addRecipeForm select:focus,
-#addRecipeForm textarea:focus {
+#addRecipeForm textarea:focus,
+#ownRecipeForm input:focus,
+#ownRecipeForm select:focus,
+#ownRecipeForm textarea:focus {
   outline: none;
   border-color: var(--green);
   box-shadow: var(--field-focus-ring);
 }
 
-#addRecipeForm textarea {
+#addRecipeForm textarea,
+#ownRecipeForm textarea {
   min-height: 116px;
   resize: vertical;
   line-height: 1.45;
@@ -5845,3 +5856,438 @@ body.mobile-menu-open .mobile-nav-header {
   overflow: hidden;
 }
 
+/* ===================== EIGEN RECEPTEN =====================
+   Twee manieren om toe te voegen (link of zelf uitschrijven) en de eigen
+   receptpagina op /recept/<id>. Mobile-first opgezet: alles staat onder
+   elkaar en gaat pas vanaf 760px naast elkaar staan. */
+
+#addRecipeForm[hidden],
+#ownRecipeForm[hidden] {
+  display: none;
+}
+
+.add-recipe-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.add-recipe-mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 16px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #4b5650;
+  background: #ffffff;
+  border: 2px solid #e6efe8;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+
+.add-recipe-mode-btn:hover {
+  border-color: #c6d4ca;
+  color: #2f3b34;
+}
+
+.add-recipe-mode-btn.active {
+  border-color: var(--green);
+  background: #f2fbf4;
+  color: var(--green-deep);
+}
+
+.add-recipe-mode-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* --- Fotokiezer in het formulier --- */
+.own-photo-picker {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.own-photo-preview {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--field-border);
+  background: #f7fbf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.own-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.own-photo-placeholder {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  color: #7d8a7f;
+}
+
+.own-photo-controls {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+/* Het echte bestandsveld is onzichtbaar maar wel bereikbaar met toetsenbord;
+   het label ernaast is de zichtbare knop. */
+.own-photo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.own-photo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--green);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  justify-self: start;
+}
+
+.own-photo-btn:hover {
+  background: var(--green-hover);
+}
+
+.own-photo-input:focus-visible + .own-photo-btn {
+  box-shadow: var(--field-focus-ring);
+}
+
+.own-photo-remove {
+  justify-self: start;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  color: var(--danger);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.own-photo-hint {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  color: #7d8a7f;
+  margin: 0;
+}
+
+@media (min-width: 760px) {
+  .add-recipe-mode-switch {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .own-photo-picker {
+    grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+    align-items: center;
+  }
+}
+
+/* --- De receptpagina zelf (/recept/<id>) --- */
+.own-recipe-page {
+  display: grid;
+  gap: 24px;
+}
+
+.own-recipe-status {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  color: #4b5650;
+  text-align: center;
+  padding: 32px 12px;
+}
+
+.own-recipe-status-link {
+  color: var(--green-deep);
+  font-weight: 700;
+}
+
+.own-recipe-head {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.own-recipe-photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: #f7fbf8;
+  border: 1px solid #e6efe8;
+}
+
+/* Zonder foto geen lege grijze plek: de kolom valt gewoon weg. */
+.own-recipe-photo.is-empty {
+  display: none;
+}
+
+.own-recipe-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.own-recipe-intro {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.own-recipe-kicker {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--green-deep);
+  margin: 0;
+}
+
+.own-recipe-page h1 {
+  margin: 0;
+  font-size: 2rem;
+  color: #3a3a3a;
+  line-height: 1.15;
+}
+
+.own-recipe-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.own-recipe-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5650;
+}
+
+.own-recipe-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.own-recipe-tag {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green-deep);
+  background: #eef9f0;
+  border: 1px solid #d9efdd;
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+.own-recipe-source {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-style: italic;
+  color: #7d8a7f;
+  margin: 0;
+}
+
+.own-recipe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* De knopvorm (padding, radius, lettertype) staat op de button-selector, dus
+   een link met .green-btn erft alleen de kleur. Hier zetten we de rest erbij. */
+.own-recipe-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border-radius: var(--btn-radius);
+  font-family: 'EatingPasta', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  white-space: nowrap;
+  text-decoration: none;
+  color: #ffffff;
+  transition: background-color .2s ease, transform .2s ease;
+}
+
+.own-recipe-back-btn:hover {
+  background-color: var(--green-hover);
+  transform: translateY(-1px);
+}
+
+.own-recipe-secondary-btn,
+.own-recipe-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #4b5650;
+  background: #ffffff;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.own-recipe-secondary-btn:hover,
+.own-recipe-copy-btn:hover {
+  border-color: #c6d4ca;
+  color: #2f3b34;
+}
+
+.own-recipe-section {
+  background: #ffffff;
+  border: 1px solid #e6efe8;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(47, 106, 55, 0.07);
+  padding: 22px;
+  display: grid;
+  gap: 16px;
+}
+
+.own-recipe-section h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #2f3a35;
+}
+
+.own-recipe-ingredients {
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+}
+
+.own-recipe-ingredients li {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 9px 4px;
+  border-bottom: 1px solid #f0f5f1;
+}
+
+.own-recipe-ingredients li:last-child {
+  border-bottom: none;
+}
+
+/* Afvinken tijdens het koken: puur visueel, wordt niet bewaard. */
+.own-recipe-check {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  flex-shrink: 0;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+
+.own-recipe-ingredients label {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  color: #3a3a3a;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.own-recipe-check:checked + label {
+  color: #9aa79c;
+  text-decoration: line-through;
+}
+
+.own-recipe-copy-btn {
+  justify-self: start;
+}
+
+.own-recipe-steps {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.own-recipe-steps li {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #3a3a3a;
+  padding-left: 4px;
+}
+
+.own-recipe-steps li::marker {
+  color: var(--green-deep);
+  font-weight: 700;
+}
+
+@media (min-width: 760px) {
+  .own-recipe-head {
+    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .own-recipe-page h1 {
+    font-size: 2.4rem;
+  }
+
+  /* Zonder foto mag de tekst de volle breedte pakken. */
+  .own-recipe-head:has(.own-recipe-photo.is-empty) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Printen: alleen het recept, zonder knoppen en menubalk. */
+@media print {
+  .topbar,
+  .own-recipe-actions,
+  .own-recipe-copy-btn {
+    display: none !important;
+  }
+
+  .own-recipe-section {
+    box-shadow: none;
+    border-color: #d9d9d9;
+    break-inside: avoid;
+  }
+
+  .own-recipe-photo {
+    max-width: 320px;
+  }
+}

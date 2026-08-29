@@ -459,9 +459,39 @@ function renderRecipeNoteButton(recipeId, recipeUrl, recipeTitle, extraClass = '
 const recipeImageCache = new Map();
 let pendingResetToken = null;
 
+// Eigen recepten wijzen naar een pagina op Kookkeuze zelf ("/recept/12") in
+// plaats van naar een externe site.
+function isOwnRecipeUrl(url) {
+  return /^\/recept\/\d+$/.test(String(url || '').trim());
+}
+
+function getOwnRecipeId(url) {
+  const match = /^\/recept\/(\d+)$/.exec(String(url || '').trim());
+  return match ? match[1] : '';
+}
+
+// De foto van een eigen recept zit achter dezelfde toegangscontrole als het
+// recept, dus een gewone <img src> zonder token werkt niet. Ophalen als blob.
+function fetchOwnRecipePhoto(url) {
+  const id = getOwnRecipeId(url);
+  if (!id) return Promise.resolve(null);
+
+  return fetch(`${API_BASE}/api/recipes/own/${id}/photo`, { headers: authHeaders() })
+    .then(res => (res.ok ? res.blob() : null))
+    .then(blob => (blob ? URL.createObjectURL(blob) : null))
+    .catch(() => null);
+}
+
 function fetchRecipeImage(url) {
   if (!url) return Promise.resolve(null);
   if (recipeImageCache.has(url)) return Promise.resolve(recipeImageCache.get(url));
+
+  if (isOwnRecipeUrl(url)) {
+    return fetchOwnRecipePhoto(url).then(imageUrl => {
+      recipeImageCache.set(url, imageUrl);
+      return imageUrl;
+    });
+  }
 
   const endpoint = `${API_BASE}/api/recipe-image?url=${encodeURIComponent(url)}`;
   return fetch(endpoint, { headers: authHeaders() })
@@ -1708,6 +1738,9 @@ function buildRecipeCardsHtml(arr, options = {}) {
     const safeMealType = escapeAttr(r.meal_type || '');
     const safeTimeRequired = escapeAttr(r.time_required || '');
     const safeCalories = r.calories == null ? '' : escapeAttr(String(r.calories));
+    // Eigen recepten openen op Kookkeuze zelf. Bring kan die pagina niet
+    // uitlezen (hij zit achter een login), dus die knop laten we daar weg.
+    const isOwn = isOwnRecipeUrl(r.url);
     html += `
       <div class="recipe-card">
         <div class="result-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
@@ -1718,8 +1751,10 @@ function buildRecipeCardsHtml(arr, options = {}) {
             <h3>${displayTitle}</h3>
           </div>
           <div class="recipe-card-actions">
-            <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
-              Bekijk&nbsp;recept&nbsp;<img src="icons/externe-link.svg" alt="" class="recipe-link-ext-icon" /></a></p>
+            <p class="recipe-link">${isOwn
+              ? `<a href="${safeHref}" class="ext-link own-recipe-link">Bekijk&nbsp;recept</a>`
+              : `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
+              Bekijk&nbsp;recept&nbsp;<img src="icons/externe-link.svg" alt="" class="recipe-link-ext-icon" /></a>`}</p>
             <div class="recipe-secondary-actions">
               ${renderRecipeNoteButton(recipeId, r.url || '', r.title || 'Recept', 'recipe-note-trigger--card')}
               <div class="recipe-export-menu">
@@ -1802,7 +1837,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
                 <img src="icons/notities.svg" alt="" class="recipe-shopping-icon" />
                 <span class="recipe-shopping-name">Notities</span>
               </button>
-              <button
+              ${isOwn ? '' : `<button
                 type="button"
                 class="recipe-shopping-btn bring-export-option"
                 data-recipe-url="${safeUrl}"
@@ -1812,7 +1847,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
               >
                 <img src="icons/bring.svg" alt="" class="recipe-shopping-icon" />
                 <span class="recipe-shopping-name">Bring!</span>
-              </button>
+              </button>`}
             </div>
           </div>
         </div>
@@ -1875,6 +1910,20 @@ document.addEventListener('keydown', e => {
 });
 
 async function fetchRecipeIngredients(recipeUrl) {
+  // Bij een eigen recept staan de ingredienten al in onze eigen database; die
+  // hoeven we niet van een externe pagina te schrapen.
+  if (isOwnRecipeUrl(recipeUrl)) {
+    const res = await fetch(`${API_BASE}/api/recipes/own/${getOwnRecipeId(recipeUrl)}`, {
+      headers: authHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    const ingredients = String(data.ingredients || '')
+      .split(/\r?\n/)
+      .map(line => line.replace(/^\s*[-*•]\s*/, '').trim())
+      .filter(Boolean);
+    return { ingredients };
+  }
+
   const res = await fetch(`${API_BASE}/api/recipe-info?url=${encodeURIComponent(recipeUrl)}`, {
     headers: authHeaders()
   });
@@ -2820,8 +2869,10 @@ function openWeekmenuPreviewModal(recipeId, fallbackRecipe = null) {
         </div>
         <div class="recipe-card-content">
           <h3>${displayTitle}</h3>
-          <p class="recipe-link"><a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
-            Bekijk&nbsp;recept&nbsp;<img src="icons/externe-link.svg" alt="" class="recipe-link-ext-icon" /></a></p>
+          <p class="recipe-link">${isOwnRecipeUrl(recipe.url)
+            ? `<a href="${safeHref}" class="ext-link own-recipe-link">Bekijk&nbsp;recept</a>`
+            : `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
+            Bekijk&nbsp;recept&nbsp;<img src="icons/externe-link.svg" alt="" class="recipe-link-ext-icon" /></a>`}</p>
           <div class="recipe-meta-row">
             <span class="recipe-meta-pill"><img src="icons/tijd.svg" alt="" class="recipe-meta-icon" /> ${escapeHtml(recipe.time_required || '-')}</span>
             <span class="recipe-meta-pill"><img src="icons/kcal.svg" alt="" class="recipe-meta-icon" /> ${escapeHtml(recipe.calories ?? '-')} kcal</span>
@@ -3493,6 +3544,199 @@ addRecipeForm.addEventListener('submit', async e => {
   }
 });
 
+/* ========= EIGEN RECEPT TOEVOEGEN ========= */
+const ownRecipeForm = document.getElementById('ownRecipeForm');
+const modeLinkBtn = document.getElementById('modeLinkBtn');
+const modeOwnBtn = document.getElementById('modeOwnBtn');
+const ownPhotoInput = document.getElementById('ownPhotoInput');
+const ownPhotoPreview = document.getElementById('ownPhotoPreview');
+const ownPhotoRemoveBtn = document.getElementById('ownPhotoRemoveBtn');
+
+// De verkleinde foto als data-URL; pas bij opslaan gaat hij mee naar de server.
+let ownRecipePhotoData = null;
+
+const OWN_PHOTO_MAX_EDGE = 1400;
+const OWN_PHOTO_QUALITY = 0.82;
+
+function setAddRecipeMode(mode) {
+  const own = mode === 'own';
+  addRecipeForm.hidden = own;
+  if (ownRecipeForm) ownRecipeForm.hidden = !own;
+  modeLinkBtn?.classList.toggle('active', !own);
+  modeOwnBtn?.classList.toggle('active', own);
+  modeLinkBtn?.setAttribute('aria-pressed', String(!own));
+  modeOwnBtn?.setAttribute('aria-pressed', String(own));
+  if (addMessageDiv) addMessageDiv.innerHTML = '';
+}
+
+modeLinkBtn?.addEventListener('click', () => setAddRecipeMode('link'));
+modeOwnBtn?.addEventListener('click', () => setAddRecipeMode('own'));
+
+// Foto's van een telefoon zijn zo een paar megabyte. In de browser verkleinen
+// scheelt uploadtijd en houdt de database klein.
+function resizeImageToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const scale = Math.min(1, OWN_PHOTO_MAX_EDGE / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject(new Error('Kon de foto niet verwerken.'));
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      try {
+        resolve(canvas.toDataURL('image/jpeg', OWN_PHOTO_QUALITY));
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Kon de foto niet lezen.'));
+    };
+
+    img.src = objectUrl;
+  });
+}
+
+function showOwnPhotoPreview(dataUrl) {
+  if (!ownPhotoPreview) return;
+  ownRecipePhotoData = dataUrl;
+
+  if (dataUrl) {
+    ownPhotoPreview.classList.remove('is-empty');
+    ownPhotoPreview.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.alt = 'Voorbeeld van de gekozen foto';
+    ownPhotoPreview.appendChild(img);
+    if (ownPhotoRemoveBtn) ownPhotoRemoveBtn.hidden = false;
+    return;
+  }
+
+  ownPhotoPreview.classList.add('is-empty');
+  ownPhotoPreview.innerHTML = '<span class="own-photo-placeholder">Nog geen foto</span>';
+  if (ownPhotoRemoveBtn) ownPhotoRemoveBtn.hidden = true;
+  if (ownPhotoInput) ownPhotoInput.value = '';
+}
+
+ownPhotoInput?.addEventListener('change', async () => {
+  const file = ownPhotoInput.files && ownPhotoInput.files[0];
+  if (!file) return showOwnPhotoPreview(null);
+
+  try {
+    showOwnPhotoPreview(await resizeImageToDataUrl(file));
+  } catch (err) {
+    console.error(err);
+    showOwnPhotoPreview(null);
+    if (addMessageDiv) {
+      addMessageDiv.innerHTML = '<p style="color:red;">Die foto konden we niet verwerken. Probeer een JPG, PNG of WebP.</p>';
+    }
+  }
+});
+
+ownPhotoRemoveBtn?.addEventListener('click', () => showOwnPhotoPreview(null));
+
+ownRecipeForm?.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!ensureLoggedInOrNotify(addMessageDiv)) return;
+
+  const readValue = id => document.getElementById(id)?.value.trim() || '';
+  const readNumber = id => {
+    const raw = readValue(id);
+    return raw ? parseInt(raw, 10) : null;
+  };
+
+  const noteText = readValue('ownRecipeNote');
+  const bodyData = {
+    title:         readValue('ownTitle'),
+    dish_type:     getSelectedValues(document.getElementById('ownDishType')),
+    meal_category: getSelectedValues(document.getElementById('ownMealCategory')),
+    meal_type:     getSelectedValues(document.getElementById('ownMealType')),
+    time_required: getSelectedValues(document.getElementById('ownTimeRequired')),
+    calories:      readNumber('ownCalories'),
+    servings:      readNumber('ownServings'),
+    prep_minutes:  readNumber('ownPrepMinutes'),
+    source_note:   readValue('ownSourceNote'),
+    ingredients:   document.getElementById('ownIngredients')?.value.trim() || '',
+    instructions:  document.getElementById('ownInstructions')?.value.trim() || '',
+    photo:         ownRecipePhotoData || null
+  };
+
+  if (!bodyData.title) {
+    addMessageDiv.innerHTML = '<p style="color:red;">Geef je recept een titel.</p>';
+    return;
+  }
+
+  const submitBtn = ownRecipeForm.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/recipes/own`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(withActiveDatabaseBody(bodyData))
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok || d.error) {
+      addMessageDiv.innerHTML = `<p style="color:red;">${d.error || 'Er ging iets mis bij het opslaan van het recept.'}</p>`;
+      return;
+    }
+
+    let toastMessage = 'Recept toegevoegd!';
+    let inlineMessage = '';
+    if (noteText && d.id) {
+      try {
+        await saveRecipeNote(d.id, d.url, noteText);
+        toastMessage = 'Recept en notitie toegevoegd!';
+      } catch (noteErr) {
+        console.error(noteErr);
+        inlineMessage = '<p style="color:#8a6d3b;">Recept toegevoegd, maar de notitie kon niet meteen worden opgeslagen. Je kunt die later alsnog toevoegen.</p>';
+      }
+    }
+
+    const joinField = val => Array.isArray(val) ? val.filter(Boolean).join(', ') : (val || '');
+    const addedRecipe = {
+      id: d.id || '',
+      title: bodyData.title,
+      url: d.url || '',
+      dish_type: joinField(bodyData.dish_type),
+      meal_category: joinField(bodyData.meal_category),
+      meal_type: joinField(bodyData.meal_type),
+      time_required: joinField(bodyData.time_required),
+      calories: bodyData.calories
+    };
+
+    addMessageDiv.innerHTML = inlineMessage;
+    showRecipeAddedToast(toastMessage);
+    ownRecipeForm.reset();
+    showOwnPhotoPreview(null);
+    ['ownDishType', 'ownMealCategory', 'ownMealType', 'ownTimeRequired']
+      .forEach(id => document.getElementById(id)?._multiSelectApi?.clear());
+
+    // De net gemaakte foto zit nog onder de oude cache-sleutel (leeg), dus die
+    // vergeten we; de kaart haalt hem daarna opnieuw op.
+    recipeImageCache.delete(addedRecipe.url);
+
+    fetchAllRecipes();
+    if (addedRecipe.id && addedRecipe.url) {
+      transitionFromToastToRecipePreview(addedRecipe);
+    }
+  } catch (err) {
+    console.error(err);
+    addMessageDiv.innerHTML = '<p style="color:red;">Server niet bereikbaar.</p>';
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+});
+
 /* ========= OVERZICHT RECEPTEN (TAB 3) ========= */
 const allRecipesDiv = document.getElementById('allRecipes');
 const openRecipePacksBtn = document.getElementById('openRecipePacksBtn');
@@ -3651,7 +3895,9 @@ function renderOverviewPage() {
             <div class="recipe-thumb-skeleton"></div>
           </td>
           <td contenteditable>${r.title}</td>
-          <td contenteditable>${r.url}</td>
+          ${isOwnRecipeUrl(r.url)
+            ? `<td class="overview-own-url"><a href="${r.url}">Eigen recept op Kookkeuze</a></td>`
+            : `<td contenteditable>${r.url}</td>`}
           <td>${dropdown(dishOpt,  r.dish_type, 'Soort')}</td>
           <td>${dropdown(catOpt,   r.meal_category, 'Menugang')}</td>
           <td>${dropdown(mealOpt,  r.meal_type, 'Doel gerecht')}</td>
@@ -3717,9 +3963,11 @@ function onUpdateRecipe(e){
   const catSelect = row.cells[4].querySelector('select');
   const mealSelect = row.cells[5].querySelector('select');
   const timeSelect = row.cells[6].querySelector('select');
+  const urlCell = row.cells[2];
+  const ownLink = urlCell.querySelector('a')?.getAttribute('href') || '';
   const data = {
     title:         row.cells[1].innerText.trim(),
-    url:           row.cells[2].innerText.trim(),
+    url:           ownLink || urlCell.innerText.trim(),
     dish_type:     getSelectedValues(dishSelect),
     meal_category: getSelectedValues(catSelect),
     meal_type:     getSelectedValues(mealSelect),

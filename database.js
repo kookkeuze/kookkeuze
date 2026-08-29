@@ -232,6 +232,33 @@ async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_recipes_database_id
       ON recipes (database_id)
     `);
+
+    // Eigen recepten: recepten die de gebruiker zelf op Kookkeuze schrijft in
+    // plaats van een link naar een externe site. Ze staan in dezelfde tabel,
+    // zodat filteren, weekmenu en notities er zonder aanpassing mee werken.
+    await pool.query(`
+      ALTER TABLE recipes
+        ADD COLUMN IF NOT EXISTS is_own_recipe BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS ingredients TEXT,
+        ADD COLUMN IF NOT EXISTS instructions TEXT,
+        ADD COLUMN IF NOT EXISTS servings INTEGER,
+        ADD COLUMN IF NOT EXISTS prep_minutes INTEGER,
+        ADD COLUMN IF NOT EXISTS source_note TEXT,
+        ADD COLUMN IF NOT EXISTS photo_updated_at TIMESTAMP
+    `);
+    console.log('\u2705 Own recipe columns created/verified');
+
+    // De foto staat bewust in een eigen tabel: getRecipes doet SELECT *, en die
+    // zou anders bij elke lijstweergave alle afbeeldingsbytes meeslepen.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS recipe_photos (
+        recipe_id INTEGER PRIMARY KEY REFERENCES recipes(id) ON DELETE CASCADE,
+        mime_type TEXT NOT NULL,
+        data BYTEA NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('\u2705 Recipe photos table created/verified');
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_meal_plans_database_week
       ON meal_plans (database_id, week_start)
@@ -562,6 +589,141 @@ function addRecipe(recipe, callback) {
       callback(null, { id: result.rows[0].id });
     }
   );
+}
+
+// Eigen recept opslaan. De URL wijst naar onze eigen receptpagina, maar het
+// id is pas na de insert bekend; daarom zetten we hem er in dezelfde query
+// meteen achteraan op.
+function addOwnRecipe(recipe, callback) {
+  const {
+    title,
+    dish_type,
+    meal_type,
+    time_required,
+    meal_category,
+    calories,
+    ingredients,
+    instructions,
+    servings,
+    prep_minutes,
+    source_note,
+    user_id,
+    database_id
+  } = recipe;
+
+  const query = `
+    WITH nieuw_id AS (
+      SELECT nextval(pg_get_serial_sequence('recipes', 'id')) AS id
+    )
+    INSERT INTO recipes (
+      id, title, url, dish_type, meal_type, time_required, meal_category, calories,
+      ingredients, instructions, servings, prep_minutes, source_note,
+      is_own_recipe, user_id, database_id
+    )
+    SELECT
+      nieuw_id.id, $1, '/recept/' || nieuw_id.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+      TRUE, $12, $13
+    FROM nieuw_id
+    RETURNING id, url
+  `;
+
+  pool.query(query, [
+    title, dish_type, meal_type, time_required, meal_category, calories,
+    ingredients, instructions, servings, prep_minutes, source_note,
+    user_id, database_id
+  ], (err, result) => {
+    if (err) {
+      console.error('Fout bij invoegen eigen recept:', err);
+      return callback(err);
+    }
+    callback(null, result.rows[0] || null);
+  });
+}
+
+function updateOwnRecipe(id, databaseId, recipe, callback) {
+  const {
+    title,
+    dish_type,
+    meal_type,
+    time_required,
+    meal_category,
+    calories,
+    ingredients,
+    instructions,
+    servings,
+    prep_minutes,
+    source_note
+  } = recipe;
+
+  const query = `
+    UPDATE recipes
+    SET title = $1, dish_type = $2, meal_type = $3, time_required = $4,
+        meal_category = $5, calories = $6, ingredients = $7, instructions = $8,
+        servings = $9, prep_minutes = $10, source_note = $11
+    WHERE id = $12 AND database_id = $13 AND is_own_recipe = TRUE
+    RETURNING id
+  `;
+
+  pool.query(query, [
+    title, dish_type, meal_type, time_required, meal_category, calories,
+    ingredients, instructions, servings, prep_minutes, source_note,
+    id, databaseId
+  ], (err, result) => {
+    if (err) {
+      console.error('Fout bij bijwerken eigen recept:', err);
+      return callback(err);
+    }
+    callback(null, result.rows[0] || null);
+  });
+}
+
+// Recept zonder database-filter ophalen; de aanroeper controleert daarna of de
+// gebruiker toegang heeft tot de database waar het recept in staat.
+function getRecipeById(recipeId, callback) {
+  pool.query('SELECT * FROM recipes WHERE id = $1 LIMIT 1', [recipeId], (err, result) => {
+    if (err) return callback(err);
+    const row = result.rows[0] || null;
+    if (!row) return callback(null, null);
+    callback(null, {
+      ...row,
+      dish_type: toDisplayValue(row.dish_type),
+      meal_category: toDisplayValue(row.meal_category),
+      meal_type: toDisplayValue(row.meal_type),
+      time_required: toDisplayValue(row.time_required)
+    });
+  });
+}
+
+function setRecipePhoto(recipeId, mimeType, data, callback) {
+  const query = `
+    INSERT INTO recipe_photos (recipe_id, mime_type, data, updated_at)
+    VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+    ON CONFLICT (recipe_id) DO UPDATE
+      SET mime_type = EXCLUDED.mime_type,
+          data = EXCLUDED.data,
+          updated_at = CURRENT_TIMESTAMP
+  `;
+  pool.query(query, [recipeId, mimeType, data], err => {
+    if (err) {
+      console.error('Fout bij opslaan receptfoto:', err);
+      return callback(err);
+    }
+    pool.query('UPDATE recipes SET photo_updated_at = CURRENT_TIMESTAMP WHERE id = $1', [recipeId], callback);
+  });
+}
+
+function getRecipePhoto(recipeId, callback) {
+  pool.query('SELECT mime_type, data FROM recipe_photos WHERE recipe_id = $1', [recipeId], (err, result) => {
+    if (err) return callback(err);
+    callback(null, result.rows[0] || null);
+  });
+}
+
+function deleteRecipePhoto(recipeId, callback) {
+  pool.query('DELETE FROM recipe_photos WHERE recipe_id = $1', [recipeId], err => {
+    if (err) return callback(err);
+    pool.query('UPDATE recipes SET photo_updated_at = NULL WHERE id = $1', [recipeId], callback);
+  });
 }
 
 function upsertExternalRecipeToDatabase(recipe, callback) {
@@ -1528,6 +1690,12 @@ module.exports = {
   updateRecipe,
   deleteRecipe,
   getRecipeByIdForOwner,
+  getRecipeById,
+  addOwnRecipe,
+  updateOwnRecipe,
+  setRecipePhoto,
+  getRecipePhoto,
+  deleteRecipePhoto,
   importRecipeToUserDatabase,
   addUser,
   addGoogleUser,

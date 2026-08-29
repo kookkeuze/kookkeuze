@@ -392,6 +392,19 @@
           <img src="icons/recepten-pakket.svg" alt="" class="recipe-pack-btn-icon" /> Recept pakketten
         </button>
       </div>
+      <!-- Twee manieren om een recept toe te voegen: een link van een andere
+           site, of een recept dat je zelf uitschrijft op Kookkeuze. -->
+      <div class="add-recipe-mode-switch" role="group" aria-label="Manier van toevoegen kiezen">
+        <button type="button" id="modeLinkBtn" class="add-recipe-mode-btn active" aria-pressed="true">
+          <img src="icons/externe-link.svg" alt="" class="add-recipe-mode-icon" />
+          <span>Ik heb een link</span>
+        </button>
+        <button type="button" id="modeOwnBtn" class="add-recipe-mode-btn" aria-pressed="false">
+          <img src="icons/notitie.svg" alt="" class="add-recipe-mode-icon" />
+          <span>Ik heb een eigen recept</span>
+        </button>
+      </div>
+
       <form id="addRecipeForm">
         <!-- Stap 1: link plakken -->
         <section class="add-recipe-section">
@@ -507,6 +520,163 @@
 
         <button type="submit" class="green-btn">Recept toevoegen</button>
       </form>
+
+      <!-- Eigen recept: zelfde categorievelden als hierboven, plus foto,
+           ingredienten en bereiding. Dit recept krijgt een pagina op Kookkeuze
+           zelf in plaats van een link naar een andere site. -->
+      <form id="ownRecipeForm" hidden>
+        <section class="add-recipe-section">
+          <div class="add-recipe-section-head">
+            <span class="add-recipe-step-badge" aria-hidden="true">1</span>
+            <div class="add-recipe-section-title">
+              <h3>Je recept</h3>
+              <p>Dit recept komt in je eigen database en krijgt een pagina op Kookkeuze.</p>
+            </div>
+          </div>
+
+          <div class="add-recipe-field">
+            <label for="ownTitle">Titel</label>
+            <input id="ownTitle" type="text" maxlength="255" placeholder="bijv. Ovenschotel van oma" required />
+          </div>
+
+          <div class="add-recipe-field">
+            <label for="ownPhotoInput">Foto <span class="add-recipe-optional">optioneel</span></label>
+            <div class="own-photo-picker">
+              <div id="ownPhotoPreview" class="own-photo-preview is-empty">
+                <span class="own-photo-placeholder">Nog geen foto</span>
+              </div>
+              <div class="own-photo-controls">
+                <input id="ownPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" class="own-photo-input" />
+                <label for="ownPhotoInput" class="own-photo-btn">Foto kiezen</label>
+                <button type="button" id="ownPhotoRemoveBtn" class="own-photo-remove" hidden>Verwijder foto</button>
+                <p class="own-photo-hint">JPG, PNG of WebP. We verkleinen de foto automatisch.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="add-recipe-section">
+          <div class="add-recipe-section-head">
+            <span class="add-recipe-step-badge" aria-hidden="true">2</span>
+            <div class="add-recipe-section-title">
+              <h3>Ingrediënten en bereiding</h3>
+              <p>Eén per regel. Die regels worden op de receptpagina een lijst met vinkjes en genummerde stappen.</p>
+            </div>
+          </div>
+
+          <div class="add-recipe-field">
+            <label for="ownIngredients">Ingrediënten</label>
+            <textarea id="ownIngredients" rows="8" maxlength="10000" placeholder="500 g kipfilet&#10;2 el olijfolie&#10;1 ui, gesnipperd"></textarea>
+          </div>
+
+          <div class="add-recipe-field">
+            <label for="ownInstructions">Bereiding</label>
+            <textarea id="ownInstructions" rows="8" maxlength="20000" placeholder="Verwarm de oven voor op 200 graden.&#10;Snijd de ui fijn en fruit hem glazig.&#10;..."></textarea>
+          </div>
+        </section>
+
+        <section class="add-recipe-section">
+          <div class="add-recipe-section-head">
+            <span class="add-recipe-step-badge" aria-hidden="true">3</span>
+            <div class="add-recipe-section-title">
+              <h3>Gegevens</h3>
+              <p>Hiermee kun je later gericht filteren op wat je zoekt.</p>
+            </div>
+          </div>
+
+          <div class="add-recipe-grid">
+            <div class="add-recipe-field">
+              <label for="ownDishType">Soort gerecht</label>
+              <select id="ownDishType">
+                <option>maak een keuze</option>
+                <option>Kip</option>
+                <option>Rund</option>
+                <option>Varken</option>
+                <option>Brood</option>
+                <option>Hartig</option>
+                <option>Hartige taart</option>
+                <option>Ovenschotel</option>
+                <option>Pasta</option>
+                <option>Rijst</option>
+                <option>Soep</option>
+                <option>Taart &amp; cake</option>
+                <option>Vegetarisch</option>
+                <option>Vis</option>
+                <option>Wraps</option>
+                <option>Zoet</option>
+              </select>
+            </div>
+            <div class="add-recipe-field">
+              <label for="ownMealCategory">Menugang</label>
+              <select id="ownMealCategory">
+                <option>maak een keuze</option>
+                <option>Bakken</option>
+                <option>Dessert</option>
+                <option>Dressings, sauzen &amp; dips</option>
+                <option>Drinken</option>
+                <option>Hoofdgerecht</option>
+                <option>Lunch</option>
+                <option>Ontbijt</option>
+                <option>Salade</option>
+                <option>Snacks</option>
+              </select>
+            </div>
+            <div class="add-recipe-field">
+              <label for="ownMealType">Doel gerecht</label>
+              <select id="ownMealType">
+                <option>maak een keuze</option>
+                <option>Sporten</option>
+                <option>Normaal</option>
+                <option>Cheaten</option>
+              </select>
+            </div>
+            <div class="add-recipe-field">
+              <label for="ownTimeRequired">Tijd</label>
+              <select id="ownTimeRequired">
+                <option>maak een keuze</option>
+                <option>Onder de 30 minuten</option>
+                <option>30 - 45 minuten</option>
+                <option>45 minuten - 1 uur</option>
+                <option>1 - 2 uur</option>
+                <option>langer dan 2 uur</option>
+              </select>
+            </div>
+            <div class="add-recipe-field">
+              <label for="ownPrepMinutes">Bereidingstijd in minuten <span class="add-recipe-optional">optioneel</span></label>
+              <input id="ownPrepMinutes" type="number" min="0" max="6000" placeholder="bijv. 40" />
+            </div>
+            <div class="add-recipe-field">
+              <label for="ownServings">Aantal personen <span class="add-recipe-optional">optioneel</span></label>
+              <input id="ownServings" type="number" min="1" max="100" placeholder="bijv. 4" />
+            </div>
+            <div class="add-recipe-field">
+              <label for="ownCalories">Calorieën <span class="add-recipe-optional">optioneel</span></label>
+              <input id="ownCalories" type="number" min="0" placeholder="bijv. 450 per persoon" />
+            </div>
+            <div class="add-recipe-field">
+              <label for="ownSourceNote">Waar komt het vandaan <span class="add-recipe-optional">optioneel</span></label>
+              <input id="ownSourceNote" type="text" maxlength="255" placeholder="bijv. van oma, of zelf bedacht" />
+            </div>
+          </div>
+        </section>
+
+        <section class="add-recipe-section">
+          <div class="add-recipe-section-head">
+            <span class="add-recipe-step-badge" aria-hidden="true">4</span>
+            <div class="add-recipe-section-title">
+              <h3>Eigen notitie <span class="add-recipe-optional">optioneel</span></h3>
+            </div>
+          </div>
+
+          <div class="add-recipe-field">
+            <label for="ownRecipeNote" class="sr-only">Notities bij dit recept</label>
+            <textarea id="ownRecipeNote" rows="4" maxlength="500" placeholder="Bijvoorbeeld: volgende keer meer knoflook"></textarea>
+          </div>
+        </section>
+
+        <button type="submit" class="green-btn">Recept opslaan</button>
+      </form>
+
       <div id="addMessage"></div>
     </div>
 

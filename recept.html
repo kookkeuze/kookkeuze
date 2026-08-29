@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recept – Kookkeuze</title>
+  <!-- Eigen recepten zijn privé: alleen zichtbaar voor wie toegang heeft tot de
+       database waar ze in staan. Daarom niet indexeren en niet volgen. -->
+  <meta name="robots" content="noindex, nofollow" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+  />
+  <link rel="stylesheet" href="/styles.css" />
+
+  <!-- Umami: privacyvriendelijke statistieken, cookieloos en zonder
+       toestemmingsbanner. Defer, dus het blokkeert het laden niet. -->
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="b57021f2-91b0-4ba7-bd2c-19278aefe4d5"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="/" aria-label="Ga naar home">
+        <img src="/Logo/Kookkeuze-logo.svg" alt="Kookkeuze-logo" class="logo-img" />
+      </a>
+
+      <div class="topbar-actions">
+        <a href="/" class="topbar-action-btn install-app-btn" aria-label="Terug naar home">
+          <span class="action-icon-shell"><img src="/icons/app.svg" alt="" width="24" height="24" class="topbar-icon-img" /></span>
+          <span class="install-text">Naar Kookkeuze</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <article id="ownRecipePage" class="tab-content active own-recipe-page">
+      <p id="ownRecipeStatus" class="own-recipe-status">Recept laden…</p>
+      <div id="ownRecipeBody" hidden></div>
+    </article>
+  </main>
+
+  <script src="/recept.js" defer></script>
+</body>
+</html>

@@ -1246,6 +1246,12 @@ const {
   upsertRecipeNote,
   deleteRecipeNote,
   getRecipeByIdForOwner,
+  getRecipeById,
+  addOwnRecipe,
+  updateOwnRecipe,
+  setRecipePhoto,
+  getRecipePhoto,
+  deleteRecipePhoto,
   importRecipeToUserDatabase,
   upsertExternalRecipeToDatabase,
   listAccessibleDatabases,
@@ -1279,7 +1285,9 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(bodyParser.json());
+// 8 MB in plaats van de standaard 100 kB: een eigen recept stuurt zijn foto
+// als data-URL mee. De client verkleint hem eerst, dus dit is ruim voldoende.
+app.use(bodyParser.json({ limit: '8mb' }));
 
 // Schone URL's voor de statische pagina's (moeten vóór express.static staan,
 // anders serveert die de .html-bestanden direct op hun bestandsnaam)
@@ -1306,6 +1314,17 @@ app.get('/over-ons.html', (req, res) => {
 
 app.get('/voorwaarden.html', (req, res) => {
   res.redirect(301, '/voorwaarden');
+});
+
+// Eigen recepten hebben een pagina op de site zelf. De pagina haalt het recept
+// client-side op met de JWT uit localStorage, zodat hij alleen zichtbaar is voor
+// wie toegang heeft tot de database waar het recept in staat.
+app.get('/recept/:id', (req, res) => {
+  if (!/^\d+$/.test(String(req.params.id || ''))) {
+    return res.status(404).sendFile(path.join(__dirname, 'index.html'));
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'recept.html'));
 });
 
 // Statische bestanden serveren (zonder cache voor HTML)
@@ -2988,6 +3007,216 @@ app.post('/api/recipes', async (req, res) => {
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
     return res.status(500).json({ error: 'Er ging iets mis bij het opslaan van het recept.' });
+  }
+});
+
+/* -------------------- EIGEN RECEPTEN -------------------- */
+// Een eigen recept staat in dezelfde recepten-tabel als een gelinkt recept, maar
+// met de tekst erbij en een URL die naar onze eigen paginawijst.
+
+const OWN_RECIPE_MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const ALLOWED_PHOTO_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+function parseOptionalPositiveInt(value, max) {
+  if (value === undefined || value === null || String(value).trim() === '') return null;
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) return null;
+  const rounded = Math.round(number);
+  return max && rounded > max ? max : rounded;
+}
+
+function trimToLength(value, maxLength) {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  return text.length > maxLength ? text.slice(0, maxLength) : text;
+}
+
+// Foto komt binnen als data-URL ("data:image/jpeg;base64,...").
+function parsePhotoDataUrl(dataUrl) {
+  const match = /^data:([a-z0-9/+.-]+);base64,([\s\S]+)$/i.exec(String(dataUrl || '').trim());
+  if (!match) return { error: 'Ongeldige afbeelding.' };
+
+  const mimeType = match[1].toLowerCase();
+  if (!ALLOWED_PHOTO_MIME_TYPES.has(mimeType)) {
+    return { error: 'Alleen JPG, PNG of WebP wordt ondersteund.' };
+  }
+
+  let data;
+  try {
+    data = Buffer.from(match[2], 'base64');
+  } catch {
+    return { error: 'Ongeldige afbeelding.' };
+  }
+  if (!data.length) return { error: 'Ongeldige afbeelding.' };
+  if (data.length > OWN_RECIPE_MAX_PHOTO_BYTES) {
+    return { error: 'De foto is te groot (maximaal 5 MB).' };
+  }
+
+  return { mimeType, data };
+}
+
+function readOwnRecipeBody(body = {}) {
+  const title = trimToLength(body.title, 255);
+  if (!title) return { error: 'Geef je recept een titel.' };
+
+  return {
+    values: {
+      title,
+      dish_type: normalizeRecipeField(body.dish_type),
+      meal_category: normalizeRecipeField(body.meal_category),
+      meal_type: normalizeRecipeField(body.meal_type),
+      time_required: normalizeRecipeField(body.time_required),
+      calories: parseOptionalPositiveInt(body.calories, 100000),
+      ingredients: trimToLength(body.ingredients, 10000),
+      instructions: trimToLength(body.instructions, 20000),
+      servings: parseOptionalPositiveInt(body.servings, 100),
+      prep_minutes: parseOptionalPositiveInt(body.prep_minutes, 6000),
+      source_note: trimToLength(body.source_note, 255)
+    }
+  };
+}
+
+// Geeft het recept terug als de gebruiker toegang heeft tot de database ervan.
+async function loadAccessibleRecipe(req, recipeId) {
+  if (!req.user) {
+    const err = new Error('Je moet ingelogd zijn om dit recept te bekijken.');
+    err.statusCode = 401;
+    throw err;
+  }
+  if (!/^\d+$/.test(String(recipeId))) {
+    const err = new Error('Ongeldig recept-id.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const recipe = await dbCall(getRecipeById, Number(recipeId));
+  if (!recipe) {
+    const err = new Error('Recept niet gevonden.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const hasAccess = await dbCall(userHasDatabaseAccess, req.user.id, recipe.database_id);
+  if (!hasAccess) {
+    const err = new Error('Je hebt geen toegang tot dit recept.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  return recipe;
+}
+
+app.post('/api/recipes/own', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om recepten toe te voegen.' });
+  }
+
+  const parsed = readOwnRecipeBody(req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  let photo = null;
+  if (req.body?.photo) {
+    photo = parsePhotoDataUrl(req.body.photo);
+    if (photo.error) return res.status(400).json({ error: photo.error });
+  }
+
+  try {
+    const ownerUserId = await resolveDatabaseOwnerId(req);
+    const created = await dbCall(addOwnRecipe, {
+      ...parsed.values,
+      user_id: req.user.id,
+      database_id: ownerUserId
+    });
+
+    if (photo && created?.id) {
+      await dbCall(setRecipePhoto, created.id, photo.mimeType, photo.data);
+    }
+
+    return res.json({ message: 'Recept toegevoegd!', id: created?.id, url: created?.url });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    console.error('\u274c eigen recept opslaan:', err);
+    return res.status(500).json({ error: 'Er ging iets mis bij het opslaan van het recept.' });
+  }
+});
+
+app.put('/api/recipes/own/:id', async (req, res) => {
+  const parsed = readOwnRecipeBody(req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  let photo = null;
+  if (req.body?.photo) {
+    photo = parsePhotoDataUrl(req.body.photo);
+    if (photo.error) return res.status(400).json({ error: photo.error });
+  }
+
+  try {
+    const recipe = await loadAccessibleRecipe(req, req.params.id);
+    if (!recipe.is_own_recipe) {
+      return res.status(400).json({ error: 'Dit is geen eigen recept.' });
+    }
+
+    const updated = await dbCall(updateOwnRecipe, recipe.id, recipe.database_id, parsed.values);
+    if (!updated) return res.status(404).json({ error: 'Recept niet gevonden.' });
+
+    if (photo) {
+      await dbCall(setRecipePhoto, recipe.id, photo.mimeType, photo.data);
+    } else if (req.body?.removePhoto) {
+      await dbCall(deleteRecipePhoto, recipe.id);
+    }
+
+    return res.json({ message: 'Recept bijgewerkt!', id: recipe.id });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    console.error('\u274c eigen recept bijwerken:', err);
+    return res.status(500).json({ error: 'Er ging iets mis bij het bijwerken van het recept.' });
+  }
+});
+
+// Volledig recept inclusief ingredienten en bereiding, voor de receptpagina.
+app.get('/api/recipes/own/:id', async (req, res) => {
+  try {
+    const recipe = await loadAccessibleRecipe(req, req.params.id);
+    return res.json({
+      id: recipe.id,
+      title: recipe.title,
+      url: recipe.url,
+      dish_type: recipe.dish_type,
+      meal_category: recipe.meal_category,
+      meal_type: recipe.meal_type,
+      time_required: recipe.time_required,
+      calories: recipe.calories,
+      ingredients: recipe.ingredients,
+      instructions: recipe.instructions,
+      servings: recipe.servings,
+      prep_minutes: recipe.prep_minutes,
+      source_note: recipe.source_note,
+      is_own_recipe: !!recipe.is_own_recipe,
+      has_photo: !!recipe.photo_updated_at,
+      created_at: recipe.created_at
+    });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    console.error('\u274c eigen recept ophalen:', err);
+    return res.status(500).json({ error: 'Er ging iets mis bij het ophalen van het recept.' });
+  }
+});
+
+// De foto zelf. Vereist dezelfde toegang als het recept, dus de client haalt
+// hem op met de JWT en zet hem daarna als blob in de <img>.
+app.get('/api/recipes/own/:id/photo', async (req, res) => {
+  try {
+    const recipe = await loadAccessibleRecipe(req, req.params.id);
+    const photo = await dbCall(getRecipePhoto, recipe.id);
+    if (!photo) return res.status(404).json({ error: 'Geen foto bij dit recept.' });
+
+    res.setHeader('Content-Type', photo.mime_type);
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    return res.send(photo.data);
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    console.error('\u274c receptfoto ophalen:', err);
+    return res.status(500).json({ error: 'Er ging iets mis bij het ophalen van de foto.' });
   }
 });
 
