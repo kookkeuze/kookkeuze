@@ -2251,14 +2251,14 @@ const INTERNET_ADDITIONAL_SOURCE_SEEDS = [
     meal_type: 'Normaal',
     time_required: '30 - 45 minuten'
   }),
-  packRecipe('Appeltaartkoeken', 'https://rutgerbakt.nl/koek-recepten/appeltaartkoeken-recept/', {
+  packRecipe('Makkelijke kleine appeltaartjes', 'https://rutgerbakt.nl/taart-recepten/appeltaart/makkelijke-kleine-appeltaartjes/', {
     source: 'Rutger Bakt',
     dish_type: 'Taart & cake',
     meal_category: 'Bakken',
     meal_type: 'Cheaten',
     time_required: '30 - 45 minuten'
   }),
-  packRecipe('Kip pasta pesto', 'https://brendakookt.nl/recepten/kip-pasta-pesto/', {
+  packRecipe('Pasta pesto met spinazie en kip', 'https://brendakookt.nl/recepten/pasta-pesto-met-spinazie-en-kip/', {
     source: 'Brenda Kookt',
     dish_type: 'Pasta',
     meal_category: 'Hoofdgerecht',
@@ -2272,21 +2272,21 @@ const INTERNET_ADDITIONAL_SOURCE_SEEDS = [
     meal_type: 'Normaal',
     time_required: '45 minuten - 1 uur'
   }),
-  packRecipe('Pasta met zalm en spinazie', 'https://miljuschka.nl/pasta-met-zalm-en-spinazie-recept/', {
+  packRecipe('Pasta met zalm', 'https://miljuschka.nl/pasta-met-zalm/', {
     source: 'Miljuschka',
     dish_type: 'Pasta',
     meal_category: 'Hoofdgerecht',
     meal_type: 'Normaal',
-    time_required: 'Onder de 30 minuten'
+    time_required: '30 - 45 minuten'
   }),
-  packRecipe('Pesto pasta met kip en verse spinazie', 'https://www.keukenliefde.nl/pesto-pasta-met-kip-en-verse-spinazie/', {
+  packRecipe('Pasta pesto met kip', 'https://www.keukenliefde.nl/recepten/pasta-pesto-kip/', {
     source: 'Keukenliefde',
     dish_type: 'Pasta',
     meal_category: 'Hoofdgerecht',
     meal_type: 'Normaal',
-    time_required: 'Onder de 30 minuten'
+    time_required: '30 - 45 minuten'
   }),
-  packRecipe('Romige pasta met kip en Parmezaan', 'https://www.eefkooktzo.nl/romige-pasta-met-kip-en-parmezaan/', {
+  packRecipe('Kip Parmezaan met pasta', 'https://www.eefkooktzo.nl/kip-parmezaan-met-pasta/', {
     source: 'Eef Kookt Zo',
     dish_type: 'Pasta',
     meal_category: 'Hoofdgerecht',
@@ -2307,14 +2307,7 @@ const INTERNET_ADDITIONAL_SOURCE_SEEDS = [
     meal_type: 'Normaal',
     time_required: '45 minuten - 1 uur'
   }),
-  packRecipe('Pasta met zalm', 'https://www.libelle-lekker.be/bekijk-recept/85034/pasta-met-zalm', {
-    source: 'Libelle Lekker',
-    dish_type: 'Pasta',
-    meal_category: 'Hoofdgerecht',
-    meal_type: 'Normaal',
-    time_required: '30 - 45 minuten'
-  }),
-  packRecipe('Pasta met romige kip, doperwten en chorizo', 'https://www.jumbo.com/recepten/pasta-met-romige-kip-doperwten-en-chorizo-31505', {
+  packRecipe('Pasta met kip, erwten en chorizo', 'https://www.jumbo.com/recepten/pasta-met-kip-erwten-en-chorizo-502299', {
     source: 'Jumbo Recepten',
     dish_type: 'Pasta',
     meal_category: 'Hoofdgerecht',
@@ -2351,7 +2344,7 @@ const DEMO_RECIPES = [
   packRecipe('Kip-avocado salade', 'https://chickslovefood.com/recept/kip-avocado-salade/', {
     source: 'Chickslovefood', dish_type: 'Kip', meal_category: 'Salade', meal_type: 'Normaal', time_required: 'Onder de 30 minuten'
   }),
-  packRecipe('Appeltaartkoeken', 'https://rutgerbakt.nl/koek-recepten/appeltaartkoeken-recept/', {
+  packRecipe('Makkelijke kleine appeltaartjes', 'https://rutgerbakt.nl/taart-recepten/appeltaart/makkelijke-kleine-appeltaartjes/', {
     source: 'Rutger Bakt', dish_type: 'Taart & cake', meal_category: 'Bakken', meal_type: 'Cheaten', time_required: '30 - 45 minuten'
   }),
   packRecipe('Paella met chorizo, garnalen en kip', 'https://www.plus.nl/recept/paella-met-chorizo-garnalen-en-kip', {
@@ -2412,12 +2405,26 @@ const DEMO_RECIPE_REPLACEMENTS_2026_07_17 = [
   }
 ];
 
+// Gerichte migratie (2026-08-29): het recept 'Appeltaartkoeken' is bij Rutger
+// Bakt verwijderd en gaf een 404. Vervangen door een bestaand recept van
+// dezelfde bron met dezelfde metadata. Idempotent, net als de migratie
+// hierboven.
+const DEMO_RECIPE_REPLACEMENTS_2026_08_29 = [
+  {
+    removeUrl: 'https://rutgerbakt.nl/koek-recepten/appeltaartkoeken-recept/',
+    add: packRecipe('Makkelijke kleine appeltaartjes', 'https://rutgerbakt.nl/taart-recepten/appeltaart/makkelijke-kleine-appeltaartjes/', {
+      source: 'Rutger Bakt', dish_type: 'Taart & cake', meal_category: 'Bakken', meal_type: 'Cheaten', time_required: '30 - 45 minuten'
+    })
+  }
+];
+
 async function seedDemoDataset() {
   try {
     const result = await seedDemoData(DEMO_USER_EMAIL, DEMO_RECIPES);
     if (result?.databaseId) {
       demoDatabaseIdCache = result.databaseId;
       await replaceDemoRecipes(result.databaseId, result.userId, DEMO_RECIPE_REPLACEMENTS_2026_07_17);
+      await replaceDemoRecipes(result.databaseId, result.userId, DEMO_RECIPE_REPLACEMENTS_2026_08_29);
       console.log(`✅ Demo-dataset klaar: ${DEMO_RECIPES.length} voorbeeldrecepten (database ${result.databaseId}).`);
     } else {
       console.warn('⚠️ Demo-dataset kon niet worden geïnitialiseerd (geen database-id).');
@@ -2458,7 +2465,6 @@ function inferRecipeSourceLabel(recipeUrl) {
       'eefkooktzo.nl': 'Eef Kookt Zo',
       'familieoverdekook.nl': 'Familie over de Kook',
       'kookmutsjes.com': 'Kookmutsjes',
-      'libelle-lekker.be': 'Libelle Lekker',
       'jumbo.com': 'Jumbo Recepten',
       'plus.nl': 'Plus',
       'laurasbakery.nl': "Laura's Bakery",

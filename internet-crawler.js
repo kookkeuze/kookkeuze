@@ -49,6 +49,12 @@ const INTERNET_CRAWLER_SITES = [
     baseUrl: 'https://www.lekkerensimpel.com',
     allowedHosts: ['lekkerensimpel.com', 'www.lekkerensimpel.com'],
     recipePathIncludes: ['/recept', '/recepten'],
+    // Recepten staan hier op de root (/pulled-chicken-wraps/) in plaats van
+    // onder /recept, dus accepteren we paden van een enkel segment. Omdat daar
+    // ook blogposts en winacties tussen zitten, moet de pagina wel een echt
+    // schema.org-recept bevatten voordat hij in de index belandt.
+    allowRootRecipePaths: true,
+    requireRecipeSchema: true,
     listingPageCandidates: ['/recepten', '/familie-recepten', '/snelle-recepten'],
     maxRecipeUrls: 250
   },
@@ -185,15 +191,6 @@ const INTERNET_CRAWLER_SITES = [
     allowedHosts: ['kookmutsjes.com', 'www.kookmutsjes.com'],
     recipePathIncludes: ['/recept', '/recepten'],
     listingPageCandidates: ['/recepten', '/category/recepten'],
-    maxRecipeUrls: 250
-  },
-  {
-    key: 'libellelekker',
-    source: 'Libelle Lekker',
-    baseUrl: 'https://www.libelle-lekker.be',
-    allowedHosts: ['libelle-lekker.be', 'www.libelle-lekker.be'],
-    recipePathIncludes: ['/recept', '/recepten', '/bekijk-recept/'],
-    listingPageCandidates: ['/recepten', '/zoek?search=recept'],
     maxRecipeUrls: 250
   },
   {
@@ -438,20 +435,36 @@ function isXmlLikeUrl(rawUrl) {
   return /\.xml(?:$|[?#])/i.test(String(rawUrl || ''));
 }
 
+const THROTTLED_STATUS_CODES = new Set([429, 503]);
+const THROTTLE_RETRY_DELAYS_MS = [1500, 4000];
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function fetchText(url, headers = {}, acceptHeader = 'application/xml,text/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5') {
-  const response = await fetch(url, {
-    headers: {
-      ...DEFAULT_FETCH_HEADERS,
-      Accept: acceptHeader,
-      ...headers
-    },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(15000)
-  });
-  if (!response.ok) {
+  // Sommige sites knijpen af zodra er een paar verzoeken snel achter elkaar
+  // binnenkomen. Even wachten en opnieuw proberen scheelt een gemiste sitemap.
+  for (let attempt = 0; ; attempt += 1) {
+    const response = await fetch(url, {
+      headers: {
+        ...DEFAULT_FETCH_HEADERS,
+        Accept: acceptHeader,
+        ...headers
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(15000)
+    });
+
+    if (response.ok) return response.text();
+
+    if (THROTTLED_STATUS_CODES.has(response.status) && attempt < THROTTLE_RETRY_DELAYS_MS.length) {
+      await delay(THROTTLE_RETRY_DELAYS_MS[attempt]);
+      continue;
+    }
+
     throw new Error(`HTTP ${response.status}`);
   }
-  return response.text();
 }
 
 function getSitemapCandidates(site) {
@@ -508,6 +521,10 @@ function isRecipeUrlForSite(site, rawUrl) {
 
   // Verzamel-/lijstpagina's ("10-beste-tortilla-recepten") uitsluiten.
   if (looksLikeRecipeRoundup({ url: rawUrl })) return false;
+
+  // Sites die hun recepten op de root zetten: elk pad van een enkel segment
+  // mag mee. De schema.org-controle bij het indexeren zeeft er niet-recepten uit.
+  if (site.allowRootRecipePaths && /^\/[^/]+\/?$/.test(pathname)) return true;
 
   const includeParts = Array.isArray(site.recipePathIncludes) && site.recipePathIncludes.length
     ? site.recipePathIncludes
@@ -628,24 +645,32 @@ async function discoverSiteSitemaps(site, log) {
     log(`robots.txt niet bruikbaar voor ${site.source}`);
   }
 
-  const validSitemaps = [];
+  const validSitemaps = new Map();
   for (const sitemapUrl of candidateUrls) {
-    if (!isXmlLikeUrl(sitemapUrl)) continue;
-    try {
-      const xml = await fetchText(sitemapUrl);
-      if (looksLikeXmlDocument(xml)) {
-        validSitemaps.push(sitemapUrl);
+    if (isXmlLikeUrl(sitemapUrl) && !validSitemaps.has(sitemapUrl)) {
+      try {
+        const xml = await fetchText(sitemapUrl);
+        if (looksLikeXmlDocument(xml)) {
+          validSitemaps.set(sitemapUrl, xml);
+          // Een sitemap-index verwijst al naar alle andere sitemaps, dus verder
+          // proberen levert alleen extra verzoeken op (en soms een 429).
+          if (/<sitemapindex\b/i.test(xml)) break;
+        }
+      } catch (_err) {
+        // negeer niet-bestaande sitemaps
       }
-    } catch (_err) {
-      // negeer niet-bestaande sitemaps
     }
   }
 
-  return [...new Set(validSitemaps)];
+  return validSitemaps;
 }
 
 async function collectRecipeUrlsForSite(site, log) {
-  const sitemapUrls = await discoverSiteSitemaps(site, log);
+  // discoverSiteSitemaps geeft de al opgehaalde XML mee, zodat we die hieronder
+  // niet nog een keer hoeven op te halen.
+  const discovered = await discoverSiteSitemaps(site, log);
+  const sitemapXmlCache = new Map(discovered);
+  const sitemapUrls = [...discovered.keys()];
   const queue = [...sitemapUrls];
   const visitedSitemaps = new Set();
   const recipeUrls = new Set();
@@ -657,20 +682,25 @@ async function collectRecipeUrlsForSite(site, log) {
     if (!sitemapUrl || visitedSitemaps.has(sitemapUrl)) continue;
     visitedSitemaps.add(sitemapUrl);
 
-    let xml;
-    try {
-      xml = await fetchText(sitemapUrl);
-    } catch (_err) {
-      continue;
+    let xml = sitemapXmlCache.get(sitemapUrl);
+    if (xml === undefined) {
+      try {
+        xml = await fetchText(sitemapUrl);
+      } catch (_err) {
+        continue;
+      }
+    } else {
+      sitemapXmlCache.delete(sitemapUrl);
     }
 
     const locs = extractLocsFromXml(xml);
+    const childSitemaps = [];
     for (const loc of locs) {
       const normalized = normalizeUrl(loc);
       if (!normalized) continue;
 
       if (isXmlLikeUrl(normalized)) {
-        if (!visitedSitemaps.has(normalized)) queue.push(normalized);
+        if (!visitedSitemaps.has(normalized)) childSitemaps.push(normalized);
         continue;
       }
 
@@ -679,6 +709,15 @@ async function collectRecipeUrlsForSite(site, log) {
         if (recipeUrls.size >= maxRecipeUrls) break;
       }
     }
+
+    // Recepten staan in de post-/receptsitemaps; page-sitemap.xml bevat vooral
+    // categoriepagina's ("/salades", "/borrelhapjes"). Die eerst behandelen zou
+    // maxRecipeUrls vullen met overzichtspagina's. Binnen elke groep beginnen we
+    // bij de laatste chunk, want een sitemap-index zet de oudste vooraan.
+    const isPostSitemap = url => /post|recept|recipe/i.test(url);
+    const preferred = childSitemaps.filter(isPostSitemap).reverse();
+    const others = childSitemaps.filter(url => !isPostSitemap(url)).reverse();
+    queue.unshift(...preferred, ...others);
   }
 
   const htmlFallback = await collectRecipeUrlsFromListingPages(site, log, [...recipeUrls]);
@@ -789,6 +828,13 @@ async function crawlInternetRecipeIndex({ fetchRecipePayload, log = () => {} }) 
 
           const normalizedUrl = normalizeUrl(recipeUrl);
           if (!normalizedUrl || seenUrls.has(normalizedUrl)) return null;
+
+          // Sites zonder receptpad in de URL: alleen pagina's met een echt
+          // schema.org-recept tellen mee, anders glippen blogposts erdoorheen.
+          if (site.requireRecipeSchema && !Number(payload?.recipe_schema_count)) {
+            summary.failedRecipes += 1;
+            return null;
+          }
 
           // Titel of paginastructuur kan pas na het ophalen verraden dat het om
           // een verzamelartikel gaat.
