@@ -388,20 +388,26 @@
     <div id="voegReceptToe" class="tab-content">
       <div class="add-recipe-header">
         <h2>Nieuw recept toevoegen</h2>
+      </div>
+      <!-- Links de twee manieren om toe te voegen (een link van een andere site,
+           of een recept dat je zelf uitschrijft). De receptpakketten staan er los
+           van, vandaar de extra ruimte en het streepje ertussen. -->
+      <div class="add-recipe-toolbar">
+        <div class="add-recipe-mode-switch" role="group" aria-label="Manier van toevoegen kiezen">
+          <button type="button" id="modeLinkBtn" class="add-recipe-mode-btn active" aria-pressed="true">
+            <img src="icons/externe-link.svg" alt="" class="add-recipe-mode-icon" />
+            <span>Ik heb een link</span>
+          </button>
+          <button type="button" id="modeOwnBtn" class="add-recipe-mode-btn" aria-pressed="false">
+            <img src="icons/notitie.svg" alt="" class="add-recipe-mode-icon" />
+            <span>Ik heb een eigen recept</span>
+          </button>
+        </div>
+
+        <span class="add-recipe-toolbar-divider" aria-hidden="true"></span>
+
         <button id="openRecipePacksBtn" type="button" class="overview-view-btn recipe-packs-btn">
           <img src="icons/recepten-pakket.svg" alt="" class="recipe-pack-btn-icon" /> Recept pakketten
-        </button>
-      </div>
-      <!-- Twee manieren om een recept toe te voegen: een link van een andere
-           site, of een recept dat je zelf uitschrijft op Kookkeuze. -->
-      <div class="add-recipe-mode-switch" role="group" aria-label="Manier van toevoegen kiezen">
-        <button type="button" id="modeLinkBtn" class="add-recipe-mode-btn active" aria-pressed="true">
-          <img src="icons/externe-link.svg" alt="" class="add-recipe-mode-icon" />
-          <span>Ik heb een link</span>
-        </button>
-        <button type="button" id="modeOwnBtn" class="add-recipe-mode-btn" aria-pressed="false">
-          <img src="icons/notitie.svg" alt="" class="add-recipe-mode-icon" />
-          <span>Ik heb een eigen recept</span>
         </button>
       </div>
 

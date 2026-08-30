@@ -5875,56 +5875,88 @@ body.mobile-menu-open .mobile-nav-header {
   display: none;
 }
 
-/* Kleine segmentknoppen in dezelfde stijl als de weergaveschakelaar van het
-   overzicht: witte pil met een dunne rand, en de actieve knop egaal groen. */
-.add-recipe-mode-switch {
-  display: inline-flex;
+/* Rij onder de titel: links de twee manieren van toevoegen, rechts de
+   receptpakketten. Die laatste hoort er niet bij, vandaar de extra ruimte en
+   het verticale streepje ertussen. */
+.add-recipe-toolbar {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  /* Ruimer dan de 18px tussen de twee manieren van toevoegen, zodat de
+     receptpakketten er duidelijk los van staan. */
+  gap: 10px 24px;
   margin: 0 0 16px;
 }
 
+.add-recipe-toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: #d7e3da;
+  flex: 0 0 auto;
+}
+
+.add-recipe-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+/* Zelfde stijl als 'Recept pakketten' en de weergaveschakelaar van het
+   overzicht: klikbare tekst in plaats van een omkaderde knop. */
 .add-recipe-mode-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
   min-width: 0;
-  height: 34px;
-  padding: 6px 14px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  height: auto;
+  padding: 4px 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--green-deep);
   font-size: 12px;
   font-weight: 600;
+  /* Vaste regelhoogte: het merklettertype geeft met 'normal' een te hoge regel,
+     waardoor de knoppen niet op één lijn met elkaar staan. */
+  line-height: 1.2;
   white-space: nowrap;
-  color: var(--green-deep);
-  background: #ffffff;
-  border: 1px solid #cfe0d4;
-  border-radius: var(--btn-radius);
   cursor: pointer;
-  transition: border-color .15s ease, background-color .15s ease, color .15s ease;
 }
 
 .add-recipe-mode-btn:hover {
-  border-color: var(--green);
-  background: #ffffff;
+  background: none;
+  color: var(--green-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
+/* De gekozen manier is aan de onderstreping te herkennen, net als de actieve
+   weergave in het receptoverzicht. */
 .add-recipe-mode-btn.active {
-  background: var(--green);
-  border-color: var(--green);
-  color: #ffffff;
+  background: none;
+  color: var(--green-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .add-recipe-mode-icon {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+  margin-right: 7px;
+  flex: 0 0 auto;
 }
 
-/* Het icoon is een donkere lijntekening; op de groene actieve knop maken we
-   hem wit, zodat hij bij de tekst past. */
-.add-recipe-mode-btn.active .add-recipe-mode-icon {
-  filter: brightness(0) invert(1);
+/* Op een smal scherm passen de drie niet op een regel. Het streepje wordt dan
+   een horizontale lijn over de volle breedte, zodat het de receptpakketten naar
+   de volgende regel duwt in plaats van los aan het eind te blijven hangen. */
+@media (max-width: 620px) {
+  .add-recipe-toolbar-divider {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 1px;
+    margin: 2px 0;
+  }
 }
 
 /* --- Fotokiezer in het formulier --- */
