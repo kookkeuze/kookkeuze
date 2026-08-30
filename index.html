@@ -393,15 +393,9 @@
            of een recept dat je zelf uitschrijft). De receptpakketten staan er los
            van, vandaar de extra ruimte en het streepje ertussen. -->
       <div class="add-recipe-toolbar">
-        <div class="add-recipe-mode-switch" role="group" aria-label="Manier van toevoegen kiezen">
-          <button type="button" id="modeLinkBtn" class="add-recipe-mode-btn active" aria-pressed="true">
-            <img src="icons/externe-link.svg" alt="" class="add-recipe-mode-icon" />
-            <span>Ik heb een link</span>
-          </button>
-          <button type="button" id="modeOwnBtn" class="add-recipe-mode-btn" aria-pressed="false">
-            <img src="icons/notitie.svg" alt="" class="add-recipe-mode-icon" />
-            <span>Ik heb een eigen recept</span>
-          </button>
+        <div class="add-recipe-mode-switch" role="group" aria-label="Manier van toevoegen kiezen" data-active-mode="link">
+          <button type="button" id="modeLinkBtn" class="add-recipe-mode-btn active" aria-pressed="true">Ik heb een link</button>
+          <button type="button" id="modeOwnBtn" class="add-recipe-mode-btn" aria-pressed="false">Ik heb een eigen recept</button>
         </div>
 
         <span class="add-recipe-toolbar-divider" aria-hidden="true"></span>

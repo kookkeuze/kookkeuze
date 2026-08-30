@@ -3563,6 +3563,8 @@ let ownRecipePhotoData = null;
 const OWN_PHOTO_MAX_EDGE = 1400;
 const OWN_PHOTO_QUALITY = 0.82;
 
+const addRecipeModeSwitch = document.querySelector('.add-recipe-mode-switch');
+
 function setAddRecipeMode(mode) {
   const own = mode === 'own';
   addRecipeForm.hidden = own;
@@ -3571,6 +3573,8 @@ function setAddRecipeMode(mode) {
   modeOwnBtn?.classList.toggle('active', own);
   modeLinkBtn?.setAttribute('aria-pressed', String(!own));
   modeOwnBtn?.setAttribute('aria-pressed', String(own));
+  // Stuurt het witte blokje van de schuif naar de gekozen kant.
+  if (addRecipeModeSwitch) addRecipeModeSwitch.dataset.activeMode = own ? 'own' : 'link';
   if (addMessageDiv) addMessageDiv.innerHTML = '';
 }
 
