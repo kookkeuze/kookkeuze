@@ -3551,6 +3551,11 @@ const modeOwnBtn = document.getElementById('modeOwnBtn');
 const ownPhotoInput = document.getElementById('ownPhotoInput');
 const ownPhotoPreview = document.getElementById('ownPhotoPreview');
 const ownPhotoRemoveBtn = document.getElementById('ownPhotoRemoveBtn');
+const ownPhotoChooseBtn = document.getElementById('ownPhotoChooseBtn');
+
+// Het bestandsveld zelf is verborgen; deze knop opent de bestandskiezer. Een
+// tweede <label for> op hetzelfde veld zou de naam voor schermlezers vertroebelen.
+ownPhotoChooseBtn?.addEventListener('click', () => ownPhotoInput?.click());
 
 // De verkleinde foto als data-URL; pas bij opslaan gaat hij mee naar de server.
 let ownRecipePhotoData = null;

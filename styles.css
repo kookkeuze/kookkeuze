@@ -698,7 +698,8 @@ button {
 }
 
 #addRecipeForm,
-#ownRecipeForm {
+#ownRecipeForm,
+#ownRecipeEditForm {
   width: 100%;
   max-width: none;
   margin: 0;
@@ -809,7 +810,8 @@ button {
 }
 
 #addRecipeForm .add-recipe-field > label,
-#ownRecipeForm .add-recipe-field > label {
+#ownRecipeForm .add-recipe-field > label,
+#ownRecipeEditForm .add-recipe-field > label {
   font-weight: 700;
   color: #3f4e45;
   margin-top: 0;
@@ -890,7 +892,10 @@ button {
 #addRecipeForm textarea,
 #ownRecipeForm input,
 #ownRecipeForm select,
-#ownRecipeForm textarea {
+#ownRecipeForm textarea,
+#ownRecipeEditForm input,
+#ownRecipeEditForm select,
+#ownRecipeEditForm textarea {
   width: 100%;
   padding: 11px 13px;
   border: 1.5px solid var(--field-border);
@@ -906,14 +911,18 @@ button {
 #addRecipeForm textarea:focus,
 #ownRecipeForm input:focus,
 #ownRecipeForm select:focus,
-#ownRecipeForm textarea:focus {
+#ownRecipeForm textarea:focus,
+#ownRecipeEditForm input:focus,
+#ownRecipeEditForm select:focus,
+#ownRecipeEditForm textarea:focus {
   outline: none;
   border-color: var(--green);
   box-shadow: var(--field-focus-ring);
 }
 
 #addRecipeForm textarea,
-#ownRecipeForm textarea {
+#ownRecipeForm textarea,
+#ownRecipeEditForm textarea {
   min-height: 116px;
   resize: vertical;
   line-height: 1.45;
@@ -5866,45 +5875,56 @@ body.mobile-menu-open .mobile-nav-header {
   display: none;
 }
 
+/* Kleine segmentknoppen in dezelfde stijl als de weergaveschakelaar van het
+   overzicht: witte pil met een dunne rand, en de actieve knop egaal groen. */
 .add-recipe-mode-switch {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-  margin: 0 0 18px;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
 }
 
 .add-recipe-mode-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 13px 16px;
+  gap: 7px;
+  min-width: 0;
+  height: 34px;
+  padding: 6px 14px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  color: #4b5650;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--green-deep);
   background: #ffffff;
-  border: 2px solid #e6efe8;
-  border-radius: var(--radius-md);
+  border: 1px solid #cfe0d4;
+  border-radius: var(--btn-radius);
   cursor: pointer;
-  transition: border-color .15s ease, color .15s ease, background .15s ease;
+  transition: border-color .15s ease, background-color .15s ease, color .15s ease;
 }
 
 .add-recipe-mode-btn:hover {
-  border-color: #c6d4ca;
-  color: #2f3b34;
+  border-color: var(--green);
+  background: #ffffff;
 }
 
 .add-recipe-mode-btn.active {
+  background: var(--green);
   border-color: var(--green);
-  background: #f2fbf4;
-  color: var(--green-deep);
+  color: #ffffff;
 }
 
 .add-recipe-mode-icon {
-  width: 20px;
-  height: 20px;
+  width: 15px;
+  height: 15px;
   flex-shrink: 0;
+}
+
+/* Het icoon is een donkere lijntekening; op de groene actieve knop maken we
+   hem wit, zodat hij bij de tekst past. */
+.add-recipe-mode-btn.active .add-recipe-mode-icon {
+  filter: brightness(0) invert(1);
 }
 
 /* --- Fotokiezer in het formulier --- */
@@ -5948,6 +5968,13 @@ body.mobile-menu-open .mobile-nav-header {
 
 /* Het echte bestandsveld is onzichtbaar maar wel bereikbaar met toetsenbord;
    het label ernaast is de zichtbare knop. */
+#ownRecipeEditForm .own-photo-input,
+#ownRecipeForm .own-photo-input {
+  width: 1px;
+  padding: 0;
+  border: none;
+}
+
 .own-photo-input {
   position: absolute;
   width: 1px;
@@ -5963,6 +5990,8 @@ body.mobile-menu-open .mobile-nav-header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
+  border: none;
   padding: 10px 16px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13px;
@@ -5978,6 +6007,7 @@ body.mobile-menu-open .mobile-nav-header {
   background: var(--green-hover);
 }
 
+.own-photo-btn:focus-visible,
 .own-photo-input:focus-visible + .own-photo-btn {
   box-shadow: var(--field-focus-ring);
 }
@@ -6002,10 +6032,6 @@ body.mobile-menu-open .mobile-nav-header {
 }
 
 @media (min-width: 760px) {
-  .add-recipe-mode-switch {
-    grid-template-columns: 1fr 1fr;
-  }
-
   .own-photo-picker {
     grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
     align-items: center;
@@ -6271,6 +6297,17 @@ body.mobile-menu-open .mobile-nav-header {
   .own-recipe-head:has(.own-recipe-photo.is-empty) {
     grid-template-columns: 1fr;
   }
+}
+
+.own-recipe-edit-message {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  color: var(--green-deep);
+  margin: 0;
+}
+
+.own-recipe-edit-message.is-error {
+  color: var(--danger);
 }
 
 /* Printen: alleen het recept, zonder knoppen en menubalk. */
