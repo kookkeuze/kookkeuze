@@ -736,15 +736,11 @@
       <h2>Weekmenu planner</h2>
       <div class="weekmenu-toolbar">
         <button id="weekPrevBtn" type="button" class="overview-view-btn"><i class="fas fa-chevron-left"></i> Vorige week</button>
-        <p id="weekLabel" class="weekmenu-label">Week</p>
+        <div class="weekmenu-week-info">
+          <p id="weekLabel" class="weekmenu-label">Week</p>
+          <button id="weekShoppingListBtn" type="button" class="weekmenu-shopping-btn">Boodschappen voor deze week</button>
+        </div>
         <button id="weekNextBtn" type="button" class="overview-view-btn">Volgende week <i class="fas fa-chevron-right"></i></button>
-      </div>
-
-      <div class="weekmenu-shopping-row">
-        <button id="weekShoppingListBtn" type="button" class="green-btn weekmenu-shopping-btn">
-          <img src="icons/boodschappenlijst.svg" alt="" class="weekmenu-shopping-icon" aria-hidden="true" />
-          Boodschappen voor deze week
-        </button>
       </div>
 
       <div id="weekmenuGrid" class="weekmenu-grid"></div>
