@@ -60,6 +60,11 @@
         <span class="database-text">Database</span>
       </button>
 
+      <button id="shoppingListMenuBtn" class="topbar-action-btn shopping-list-menu-btn hidden" aria-label="Boodschappenlijst">
+        <span class="action-icon-shell"><img src="icons/boodschappenlijst.svg" alt="" width="24" height="24" class="topbar-icon-img" /></span>
+        <span class="shopping-list-text">Boodschappen</span>
+      </button>
+
       <button id="installAppBtn" class="topbar-action-btn install-app-btn" aria-label="Installeer app">
         <span class="action-icon-shell"><img src="icons/app.svg" alt="" width="24" height="24" class="topbar-icon-img" /></span>
         <span id="installAppText" class="install-text">Installeer app</span>
@@ -100,6 +105,9 @@
     </button>
     <button id="mobileDatabaseMenuBtn" type="button" class="mobile-header-menu-link mobile-header-database-link hidden">
       <img src="icons/database.svg" alt="" width="22" height="22" class="mobile-menu-icon-img" aria-hidden="true" /> Database
+    </button>
+    <button id="mobileShoppingListMenuBtn" type="button" class="mobile-header-menu-link mobile-header-shopping-link hidden">
+      <img src="icons/boodschappenlijst.svg" alt="" width="22" height="22" class="mobile-menu-icon-img" aria-hidden="true" /> Boodschappenlijst
     </button>
 
     <div class="mobile-nav-tabs">
@@ -732,6 +740,13 @@
         <button id="weekNextBtn" type="button" class="overview-view-btn">Volgende week <i class="fas fa-chevron-right"></i></button>
       </div>
 
+      <div class="weekmenu-shopping-row">
+        <button id="weekShoppingListBtn" type="button" class="green-btn weekmenu-shopping-btn">
+          <img src="icons/boodschappenlijst.svg" alt="" class="weekmenu-shopping-icon" aria-hidden="true" />
+          Boodschappen voor deze week
+        </button>
+      </div>
+
       <div id="weekmenuGrid" class="weekmenu-grid"></div>
     </div>
 
@@ -896,6 +911,47 @@
               <div id="shareInvitesList" class="share-list"></div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kiezen welke ingrediënten daadwerkelijk op de lijst komen -->
+    <div id="ingredientPickModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content ingredient-pick-modal-content">
+        <button id="closeIngredientPickModal" class="modal-close" aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+        <h3 class="assign-modal-title">Kies je ingrediënten</h3>
+        <p id="ingredientPickSub" class="ingredient-pick-sub"></p>
+        <div class="ingredient-pick-toolbar">
+          <button id="ingredientPickAllBtn" type="button" class="overview-view-btn">Alles aan</button>
+          <button id="ingredientPickNoneBtn" type="button" class="overview-view-btn">Alles uit</button>
+          <span id="ingredientPickCount" class="ingredient-pick-count"></span>
+        </div>
+        <div id="ingredientPickBody" class="ingredient-pick-body"></div>
+        <div class="ingredient-pick-footer">
+          <button id="ingredientPickCancelBtn" type="button" class="ghost-btn">Annuleer</button>
+          <button id="ingredientPickConfirmBtn" type="button" class="green-btn">Zet op mijn lijst</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- De boodschappenlijst zelf -->
+    <div id="shoppingListModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content shopping-list-modal-content">
+        <button id="closeShoppingListModal" class="modal-close" aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+        <h3 class="assign-modal-title">Boodschappenlijst</h3>
+        <p id="shoppingListScope" class="shopping-list-scope"></p>
+        <form id="shoppingListAddForm" class="shopping-list-add">
+          <input id="shoppingListAddInput" type="text" placeholder="Voeg zelf iets toe, bijv. 1 l melk" autocomplete="off" maxlength="200" />
+          <button type="submit" class="green-btn">Toevoegen</button>
+        </form>
+        <div id="shoppingListBody" class="shopping-list-body"></div>
+        <div class="shopping-list-footer">
+          <button id="shoppingListClearCheckedBtn" type="button" class="overview-view-btn">Verwijder afgevinkte</button>
+          <button id="shoppingListClearAllBtn" type="button" class="danger-btn">Lijst legen</button>
         </div>
       </div>
     </div>

@@ -1208,7 +1208,7 @@ async function sendBrevoEmail({ to, subject, html, text, replyTo }) {
 /* -------------------- CORS -------------------- */
 const corsOptions = {
   origin: buildAllowedOrigins(),
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: false,
   optionsSuccessStatus: 204
@@ -1264,6 +1264,11 @@ const {
   revokeDatabaseMember,
   revokeDatabaseInvite,
   acceptPendingInvitesForUser,
+  listShoppingListItems,
+  addShoppingListItems,
+  updateShoppingListItem,
+  deleteShoppingListItem,
+  clearShoppingListItems,
   closeDatabasePool,
   loadCrawlerIndexFromDatabase,
   saveCrawlerIndexToDatabase,
@@ -3519,6 +3524,122 @@ app.delete('/api/recipe-notes', async (req, res) => {
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
     return res.status(400).json({ error: err.message || 'Verwijderen van notitie mislukt.' });
+  }
+});
+
+// 12b. Boodschappenlijst. Hangt aan de actieve database, dus in een
+// gezamenlijke database werken alle leden aan dezelfde lijst.
+app.get('/api/shopping-list', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om je boodschappenlijst te zien.' });
+  }
+
+  try {
+    const databaseId = await resolveDatabaseOwnerId(req);
+    const items = await dbCall(listShoppingListItems, { database_id: databaseId });
+    return res.json(items);
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Kon boodschappenlijst niet ophalen.' });
+  }
+});
+
+app.post('/api/shopping-list', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om boodschappen toe te voegen.' });
+  }
+
+  const body = req.body || {};
+  const rawItems = Array.isArray(body.items)
+    ? body.items
+    : (body.name ? [{ name: body.name, source_title: body.source_title }] : []);
+  if (!rawItems.length) {
+    return res.status(400).json({ error: 'Geen producten om toe te voegen.' });
+  }
+  if (rawItems.length > 200) {
+    return res.status(400).json({ error: 'Je kunt maximaal 200 producten tegelijk toevoegen.' });
+  }
+
+  try {
+    const databaseId = await resolveDatabaseOwnerId(req);
+    const result = await dbCall(addShoppingListItems, {
+      database_id: databaseId,
+      added_by_user_id: req.user.id,
+      items: rawItems
+    });
+    const items = await dbCall(listShoppingListItems, { database_id: databaseId });
+    return res.json({ added: result?.added || 0, items });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(400).json({ error: err.message || 'Toevoegen aan boodschappenlijst mislukt.' });
+  }
+});
+
+app.patch('/api/shopping-list/:id', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om je boodschappenlijst bij te werken.' });
+  }
+
+  const itemId = Number(req.params.id);
+  if (!Number.isInteger(itemId) || itemId <= 0) {
+    return res.status(400).json({ error: 'Ongeldig product.' });
+  }
+
+  const { is_checked, name } = req.body || {};
+
+  try {
+    const databaseId = await resolveDatabaseOwnerId(req);
+    const updated = await dbCall(updateShoppingListItem, {
+      database_id: databaseId,
+      item_id: itemId,
+      is_checked,
+      name
+    });
+    if (!updated) return res.status(404).json({ error: 'Product niet gevonden.' });
+    return res.json(updated);
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(400).json({ error: err.message || 'Bijwerken van product mislukt.' });
+  }
+});
+
+app.delete('/api/shopping-list/:id', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om producten te verwijderen.' });
+  }
+
+  const itemId = Number(req.params.id);
+  if (!Number.isInteger(itemId) || itemId <= 0) {
+    return res.status(400).json({ error: 'Ongeldig product.' });
+  }
+
+  try {
+    const databaseId = await resolveDatabaseOwnerId(req);
+    await dbCall(deleteShoppingListItem, { database_id: databaseId, item_id: itemId });
+    return res.json({ message: 'Product verwijderd.' });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(400).json({ error: err.message || 'Verwijderen van product mislukt.' });
+  }
+});
+
+app.post('/api/shopping-list/clear', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Je moet ingelogd zijn om je boodschappenlijst te legen.' });
+  }
+
+  const onlyChecked = String(req.body?.scope || 'checked') !== 'all';
+
+  try {
+    const databaseId = await resolveDatabaseOwnerId(req);
+    const result = await dbCall(clearShoppingListItems, {
+      database_id: databaseId,
+      only_checked: onlyChecked
+    });
+    return res.json({ deleted: result?.deleted || 0 });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(400).json({ error: err.message || 'Legen van de boodschappenlijst mislukt.' });
   }
 });
 

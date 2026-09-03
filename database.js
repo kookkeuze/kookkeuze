@@ -351,6 +351,28 @@ async function initializeDatabase() {
     `);
     console.log('✅ Recipe notes table created/verified');
 
+    // Boodschappenlijst hangt bewust aan de database en niet aan de gebruiker:
+    // in een gezamenlijke database zien alle leden dezelfde lijst.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS shopping_list_items (
+        id SERIAL PRIMARY KEY,
+        database_id INTEGER NOT NULL REFERENCES recipe_databases(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        name_key TEXT NOT NULL,
+        source_title TEXT,
+        is_checked BOOLEAN NOT NULL DEFAULT FALSE,
+        added_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (database_id, name_key)
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_shopping_list_items_lookup
+      ON shopping_list_items (database_id, is_checked, created_at)
+    `);
+    console.log('✅ Shopping list table created/verified');
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS crawler_index (
         id SERIAL PRIMARY KEY,
@@ -1033,6 +1055,149 @@ function deleteRecipeNote(entry, callback) {
       return callback(err);
     }
     callback(null, { deleted: !!result.rows[0] });
+  });
+}
+
+// Sleutel om dubbele boodschappen te herkennen: hoofdletters, accenten en
+// dubbele spaties tellen niet mee, de hoeveelheid ("500 g bloem") wel — anders
+// zou een tweede recept met een andere hoeveelheid stilletjes verdwijnen.
+function buildShoppingItemKey(name) {
+  return String(name || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function listShoppingListItems(entry, callback) {
+  const { database_id } = entry;
+  const query = `
+    SELECT id, name, name_key, source_title, is_checked, created_at
+    FROM shopping_list_items
+    WHERE database_id = $1
+    ORDER BY is_checked ASC, created_at ASC, id ASC
+  `;
+  pool.query(query, [database_id], (err, result) => {
+    if (err) {
+      console.error('Fout bij ophalen boodschappenlijst:', err);
+      return callback(err);
+    }
+    callback(null, result.rows || []);
+  });
+}
+
+// Voegt meerdere producten in één keer toe. Een product dat al op de lijst
+// staat wordt niet gedupliceerd maar weer op 'nog te kopen' gezet.
+function addShoppingListItems(entry, callback) {
+  const { database_id, added_by_user_id, items } = entry;
+  const cleaned = [];
+  const seenKeys = new Set();
+
+  (Array.isArray(items) ? items : []).forEach(item => {
+    const name = String(item?.name || '').trim().replace(/\s+/g, ' ').slice(0, 200);
+    const key = buildShoppingItemKey(name);
+    if (!name || !key || seenKeys.has(key)) return;
+    seenKeys.add(key);
+    cleaned.push({
+      name,
+      key,
+      source: String(item?.source_title || '').trim().slice(0, 200) || null
+    });
+  });
+
+  if (!cleaned.length) return callback(new Error('Geen producten om toe te voegen.'));
+
+  const values = [];
+  const params = [];
+  cleaned.forEach((item, index) => {
+    const base = index * 5;
+    values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`);
+    params.push(database_id, item.name, item.key, item.source, added_by_user_id || null);
+  });
+
+  const query = `
+    INSERT INTO shopping_list_items (database_id, name, name_key, source_title, added_by_user_id)
+    VALUES ${values.join(', ')}
+    ON CONFLICT (database_id, name_key)
+    DO UPDATE SET
+      name = EXCLUDED.name,
+      source_title = COALESCE(EXCLUDED.source_title, shopping_list_items.source_title),
+      is_checked = FALSE,
+      updated_at = NOW()
+    RETURNING id
+  `;
+
+  pool.query(query, params, (err, result) => {
+    if (err) {
+      console.error('Fout bij toevoegen aan boodschappenlijst:', err);
+      return callback(err);
+    }
+    callback(null, { added: (result.rows || []).length });
+  });
+}
+
+function updateShoppingListItem(entry, callback) {
+  const { database_id, item_id, is_checked, name } = entry;
+  const hasName = typeof name === 'string' && name.trim();
+  const cleanedName = hasName ? name.trim().replace(/\s+/g, ' ').slice(0, 200) : null;
+
+  const query = `
+    UPDATE shopping_list_items
+    SET
+      is_checked = COALESCE($3, is_checked),
+      name = COALESCE($4, name),
+      name_key = COALESCE($5, name_key),
+      updated_at = NOW()
+    WHERE id = $1
+      AND database_id = $2
+    RETURNING id, name, name_key, source_title, is_checked, created_at
+  `;
+  const params = [
+    item_id,
+    database_id,
+    typeof is_checked === 'boolean' ? is_checked : null,
+    cleanedName,
+    cleanedName ? buildShoppingItemKey(cleanedName) : null
+  ];
+
+  pool.query(query, params, (err, result) => {
+    if (err) {
+      console.error('Fout bij bijwerken boodschap:', err);
+      return callback(err);
+    }
+    callback(null, result.rows[0] || null);
+  });
+}
+
+function deleteShoppingListItem(entry, callback) {
+  const { database_id, item_id } = entry;
+  const query = `
+    DELETE FROM shopping_list_items
+    WHERE id = $1
+      AND database_id = $2
+    RETURNING id
+  `;
+  pool.query(query, [item_id, database_id], (err, result) => {
+    if (err) {
+      console.error('Fout bij verwijderen boodschap:', err);
+      return callback(err);
+    }
+    callback(null, { deleted: !!result.rows[0] });
+  });
+}
+
+function clearShoppingListItems(entry, callback) {
+  const { database_id, only_checked } = entry;
+  const query = only_checked
+    ? 'DELETE FROM shopping_list_items WHERE database_id = $1 AND is_checked = TRUE RETURNING id'
+    : 'DELETE FROM shopping_list_items WHERE database_id = $1 RETURNING id';
+  pool.query(query, [database_id], (err, result) => {
+    if (err) {
+      console.error('Fout bij legen boodschappenlijst:', err);
+      return callback(err);
+    }
+    callback(null, { deleted: (result.rows || []).length });
   });
 }
 
@@ -1720,6 +1885,11 @@ module.exports = {
   listRecipeNotesForDatabase,
   upsertRecipeNote,
   deleteRecipeNote,
+  listShoppingListItems,
+  addShoppingListItems,
+  updateShoppingListItem,
+  deleteShoppingListItem,
+  clearShoppingListItems,
   listAccessibleDatabases,
   userHasDatabaseAccess,
   userCanManageDatabase,

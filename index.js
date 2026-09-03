@@ -728,6 +728,8 @@ const shareInviteBtn = document.getElementById('shareInviteBtn');
 const sharePanelMsg = document.getElementById('sharePanelMsg');
 const shareMembersList = document.getElementById('shareMembersList');
 const shareInvitesList = document.getElementById('shareInvitesList');
+const shoppingListMenuBtn = document.getElementById('shoppingListMenuBtn');
+const mobileShoppingListMenuBtn = document.getElementById('mobileShoppingListMenuBtn');
 const recipePackModal = document.getElementById('recipePackModal');
 const closeRecipePackModalBtn = document.getElementById('closeRecipePackModal');
 const recipePackModalBody = document.getElementById('recipePackModalBody');
@@ -942,6 +944,8 @@ async function loadAccessibleDatabases() {
     accessibleDatabases = [];
     if (databaseMenuBtn) databaseMenuBtn.classList.add('hidden');
     if (mobileDatabaseMenuBtn) mobileDatabaseMenuBtn.classList.add('hidden');
+    if (shoppingListMenuBtn) shoppingListMenuBtn.classList.add('hidden');
+    if (mobileShoppingListMenuBtn) mobileShoppingListMenuBtn.classList.add('hidden');
     if (sharePanel) sharePanel.classList.add('hidden');
     if (databaseModal) databaseModal.classList.add('hidden');
     return;
@@ -971,6 +975,8 @@ async function loadAccessibleDatabases() {
   }
   if (databaseMenuBtn) databaseMenuBtn.classList.toggle('hidden', accessibleDatabases.length === 0);
   if (mobileDatabaseMenuBtn) mobileDatabaseMenuBtn.classList.toggle('hidden', accessibleDatabases.length === 0);
+  if (shoppingListMenuBtn) shoppingListMenuBtn.classList.toggle('hidden', accessibleDatabases.length === 0);
+  if (mobileShoppingListMenuBtn) mobileShoppingListMenuBtn.classList.toggle('hidden', accessibleDatabases.length === 0);
   renderDatabaseSelect();
   await loadSharePanelData();
 }
@@ -986,6 +992,11 @@ activeDatabaseSelect?.addEventListener('change', async () => {
   setSharePanelMessage('');
   await loadSharePanelData();
   await ensureRecipeNotesLoaded(true);
+  shoppingListLoaded = false;
+  shoppingListItems = [];
+  if (shoppingListModal && !shoppingListModal.classList.contains('hidden')) {
+    await loadShoppingList(true).then(renderShoppingList).catch(() => {});
+  }
   refreshDatabaseDrivenViews();
 });
 
@@ -1828,6 +1839,17 @@ function buildRecipeCardsHtml(arr, options = {}) {
             <div class="recipe-shopping-actions">
               <button
                 type="button"
+                class="recipe-shopping-btn kookkeuze-list-option"
+                data-recipe-url="${safeUrl}"
+                data-recipe-title="${safeTitle}"
+                title="Zet de ingrediënten op je boodschappenlijst in Kookkeuze"
+                aria-label="Ingrediënten van ${safeTitle} op je Kookkeuze-boodschappenlijst zetten"
+              >
+                <img src="icons/boodschappenlijst-tegel.svg" alt="" class="recipe-shopping-icon" />
+                <span class="recipe-shopping-name">Kookkeuze</span>
+              </button>
+              <button
+                type="button"
                 class="recipe-shopping-btn notes-export-option"
                 data-recipe-url="${safeUrl}"
                 data-recipe-title="${safeTitle}"
@@ -2198,6 +2220,14 @@ async function onRecipeCardClick(e) {
     return;
   }
 
+  const kookkeuzeListBtn = e.target.closest('.kookkeuze-list-option');
+  if (kookkeuzeListBtn) {
+    const recipeUrl = decodeURIComponent(kookkeuzeListBtn.dataset.recipeUrl || '');
+    closeAllRecipeExportMenus();
+    openIngredientPickerForRecipe(recipeUrl, kookkeuzeListBtn.dataset.recipeTitle || 'Recept');
+    return;
+  }
+
   const notesBtn = e.target.closest('.notes-export-option');
   if (notesBtn) {
     const recipeUrl = decodeURIComponent(notesBtn.dataset.recipeUrl || '');
@@ -2283,6 +2313,562 @@ async function onRecipeCardClick(e) {
 // zoekresultaten als in de random-popup.
 resultDiv?.addEventListener('click', onRecipeCardClick);
 randomRecipeModal?.addEventListener('click', onRecipeCardClick);
+
+/* ========= BOODSCHAPPENLIJST =========
+   De lijst hangt aan de actieve database: in een gezamenlijke database werken
+   alle leden aan dezelfde lijst. Ingrediënten komen binnen via de picker
+   (per recept of voor een hele week), losse producten via het invoerveld. */
+
+const shoppingListModal = document.getElementById('shoppingListModal');
+const closeShoppingListModalBtn = document.getElementById('closeShoppingListModal');
+const shoppingListScope = document.getElementById('shoppingListScope');
+const shoppingListBody = document.getElementById('shoppingListBody');
+const shoppingListAddForm = document.getElementById('shoppingListAddForm');
+const shoppingListAddInput = document.getElementById('shoppingListAddInput');
+const shoppingListClearCheckedBtn = document.getElementById('shoppingListClearCheckedBtn');
+const shoppingListClearAllBtn = document.getElementById('shoppingListClearAllBtn');
+
+const ingredientPickModal = document.getElementById('ingredientPickModal');
+const closeIngredientPickModalBtn = document.getElementById('closeIngredientPickModal');
+const ingredientPickSub = document.getElementById('ingredientPickSub');
+const ingredientPickBody = document.getElementById('ingredientPickBody');
+const ingredientPickCount = document.getElementById('ingredientPickCount');
+const ingredientPickAllBtn = document.getElementById('ingredientPickAllBtn');
+const ingredientPickNoneBtn = document.getElementById('ingredientPickNoneBtn');
+const ingredientPickCancelBtn = document.getElementById('ingredientPickCancelBtn');
+const ingredientPickConfirmBtn = document.getElementById('ingredientPickConfirmBtn');
+
+const weekShoppingListBtn = document.getElementById('weekShoppingListBtn');
+
+let shoppingListItems = [];
+let shoppingListLoaded = false;
+let ingredientPickState = { items: [], selected: new Set() };
+
+// Schapindeling voor de winkel. Bewust een simpele woordenlijst: hij hoeft niet
+// perfect te zijn, alles wat we niet herkennen valt netjes onder 'Overig'.
+const SHOPPING_CATEGORIES = [
+  {
+    key: 'groente-fruit',
+    label: 'Groente & fruit',
+    words: ['ui', 'uien', 'sjalot', 'sjalotten', 'knoflook', 'teen', 'tenen', 'tomaat', 'tomaten', 'trostomaten', 'cherrytomaatjes', 'paprika', 'paprikas', 'courgette', 'aubergine', 'wortel', 'wortels', 'wortelen', 'winterpeen', 'prei', 'broccoli', 'bloemkool', 'spinazie', 'sla', 'ijsbergsla', 'komkommer', 'champignon', 'champignons', 'appel', 'appels', 'banaan', 'bananen', 'citroen', 'limoen', 'sinaasappel', 'avocado', 'aardappel', 'aardappels', 'aardappelen', 'krieltjes', 'boon', 'bonen', 'sperziebonen', 'haricots', 'doperwten', 'erwten', 'mais', 'pompoen', 'spruitjes', 'kool', 'witlof', 'rucola', 'veldsla', 'peterselie', 'basilicum', 'koriander', 'bieslook', 'dille', 'tijm', 'rozemarijn', 'munt', 'gember', 'bosui', 'bosuitjes', 'selderij', 'bleekselderij', 'venkel', 'asperges', 'radijs', 'biet', 'bietjes', 'druiven', 'peer', 'peren', 'aardbeien', 'frambozen', 'bosbessen', 'mango', 'ananas', 'meloen', 'perzik', 'kersen', 'rozijnen', 'dadels', 'olijven', 'taugé', 'pastinaak', 'raap' ]
+  },
+  {
+    key: 'vlees-vis',
+    label: 'Vlees & vis',
+    words: ['kip', 'kipfilet', 'kipdijfilet', 'kippenbout', 'gehakt', 'gehaktballen', 'rundergehakt', 'rundvlees', 'biefstuk', 'entrecote', 'varkensvlees', 'speklap', 'speklappen', 'spek', 'spekjes', 'bacon', 'ham', 'worst', 'rookworst', 'chorizo', 'salami', 'kalkoen', 'lamsvlees', 'zalm', 'zalmfilet', 'tonijn', 'kabeljauw', 'garnaal', 'garnalen', 'mosselen', 'vis', 'visfilet', 'ansjovis', 'makreel', 'schol', 'tilapia', 'shoarma', 'hamburger', 'hamburgers', 'schnitzel', 'saucijs', 'saucijzen', 'kipreepjes', 'runderlappen', 'braadworst', 'tofu', 'tempeh', 'vegaburger']
+  },
+  {
+    key: 'zuivel-eieren',
+    label: 'Zuivel & eieren',
+    words: ['melk', 'karnemelk', 'yoghurt', 'kwark', 'room', 'slagroom', 'kookroom', 'creme', 'crème', 'fraiche', 'fraîche', 'kaas', 'geraspte', 'parmezaan', 'parmezaanse', 'mozzarella', 'feta', 'geitenkaas', 'roomkaas', 'boter', 'roomboter', 'margarine', 'ei', 'eieren', 'eiwit', 'eidooier', 'eigeel', 'mascarpone', 'ricotta', 'skyr', 'vla', 'cheddar', 'gruyere', 'halloumi']
+  },
+  {
+    key: 'brood-banket',
+    label: 'Brood & banket',
+    words: ['brood', 'stokbrood', 'ciabatta', 'boterham', 'boterhammen', 'wrap', 'wraps', 'tortilla', 'tortillas', 'pita', 'pitabroodjes', 'broodje', 'broodjes', 'beschuit', 'crackers', 'cracker', 'naan', 'croissant', 'bladerdeeg', 'filodeeg', 'pizzabodem', 'paneermeel']
+  },
+  {
+    key: 'voorraadkast',
+    label: 'Voorraadkast',
+    words: ['bloem', 'suiker', 'basterdsuiker', 'zout', 'olie', 'olijfolie', 'zonnebloemolie', 'sesamolie', 'azijn', 'balsamico', 'rijst', 'basmatirijst', 'zilvervliesrijst', 'pasta', 'spaghetti', 'penne', 'macaroni', 'lasagne', 'lasagnebladen', 'noedels', 'mie', 'couscous', 'quinoa', 'linzen', 'kikkererwten', 'bulgur', 'meel', 'gist', 'bakpoeder', 'honing', 'stroop', 'mosterd', 'ketchup', 'mayonaise', 'sambal', 'sojasaus', 'ketjap', 'vissaus', 'kokosmelk', 'bouillon', 'bouillonblokje', 'bouillonblokjes', 'tomatenblokjes', 'tomatenpuree', 'passata', 'noten', 'amandelen', 'walnoten', 'cashewnoten', 'pinda', 'pindas', 'sesamzaad', 'zaden', 'kaneel', 'kerrie', 'paprikapoeder', 'komijn', 'oregano', 'kurkuma', 'chilipoeder', 'currypasta', 'pesto', 'kokos', 'kokosrasp', 'chocolade', 'cacao', 'havermout', 'muesli', 'pindakaas', 'jam', 'hagelslag', 'kruidenmix', 'laurierblad', 'laurier', 'nootmuskaat', 'vanille', 'maizena', 'gelatine', 'peper', 'zwarte']
+  },
+  {
+    key: 'diepvries',
+    label: 'Diepvries',
+    words: ['diepvries', 'diepvrieserwten', 'bevroren', 'ijs', 'friet', 'frites']
+  },
+  {
+    key: 'drinken',
+    label: 'Drinken',
+    words: ['water', 'sap', 'sinaasappelsap', 'appelsap', 'wijn', 'bier', 'cola', 'thee', 'koffie', 'limonade', 'frisdrank', 'prosecco']
+  }
+];
+
+const SHOPPING_CATEGORY_FALLBACK = { key: 'overig', label: 'Overig' };
+
+function normalizeShoppingText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+}
+
+// Woorden vergelijken op token-niveau: 'kokosmelk' mag niet als 'melk' tellen.
+// Enkelvoud/meervoud vangen we af met een paar veelvoorkomende uitgangen.
+function shoppingTokenMatches(token, word) {
+  if (token === word) return true;
+  if (token === `${word}s` || token === `${word}en` || token === `${word}je` || token === `${word}jes`) return true;
+  if (word === `${token}s` || word === `${token}en`) return true;
+  return false;
+}
+
+function detectShoppingCategory(name) {
+  const tokens = normalizeShoppingText(name)
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!tokens.length) return SHOPPING_CATEGORY_FALLBACK;
+
+  for (const token of tokens) {
+    for (const category of SHOPPING_CATEGORIES) {
+      if (category.words.some(word => shoppingTokenMatches(token, normalizeShoppingText(word)))) {
+        return category;
+      }
+    }
+  }
+  return SHOPPING_CATEGORY_FALLBACK;
+}
+
+function groupByShoppingCategory(entries, getName) {
+  const buckets = new Map();
+  entries.forEach(entry => {
+    const category = detectShoppingCategory(getName(entry));
+    if (!buckets.has(category.key)) buckets.set(category.key, { label: category.label, entries: [] });
+    buckets.get(category.key).entries.push(entry);
+  });
+
+  const order = [...SHOPPING_CATEGORIES.map(c => c.key), SHOPPING_CATEGORY_FALLBACK.key];
+  return order
+    .filter(key => buckets.has(key))
+    .map(key => ({ key, ...buckets.get(key) }));
+}
+
+function shoppingItemKey(name) {
+  return normalizeShoppingText(name).replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function clearShoppingListCache() {
+  shoppingListItems = [];
+  shoppingListLoaded = false;
+  shoppingListModal?.classList.add('hidden');
+  shoppingListModal?.setAttribute('aria-hidden', 'true');
+}
+
+function getActiveDatabaseRecord() {
+  const activeId = getActiveDatabaseOwnerId();
+  return accessibleDatabases.find(db => Number(db.owner_user_id) === Number(activeId)) || null;
+}
+
+function renderShoppingListScope() {
+  if (!shoppingListScope) return;
+  const db = getActiveDatabaseRecord();
+  if (!db) {
+    shoppingListScope.textContent = '';
+    return;
+  }
+  shoppingListScope.textContent = db.is_personal
+    ? `Je persoonlijke lijst (${db.database_name}).`
+    : `Gedeeld met iedereen in "${db.database_name}" — zij zien dezelfde lijst.`;
+}
+
+async function shoppingListRequest(path, options = {}) {
+  const params = new URLSearchParams();
+  appendActiveDatabaseParam(params);
+  const query = params.toString();
+  const res = await fetch(`${API_BASE}${path}${query ? `${path.includes('?') ? '&' : '?'}${query}` : ''}`, {
+    ...options,
+    headers: {
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...authHeaders()
+    }
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Er ging iets mis met je boodschappenlijst.');
+  return data;
+}
+
+async function loadShoppingList(force = false) {
+  if (!getValidToken()) {
+    shoppingListItems = [];
+    shoppingListLoaded = false;
+    return shoppingListItems;
+  }
+  if (shoppingListLoaded && !force) return shoppingListItems;
+
+  const rows = await shoppingListRequest('/api/shopping-list');
+  shoppingListItems = Array.isArray(rows) ? rows : [];
+  shoppingListLoaded = true;
+  return shoppingListItems;
+}
+
+function renderShoppingList() {
+  if (!shoppingListBody) return;
+  renderShoppingListScope();
+
+  const open = shoppingListItems.filter(item => !item.is_checked);
+  const done = shoppingListItems.filter(item => !!item.is_checked);
+
+  if (!shoppingListItems.length) {
+    shoppingListBody.innerHTML = `
+      <p class="shopping-list-empty">
+        Je lijst is nog leeg. Zet ingrediënten erop via de knop <strong>Kookkeuze</strong> onder een recept,
+        of voeg hierboven zelf iets toe.
+      </p>`;
+    shoppingListClearCheckedBtn?.setAttribute('disabled', 'disabled');
+    shoppingListClearAllBtn?.setAttribute('disabled', 'disabled');
+    return;
+  }
+
+  shoppingListClearAllBtn?.removeAttribute('disabled');
+  if (done.length) shoppingListClearCheckedBtn?.removeAttribute('disabled');
+  else shoppingListClearCheckedBtn?.setAttribute('disabled', 'disabled');
+
+  const renderRow = item => `
+    <li class="shopping-item${item.is_checked ? ' is-checked' : ''}">
+      <button type="button" class="shopping-item-toggle" data-shopping-toggle data-item-id="${item.id}"
+              aria-pressed="${item.is_checked ? 'true' : 'false'}"
+              aria-label="${item.is_checked ? 'Zet terug op de lijst' : 'Afvinken'}: ${escapeAttr(item.name)}">
+        <span class="shopping-item-check" aria-hidden="true"><i class="fas fa-check"></i></span>
+        <span class="shopping-item-text">
+          <span class="shopping-item-name">${escapeHtml(item.name)}</span>
+          ${item.source_title ? `<span class="shopping-item-source">${escapeHtml(item.source_title)}</span>` : ''}
+        </span>
+      </button>
+      <button type="button" class="shopping-item-remove" data-shopping-remove data-item-id="${item.id}"
+              aria-label="Verwijder ${escapeAttr(item.name)}">
+        <i class="fas fa-times" aria-hidden="true"></i>
+      </button>
+    </li>`;
+
+  const groups = groupByShoppingCategory(open, item => item.name);
+  let html = `<p class="shopping-list-progress">${open.length} nog te halen${done.length ? ` · ${done.length} in je mandje` : ''}</p>`;
+
+  html += groups.map(group => `
+    <div class="shopping-group">
+      <h4 class="shopping-group-title">${escapeHtml(group.label)}</h4>
+      <ul class="shopping-group-list">${group.entries.map(renderRow).join('')}</ul>
+    </div>`).join('');
+
+  if (done.length) {
+    html += `
+      <div class="shopping-group shopping-group-done">
+        <h4 class="shopping-group-title">In je mandje</h4>
+        <ul class="shopping-group-list">${done.map(renderRow).join('')}</ul>
+      </div>`;
+  }
+
+  shoppingListBody.innerHTML = html;
+}
+
+async function openShoppingListModal() {
+  if (!getValidToken()) {
+    showRecipeAddedToast('Log in om je boodschappenlijst te gebruiken.', 'error');
+    return;
+  }
+  shoppingListModal?.classList.remove('hidden');
+  shoppingListModal?.setAttribute('aria-hidden', 'false');
+  if (shoppingListBody && !shoppingListLoaded) {
+    shoppingListBody.innerHTML = '<p class="shopping-list-empty">Bezig met laden…</p>';
+  }
+  try {
+    await loadShoppingList(true);
+    renderShoppingList();
+  } catch (err) {
+    console.error(err);
+    if (shoppingListBody) {
+      shoppingListBody.innerHTML = '<p class="shopping-list-empty">Kon je boodschappenlijst niet laden.</p>';
+    }
+  }
+}
+
+function closeShoppingListModalPanel() {
+  shoppingListModal?.classList.add('hidden');
+  shoppingListModal?.setAttribute('aria-hidden', 'true');
+}
+
+/* — Ingrediënten kiezen voordat ze op de lijst komen — */
+
+function renderIngredientPicker() {
+  if (!ingredientPickBody) return;
+  const { items, selected } = ingredientPickState;
+
+  if (!items.length) {
+    ingredientPickBody.innerHTML = '<p class="ingredient-pick-empty">Er konden geen ingrediënten worden opgehaald voor dit recept.</p>';
+    if (ingredientPickCount) ingredientPickCount.textContent = '';
+    ingredientPickConfirmBtn?.setAttribute('disabled', 'disabled');
+    return;
+  }
+
+  const groups = groupByShoppingCategory(items, item => item.name);
+  ingredientPickBody.innerHTML = groups.map(group => `
+    <div class="ingredient-pick-group">
+      <h4 class="ingredient-pick-group-title">${escapeHtml(group.label)}</h4>
+      <div class="ingredient-pick-tiles">
+        ${group.entries.map(item => `
+          <button type="button" class="ingredient-tile${selected.has(item.key) ? ' selected' : ''}"
+                  data-ingredient-key="${escapeAttr(item.key)}"
+                  aria-pressed="${selected.has(item.key) ? 'true' : 'false'}">
+            <span class="ingredient-tile-check" aria-hidden="true"><i class="fas fa-check"></i></span>
+            <span class="ingredient-tile-text">
+              <span class="ingredient-tile-name">${escapeHtml(item.name)}</span>
+              ${item.source_title ? `<span class="ingredient-tile-source">${escapeHtml(item.source_title)}</span>` : ''}
+            </span>
+          </button>`).join('')}
+      </div>
+    </div>`).join('');
+
+  if (ingredientPickCount) {
+    ingredientPickCount.textContent = `${selected.size} van ${items.length} geselecteerd`;
+  }
+  if (selected.size) ingredientPickConfirmBtn?.removeAttribute('disabled');
+  else ingredientPickConfirmBtn?.setAttribute('disabled', 'disabled');
+}
+
+function openIngredientPicker(subtitle, rawItems) {
+  const items = [];
+  const seen = new Set();
+  rawItems.forEach(raw => {
+    const name = String(raw?.name || '').trim().replace(/\s+/g, ' ');
+    const key = shoppingItemKey(name);
+    if (!name || !key || seen.has(key)) return;
+    seen.add(key);
+    items.push({ key, name, source_title: raw?.source_title || '' });
+  });
+
+  // Standaard staat alles aan: je vinkt uit wat je al in huis hebt.
+  ingredientPickState = { items, selected: new Set(items.map(item => item.key)) };
+  if (ingredientPickSub) ingredientPickSub.textContent = subtitle || '';
+  renderIngredientPicker();
+  ingredientPickModal?.classList.remove('hidden');
+  ingredientPickModal?.setAttribute('aria-hidden', 'false');
+}
+
+function closeIngredientPickerPanel() {
+  ingredientPickModal?.classList.add('hidden');
+  ingredientPickModal?.setAttribute('aria-hidden', 'true');
+}
+
+function showIngredientPickerLoading(subtitle) {
+  ingredientPickState = { items: [], selected: new Set() };
+  if (ingredientPickSub) ingredientPickSub.textContent = subtitle || '';
+  if (ingredientPickCount) ingredientPickCount.textContent = '';
+  if (ingredientPickBody) {
+    ingredientPickBody.innerHTML = '<p class="ingredient-pick-empty">Ingrediënten ophalen…</p>';
+  }
+  ingredientPickConfirmBtn?.setAttribute('disabled', 'disabled');
+  ingredientPickModal?.classList.remove('hidden');
+  ingredientPickModal?.setAttribute('aria-hidden', 'false');
+}
+
+async function openIngredientPickerForRecipe(recipeUrl, recipeTitle) {
+  if (!getValidToken()) {
+    showRecipeAddedToast('Log in om je boodschappenlijst te gebruiken.', 'error');
+    return;
+  }
+  const title = recipeTitle || 'Recept';
+  showIngredientPickerLoading(`Uit "${title}" — vink uit wat je al in huis hebt.`);
+  try {
+    const data = await fetchRecipeIngredients(recipeUrl);
+    const ingredients = Array.isArray(data.ingredients) ? data.ingredients.filter(Boolean) : [];
+    openIngredientPicker(
+      `Uit "${title}" — vink uit wat je al in huis hebt.`,
+      ingredients.map(name => ({ name, source_title: title }))
+    );
+  } catch (err) {
+    console.error(err);
+    closeIngredientPickerPanel();
+    showRecipeAddedToast('Kon de ingrediënten van dit recept niet ophalen.', 'error');
+  }
+}
+
+async function openIngredientPickerForWeek() {
+  if (!getValidToken()) {
+    showRecipeAddedToast('Log in om je boodschappenlijst te gebruiken.', 'error');
+    return;
+  }
+
+  // Eén keer per recept ophalen, ook als het meerdere dagen is ingepland.
+  const uniqueRecipes = new Map();
+  plannerEntries.forEach(entry => {
+    if (!entry?.url) return;
+    if (!uniqueRecipes.has(entry.url)) {
+      uniqueRecipes.set(entry.url, entry.title || 'Recept');
+    }
+  });
+
+  if (!uniqueRecipes.size) {
+    showRecipeAddedToast('Er staan nog geen recepten in deze week.', 'error');
+    return;
+  }
+
+  const weekLabelText = formatWeekLabel(plannerWeekStart);
+  const subtitle = `${uniqueRecipes.size} recept${uniqueRecipes.size === 1 ? '' : 'en'} uit ${weekLabelText} — vink uit wat je al in huis hebt.`;
+  showIngredientPickerLoading(subtitle);
+
+  const results = await Promise.all([...uniqueRecipes.entries()].map(async ([url, title]) => {
+    try {
+      const data = await fetchRecipeIngredients(url);
+      const ingredients = Array.isArray(data.ingredients) ? data.ingredients.filter(Boolean) : [];
+      return ingredients.map(name => ({ name, source_title: title }));
+    } catch (_err) {
+      return [];
+    }
+  }));
+
+  const collected = results.flat();
+  if (!collected.length) {
+    closeIngredientPickerPanel();
+    showRecipeAddedToast('Kon voor deze week geen ingrediënten ophalen.', 'error');
+    return;
+  }
+  openIngredientPicker(subtitle, collected);
+}
+
+async function confirmIngredientPicker() {
+  const chosen = ingredientPickState.items.filter(item => ingredientPickState.selected.has(item.key));
+  if (!chosen.length) return;
+
+  ingredientPickConfirmBtn?.setAttribute('disabled', 'disabled');
+  try {
+    const data = await shoppingListRequest('/api/shopping-list', {
+      method: 'POST',
+      body: JSON.stringify({
+        items: chosen.map(item => ({ name: item.name, source_title: item.source_title }))
+      })
+    });
+    shoppingListItems = Array.isArray(data.items) ? data.items : shoppingListItems;
+    shoppingListLoaded = true;
+    closeIngredientPickerPanel();
+    renderShoppingList();
+    showRecipeAddedToast(`${chosen.length} product${chosen.length === 1 ? '' : 'en'} op je boodschappenlijst gezet.`);
+  } catch (err) {
+    console.error(err);
+    showRecipeAddedToast(err.message || 'Toevoegen aan de boodschappenlijst mislukte.', 'error');
+    ingredientPickConfirmBtn?.removeAttribute('disabled');
+  }
+}
+
+/* — Koppelingen — */
+
+shoppingListMenuBtn?.addEventListener('click', openShoppingListModal);
+mobileShoppingListMenuBtn?.addEventListener('click', () => {
+  closeMobileHeaderMenu();
+  openShoppingListModal();
+});
+closeShoppingListModalBtn?.addEventListener('click', closeShoppingListModalPanel);
+shoppingListModal?.addEventListener('click', e => {
+  if (e.target === shoppingListModal) closeShoppingListModalPanel();
+});
+
+closeIngredientPickModalBtn?.addEventListener('click', closeIngredientPickerPanel);
+ingredientPickCancelBtn?.addEventListener('click', closeIngredientPickerPanel);
+ingredientPickModal?.addEventListener('click', e => {
+  if (e.target === ingredientPickModal) closeIngredientPickerPanel();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (ingredientPickModal && !ingredientPickModal.classList.contains('hidden')) {
+    closeIngredientPickerPanel();
+    return;
+  }
+  if (shoppingListModal && !shoppingListModal.classList.contains('hidden')) {
+    closeShoppingListModalPanel();
+  }
+});
+
+ingredientPickBody?.addEventListener('click', e => {
+  const tile = e.target.closest('[data-ingredient-key]');
+  if (!tile) return;
+  const key = tile.dataset.ingredientKey;
+  if (ingredientPickState.selected.has(key)) ingredientPickState.selected.delete(key);
+  else ingredientPickState.selected.add(key);
+  renderIngredientPicker();
+});
+
+ingredientPickAllBtn?.addEventListener('click', () => {
+  ingredientPickState.selected = new Set(ingredientPickState.items.map(item => item.key));
+  renderIngredientPicker();
+});
+
+ingredientPickNoneBtn?.addEventListener('click', () => {
+  ingredientPickState.selected = new Set();
+  renderIngredientPicker();
+});
+
+ingredientPickConfirmBtn?.addEventListener('click', confirmIngredientPicker);
+
+shoppingListAddForm?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = String(shoppingListAddInput?.value || '').trim();
+  if (!name) return;
+  try {
+    const data = await shoppingListRequest('/api/shopping-list', {
+      method: 'POST',
+      body: JSON.stringify({ items: [{ name }] })
+    });
+    shoppingListItems = Array.isArray(data.items) ? data.items : shoppingListItems;
+    shoppingListLoaded = true;
+    if (shoppingListAddInput) shoppingListAddInput.value = '';
+    renderShoppingList();
+  } catch (err) {
+    console.error(err);
+    showRecipeAddedToast(err.message || 'Toevoegen mislukte.', 'error');
+  }
+});
+
+shoppingListBody?.addEventListener('click', async e => {
+  const toggleBtn = e.target.closest('[data-shopping-toggle]');
+  if (toggleBtn) {
+    const itemId = Number(toggleBtn.dataset.itemId);
+    const item = shoppingListItems.find(row => Number(row.id) === itemId);
+    if (!item) return;
+    const nextChecked = !item.is_checked;
+    // Meteen omzetten voelt sneller; bij een fout draaien we het terug.
+    item.is_checked = nextChecked;
+    renderShoppingList();
+    try {
+      await shoppingListRequest(`/api/shopping-list/${itemId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_checked: nextChecked })
+      });
+    } catch (err) {
+      console.error(err);
+      item.is_checked = !nextChecked;
+      renderShoppingList();
+      showRecipeAddedToast(err.message || 'Afvinken mislukte.', 'error');
+    }
+    return;
+  }
+
+  const removeBtn = e.target.closest('[data-shopping-remove]');
+  if (!removeBtn) return;
+  const itemId = Number(removeBtn.dataset.itemId);
+  const previous = shoppingListItems;
+  shoppingListItems = shoppingListItems.filter(row => Number(row.id) !== itemId);
+  renderShoppingList();
+  try {
+    await shoppingListRequest(`/api/shopping-list/${itemId}`, { method: 'DELETE' });
+  } catch (err) {
+    console.error(err);
+    shoppingListItems = previous;
+    renderShoppingList();
+    showRecipeAddedToast(err.message || 'Verwijderen mislukte.', 'error');
+  }
+});
+
+async function clearShoppingList(scope) {
+  try {
+    await shoppingListRequest('/api/shopping-list/clear', {
+      method: 'POST',
+      body: JSON.stringify({ scope })
+    });
+    await loadShoppingList(true);
+    renderShoppingList();
+  } catch (err) {
+    console.error(err);
+    showRecipeAddedToast(err.message || 'Legen van de lijst mislukte.', 'error');
+  }
+}
+
+shoppingListClearCheckedBtn?.addEventListener('click', () => clearShoppingList('checked'));
+shoppingListClearAllBtn?.addEventListener('click', () => {
+  if (!shoppingListItems.length) return;
+  if (!confirm('Weet je zeker dat je de hele boodschappenlijst wilt legen?')) return;
+  clearShoppingList('all');
+});
+
+weekShoppingListBtn?.addEventListener('click', openIngredientPickerForWeek);
 
 /* ========= WEEKMENU PLANNER ========= */
 const weekmenuGrid = document.getElementById('weekmenuGrid');
@@ -3021,6 +3607,14 @@ function bindWeekPlannerUi() {
       if (!menu) return;
       const willOpen = menu.classList.contains('hidden');
       closeAllRecipeExportMenus(willOpen ? menu : null);
+      return;
+    }
+
+    const kookkeuzeListBtn = e.target.closest('.kookkeuze-list-option');
+    if (kookkeuzeListBtn) {
+      const recipeUrl = decodeURIComponent(kookkeuzeListBtn.dataset.recipeUrl || '');
+      closeAllRecipeExportMenus();
+      openIngredientPickerForRecipe(recipeUrl, kookkeuzeListBtn.dataset.recipeTitle || 'Recept');
       return;
     }
 
@@ -4095,8 +4689,11 @@ function updateAuthUI(){
     localStorage.removeItem('activeDatabaseOwnerId');
     if (databaseMenuBtn) databaseMenuBtn.classList.add('hidden');
     if (mobileDatabaseMenuBtn) mobileDatabaseMenuBtn.classList.add('hidden');
+    if (shoppingListMenuBtn) shoppingListMenuBtn.classList.add('hidden');
+    if (mobileShoppingListMenuBtn) mobileShoppingListMenuBtn.classList.add('hidden');
     if (databaseModal) databaseModal.classList.add('hidden');
     if (sharePanel) sharePanel.classList.add('hidden');
+    clearShoppingListCache();
     setAuthPane(pendingResetToken ? resetPane : loginPane);
   }
 }
