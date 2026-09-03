@@ -2325,7 +2325,6 @@ const shoppingListScope = document.getElementById('shoppingListScope');
 const shoppingListBody = document.getElementById('shoppingListBody');
 const shoppingListAddForm = document.getElementById('shoppingListAddForm');
 const shoppingListAddInput = document.getElementById('shoppingListAddInput');
-const shoppingListClearCheckedBtn = document.getElementById('shoppingListClearCheckedBtn');
 const shoppingListClearAllBtn = document.getElementById('shoppingListClearAllBtn');
 
 const ingredientPickModal = document.getElementById('ingredientPickModal');
@@ -2333,12 +2332,9 @@ const closeIngredientPickModalBtn = document.getElementById('closeIngredientPick
 const ingredientPickSub = document.getElementById('ingredientPickSub');
 const ingredientPickBody = document.getElementById('ingredientPickBody');
 const ingredientPickCount = document.getElementById('ingredientPickCount');
-const ingredientPickAllBtn = document.getElementById('ingredientPickAllBtn');
-const ingredientPickNoneBtn = document.getElementById('ingredientPickNoneBtn');
+const ingredientPickToggleAllBtn = document.getElementById('ingredientPickToggleAllBtn');
 const ingredientPickCancelBtn = document.getElementById('ingredientPickCancelBtn');
 const ingredientPickConfirmBtn = document.getElementById('ingredientPickConfirmBtn');
-
-const weekShoppingListBtn = document.getElementById('weekShoppingListBtn');
 
 let shoppingListItems = [];
 let shoppingListLoaded = false;
@@ -2456,9 +2452,7 @@ function renderShoppingListScope() {
     shoppingListScope.textContent = '';
     return;
   }
-  shoppingListScope.textContent = db.is_personal
-    ? `Je persoonlijke lijst (${db.database_name}).`
-    : `Gedeeld met iedereen in "${db.database_name}" — zij zien dezelfde lijst.`;
+  shoppingListScope.textContent = db.is_personal ? '' : `Gedeeld · ${db.database_name}`;
 }
 
 async function shoppingListRequest(path, options = {}) {
@@ -2498,53 +2492,54 @@ function renderShoppingList() {
   const open = shoppingListItems.filter(item => !item.is_checked);
   const done = shoppingListItems.filter(item => !!item.is_checked);
 
+  shoppingListClearAllBtn?.classList.toggle('hidden', !shoppingListItems.length);
+
   if (!shoppingListItems.length) {
-    shoppingListBody.innerHTML = `
-      <p class="shopping-list-empty">
-        Je lijst is nog leeg. Zet ingrediënten erop via de knop <strong>Kookkeuze</strong> onder een recept,
-        of voeg hierboven zelf iets toe.
-      </p>`;
-    shoppingListClearCheckedBtn?.setAttribute('disabled', 'disabled');
-    shoppingListClearAllBtn?.setAttribute('disabled', 'disabled');
+    shoppingListBody.innerHTML = '<p class="shopping-empty">Nog niets op de lijst</p>';
     return;
   }
 
-  shoppingListClearAllBtn?.removeAttribute('disabled');
-  if (done.length) shoppingListClearCheckedBtn?.removeAttribute('disabled');
-  else shoppingListClearCheckedBtn?.setAttribute('disabled', 'disabled');
+  // Het bronrecept alleen tonen als de lijst er meer dan een bevat; anders is
+  // het bij elke regel dezelfde ruis.
+  const sources = new Set(shoppingListItems.map(item => item.source_title).filter(Boolean));
+  const showSource = sources.size > 1;
 
   const renderRow = item => `
-    <li class="shopping-item${item.is_checked ? ' is-checked' : ''}">
-      <button type="button" class="shopping-item-toggle" data-shopping-toggle data-item-id="${item.id}"
+    <li class="shopping-row${item.is_checked ? ' is-done' : ''}">
+      <button type="button" class="shopping-row-main" data-shopping-toggle data-item-id="${item.id}"
               aria-pressed="${item.is_checked ? 'true' : 'false'}"
-              aria-label="${item.is_checked ? 'Zet terug op de lijst' : 'Afvinken'}: ${escapeAttr(item.name)}">
-        <span class="shopping-item-check" aria-hidden="true"><i class="fas fa-check"></i></span>
-        <span class="shopping-item-text">
-          <span class="shopping-item-name">${escapeHtml(item.name)}</span>
-          ${item.source_title ? `<span class="shopping-item-source">${escapeHtml(item.source_title)}</span>` : ''}
+              aria-label="${escapeAttr(item.name)}">
+        <span class="shopping-check" aria-hidden="true"><i class="fas fa-check"></i></span>
+        <span class="shopping-row-text">
+          <span class="shopping-row-name">${escapeHtml(item.name)}</span>
+          ${showSource && item.source_title ? `<span class="shopping-row-sub">${escapeHtml(item.source_title)}</span>` : ''}
         </span>
       </button>
-      <button type="button" class="shopping-item-remove" data-shopping-remove data-item-id="${item.id}"
+      <button type="button" class="shopping-row-remove" data-shopping-remove data-item-id="${item.id}"
               aria-label="Verwijder ${escapeAttr(item.name)}">
         <i class="fas fa-times" aria-hidden="true"></i>
       </button>
     </li>`;
 
-  const groups = groupByShoppingCategory(open, item => item.name);
-  let html = `<p class="shopping-list-progress">${open.length} nog te halen${done.length ? ` · ${done.length} in je mandje` : ''}</p>`;
+  const section = (title, rows, action = '') => `
+    <section class="shopping-section">
+      <div class="shopping-section-head">
+        <h4 class="shopping-section-title">${escapeHtml(title)}</h4>
+        ${action}
+      </div>
+      <ul class="shopping-rows">${rows}</ul>
+    </section>`;
 
-  html += groups.map(group => `
-    <div class="shopping-group">
-      <h4 class="shopping-group-title">${escapeHtml(group.label)}</h4>
-      <ul class="shopping-group-list">${group.entries.map(renderRow).join('')}</ul>
-    </div>`).join('');
+  let html = groupByShoppingCategory(open, item => item.name)
+    .map(group => section(group.label, group.entries.map(renderRow).join('')))
+    .join('');
 
   if (done.length) {
-    html += `
-      <div class="shopping-group shopping-group-done">
-        <h4 class="shopping-group-title">In je mandje</h4>
-        <ul class="shopping-group-list">${done.map(renderRow).join('')}</ul>
-      </div>`;
+    html += section(
+      'Voltooid',
+      done.map(renderRow).join(''),
+      '<button type="button" class="shopping-text-btn" data-clear-checked>Wis</button>'
+    );
   }
 
   shoppingListBody.innerHTML = html;
@@ -2558,7 +2553,7 @@ async function openShoppingListModal() {
   shoppingListModal?.classList.remove('hidden');
   shoppingListModal?.setAttribute('aria-hidden', 'false');
   if (shoppingListBody && !shoppingListLoaded) {
-    shoppingListBody.innerHTML = '<p class="shopping-list-empty">Bezig met laden…</p>';
+    shoppingListBody.innerHTML = '<p class="shopping-empty">Bezig met laden…</p>';
   }
   try {
     await loadShoppingList(true);
@@ -2566,7 +2561,7 @@ async function openShoppingListModal() {
   } catch (err) {
     console.error(err);
     if (shoppingListBody) {
-      shoppingListBody.innerHTML = '<p class="shopping-list-empty">Kon je boodschappenlijst niet laden.</p>';
+      shoppingListBody.innerHTML = '<p class="shopping-empty">Kon de lijst niet laden</p>';
     }
   }
 }
@@ -2583,32 +2578,35 @@ function renderIngredientPicker() {
   const { items, selected } = ingredientPickState;
 
   if (!items.length) {
-    ingredientPickBody.innerHTML = '<p class="ingredient-pick-empty">Er konden geen ingrediënten worden opgehaald voor dit recept.</p>';
+    ingredientPickBody.innerHTML = '<p class="shopping-empty">Geen ingrediënten gevonden</p>';
     if (ingredientPickCount) ingredientPickCount.textContent = '';
+    ingredientPickToggleAllBtn?.classList.add('hidden');
     ingredientPickConfirmBtn?.setAttribute('disabled', 'disabled');
     return;
   }
 
-  const groups = groupByShoppingCategory(items, item => item.name);
-  ingredientPickBody.innerHTML = groups.map(group => `
-    <div class="ingredient-pick-group">
-      <h4 class="ingredient-pick-group-title">${escapeHtml(group.label)}</h4>
-      <div class="ingredient-pick-tiles">
-        ${group.entries.map(item => `
-          <button type="button" class="ingredient-tile${selected.has(item.key) ? ' selected' : ''}"
-                  data-ingredient-key="${escapeAttr(item.key)}"
-                  aria-pressed="${selected.has(item.key) ? 'true' : 'false'}">
-            <span class="ingredient-tile-check" aria-hidden="true"><i class="fas fa-check"></i></span>
-            <span class="ingredient-tile-text">
-              <span class="ingredient-tile-name">${escapeHtml(item.name)}</span>
-              ${item.source_title ? `<span class="ingredient-tile-source">${escapeHtml(item.source_title)}</span>` : ''}
-            </span>
-          </button>`).join('')}
+  ingredientPickBody.innerHTML = groupByShoppingCategory(items, item => item.name).map(group => `
+    <section class="shopping-section">
+      <div class="shopping-section-head">
+        <h4 class="shopping-section-title">${escapeHtml(group.label)}</h4>
       </div>
-    </div>`).join('');
+      <ul class="shopping-rows">
+        ${group.entries.map(item => `
+          <li class="shopping-row${selected.has(item.key) ? ' is-on' : ''}">
+            <button type="button" class="shopping-row-main" data-ingredient-key="${escapeAttr(item.key)}"
+                    aria-pressed="${selected.has(item.key) ? 'true' : 'false'}">
+              <span class="shopping-check" aria-hidden="true"><i class="fas fa-check"></i></span>
+              <span class="shopping-row-name">${escapeHtml(item.name)}</span>
+            </button>
+          </li>`).join('')}
+      </ul>
+    </section>`).join('');
 
-  if (ingredientPickCount) {
-    ingredientPickCount.textContent = `${selected.size} van ${items.length} geselecteerd`;
+  const allSelected = selected.size === items.length;
+  if (ingredientPickCount) ingredientPickCount.textContent = `${selected.size} geselecteerd`;
+  if (ingredientPickToggleAllBtn) {
+    ingredientPickToggleAllBtn.classList.remove('hidden');
+    ingredientPickToggleAllBtn.textContent = allSelected ? 'Alles uit' : 'Alles aan';
   }
   if (selected.size) ingredientPickConfirmBtn?.removeAttribute('disabled');
   else ingredientPickConfirmBtn?.setAttribute('disabled', 'disabled');
@@ -2642,8 +2640,9 @@ function showIngredientPickerLoading(subtitle) {
   ingredientPickState = { items: [], selected: new Set() };
   if (ingredientPickSub) ingredientPickSub.textContent = subtitle || '';
   if (ingredientPickCount) ingredientPickCount.textContent = '';
+  ingredientPickToggleAllBtn?.classList.add('hidden');
   if (ingredientPickBody) {
-    ingredientPickBody.innerHTML = '<p class="ingredient-pick-empty">Ingrediënten ophalen…</p>';
+    ingredientPickBody.innerHTML = '<p class="shopping-empty">Ingrediënten ophalen…</p>';
   }
   ingredientPickConfirmBtn?.setAttribute('disabled', 'disabled');
   ingredientPickModal?.classList.remove('hidden');
@@ -2656,62 +2655,16 @@ async function openIngredientPickerForRecipe(recipeUrl, recipeTitle) {
     return;
   }
   const title = recipeTitle || 'Recept';
-  showIngredientPickerLoading(`Uit "${title}" — vink uit wat je al in huis hebt.`);
+  showIngredientPickerLoading(title);
   try {
     const data = await fetchRecipeIngredients(recipeUrl);
     const ingredients = Array.isArray(data.ingredients) ? data.ingredients.filter(Boolean) : [];
-    openIngredientPicker(
-      `Uit "${title}" — vink uit wat je al in huis hebt.`,
-      ingredients.map(name => ({ name, source_title: title }))
-    );
+    openIngredientPicker(title, ingredients.map(name => ({ name, source_title: title })));
   } catch (err) {
     console.error(err);
     closeIngredientPickerPanel();
     showRecipeAddedToast('Kon de ingrediënten van dit recept niet ophalen.', 'error');
   }
-}
-
-async function openIngredientPickerForWeek() {
-  if (!getValidToken()) {
-    showRecipeAddedToast('Log in om je boodschappenlijst te gebruiken.', 'error');
-    return;
-  }
-
-  // Eén keer per recept ophalen, ook als het meerdere dagen is ingepland.
-  const uniqueRecipes = new Map();
-  plannerEntries.forEach(entry => {
-    if (!entry?.url) return;
-    if (!uniqueRecipes.has(entry.url)) {
-      uniqueRecipes.set(entry.url, entry.title || 'Recept');
-    }
-  });
-
-  if (!uniqueRecipes.size) {
-    showRecipeAddedToast('Er staan nog geen recepten in deze week.', 'error');
-    return;
-  }
-
-  const weekLabelText = formatWeekLabel(plannerWeekStart);
-  const subtitle = `${uniqueRecipes.size} recept${uniqueRecipes.size === 1 ? '' : 'en'} uit ${weekLabelText} — vink uit wat je al in huis hebt.`;
-  showIngredientPickerLoading(subtitle);
-
-  const results = await Promise.all([...uniqueRecipes.entries()].map(async ([url, title]) => {
-    try {
-      const data = await fetchRecipeIngredients(url);
-      const ingredients = Array.isArray(data.ingredients) ? data.ingredients.filter(Boolean) : [];
-      return ingredients.map(name => ({ name, source_title: title }));
-    } catch (_err) {
-      return [];
-    }
-  }));
-
-  const collected = results.flat();
-  if (!collected.length) {
-    closeIngredientPickerPanel();
-    showRecipeAddedToast('Kon voor deze week geen ingrediënten ophalen.', 'error');
-    return;
-  }
-  openIngredientPicker(subtitle, collected);
 }
 
 async function confirmIngredientPicker() {
@@ -2768,21 +2721,19 @@ document.addEventListener('keydown', e => {
 });
 
 ingredientPickBody?.addEventListener('click', e => {
-  const tile = e.target.closest('[data-ingredient-key]');
-  if (!tile) return;
-  const key = tile.dataset.ingredientKey;
+  const row = e.target.closest('[data-ingredient-key]');
+  if (!row) return;
+  const key = row.dataset.ingredientKey;
   if (ingredientPickState.selected.has(key)) ingredientPickState.selected.delete(key);
   else ingredientPickState.selected.add(key);
   renderIngredientPicker();
 });
 
-ingredientPickAllBtn?.addEventListener('click', () => {
-  ingredientPickState.selected = new Set(ingredientPickState.items.map(item => item.key));
-  renderIngredientPicker();
-});
-
-ingredientPickNoneBtn?.addEventListener('click', () => {
-  ingredientPickState.selected = new Set();
+ingredientPickToggleAllBtn?.addEventListener('click', () => {
+  const { items, selected } = ingredientPickState;
+  ingredientPickState.selected = selected.size === items.length
+    ? new Set()
+    : new Set(items.map(item => item.key));
   renderIngredientPicker();
 });
 
@@ -2808,6 +2759,11 @@ shoppingListAddForm?.addEventListener('submit', async e => {
 });
 
 shoppingListBody?.addEventListener('click', async e => {
+  if (e.target.closest('[data-clear-checked]')) {
+    clearShoppingList('checked');
+    return;
+  }
+
   const toggleBtn = e.target.closest('[data-shopping-toggle]');
   if (toggleBtn) {
     const itemId = Number(toggleBtn.dataset.itemId);
@@ -2861,14 +2817,11 @@ async function clearShoppingList(scope) {
   }
 }
 
-shoppingListClearCheckedBtn?.addEventListener('click', () => clearShoppingList('checked'));
 shoppingListClearAllBtn?.addEventListener('click', () => {
   if (!shoppingListItems.length) return;
   if (!confirm('Weet je zeker dat je de hele boodschappenlijst wilt legen?')) return;
   clearShoppingList('all');
 });
-
-weekShoppingListBtn?.addEventListener('click', openIngredientPickerForWeek);
 
 /* ========= WEEKMENU PLANNER ========= */
 const weekmenuGrid = document.getElementById('weekmenuGrid');

@@ -736,10 +736,7 @@
       <h2>Weekmenu planner</h2>
       <div class="weekmenu-toolbar">
         <button id="weekPrevBtn" type="button" class="overview-view-btn"><i class="fas fa-chevron-left"></i> Vorige week</button>
-        <div class="weekmenu-week-info">
-          <p id="weekLabel" class="weekmenu-label">Week</p>
-          <button id="weekShoppingListBtn" type="button" class="weekmenu-shopping-btn">Boodschappen voor deze week</button>
-        </div>
+        <p id="weekLabel" class="weekmenu-label">Week</p>
         <button id="weekNextBtn" type="button" class="overview-view-btn">Volgende week <i class="fas fa-chevron-right"></i></button>
       </div>
 
@@ -917,17 +914,18 @@
         <button id="closeIngredientPickModal" class="modal-close" aria-label="Sluiten">
           <i class="fas fa-times"></i>
         </button>
-        <h3 class="assign-modal-title">Kies je ingrediënten</h3>
-        <p id="ingredientPickSub" class="ingredient-pick-sub"></p>
-        <div class="ingredient-pick-toolbar">
-          <button id="ingredientPickAllBtn" type="button" class="overview-view-btn">Alles aan</button>
-          <button id="ingredientPickNoneBtn" type="button" class="overview-view-btn">Alles uit</button>
-          <span id="ingredientPickCount" class="ingredient-pick-count"></span>
+        <div class="shopping-head">
+          <h3 class="shopping-title">Ingrediënten</h3>
+          <p id="ingredientPickSub" class="shopping-subtitle"></p>
         </div>
-        <div id="ingredientPickBody" class="ingredient-pick-body"></div>
-        <div class="ingredient-pick-footer">
-          <button id="ingredientPickCancelBtn" type="button" class="ghost-btn">Annuleer</button>
-          <button id="ingredientPickConfirmBtn" type="button" class="green-btn">Zet op mijn lijst</button>
+        <div class="shopping-toolbar">
+          <span id="ingredientPickCount" class="shopping-count"></span>
+          <button id="ingredientPickToggleAllBtn" type="button" class="shopping-text-btn">Alles uit</button>
+        </div>
+        <div id="ingredientPickBody" class="shopping-scroll"></div>
+        <div class="shopping-actions">
+          <button id="ingredientPickCancelBtn" type="button" class="shopping-text-btn">Annuleer</button>
+          <button id="ingredientPickConfirmBtn" type="button" class="shopping-primary-btn">Toevoegen</button>
         </div>
       </div>
     </div>
@@ -938,16 +936,19 @@
         <button id="closeShoppingListModal" class="modal-close" aria-label="Sluiten">
           <i class="fas fa-times"></i>
         </button>
-        <h3 class="assign-modal-title">Boodschappenlijst</h3>
-        <p id="shoppingListScope" class="shopping-list-scope"></p>
-        <form id="shoppingListAddForm" class="shopping-list-add">
-          <input id="shoppingListAddInput" type="text" placeholder="Voeg zelf iets toe, bijv. 1 l melk" autocomplete="off" maxlength="200" />
-          <button type="submit" class="green-btn">Toevoegen</button>
+        <div class="shopping-head">
+          <h3 class="shopping-title">Boodschappen</h3>
+          <p id="shoppingListScope" class="shopping-subtitle"></p>
+        </div>
+        <form id="shoppingListAddForm" class="shopping-add">
+          <button type="submit" class="shopping-add-btn" aria-label="Toevoegen">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+          </button>
+          <input id="shoppingListAddInput" type="text" placeholder="Voeg toe" autocomplete="off" maxlength="200" />
         </form>
-        <div id="shoppingListBody" class="shopping-list-body"></div>
-        <div class="shopping-list-footer">
-          <button id="shoppingListClearCheckedBtn" type="button" class="overview-view-btn">Verwijder afgevinkte</button>
-          <button id="shoppingListClearAllBtn" type="button" class="danger-btn">Lijst legen</button>
+        <div id="shoppingListBody" class="shopping-scroll"></div>
+        <div class="shopping-actions shopping-actions-end">
+          <button id="shoppingListClearAllBtn" type="button" class="shopping-text-btn is-danger hidden">Lijst legen</button>
         </div>
       </div>
     </div>

@@ -3307,7 +3307,7 @@ select:focus {
     gap: 8px;
   }
 
-  .weekmenu-week-info {
+  .weekmenu-label {
     grid-column: 1 / -1;
     grid-row: 1;
     margin-bottom: 2px;
@@ -3600,13 +3600,10 @@ select:focus {
     margin: 0 0 24px;
   }
 
-  .weekmenu-week-info {
+  .weekmenu-label {
     grid-column: 1 / -1;
     grid-row: 1;
     margin: 4px 0 2px;
-  }
-
-  .weekmenu-label {
     font-size: 0.92rem;
     line-height: 1.3;
   }
@@ -6389,126 +6386,185 @@ body.mobile-menu-open .mobile-nav-header {
 
 /* ==========================================================================
    BOODSCHAPPENLIJST
-   De interne lijst (topbar-knop naast Database, in het mobiele menu, en het
-   'Kookkeuze'-knopje onder elk recept). Mobile-first: tikdoelen minimaal 44px.
+   Eén rustig systeem voor de lijst en de ingredientenkiezer: lichtgrijze
+   ondergrond, witte rijen met haarlijnen ertussen, en zo min mogelijk tekst.
+   De rijen zijn zelf de uitleg.
    ========================================================================== */
 
 .shopping-list-menu-btn {
   color: #2f3740;
 }
 
-/* Popup met de lijst zelf */
-.modal-content.shopping-list-modal-content {
-  width: min(620px, 96vw);
-  max-width: min(620px, 96vw);
-  padding: 28px 22px 22px;
+.modal-content.shopping-list-modal-content,
+.modal-content.ingredient-pick-modal-content {
+  width: min(560px, 96vw);
+  max-width: min(560px, 96vw);
+  padding: 26px 18px 18px;
+  background: #f4f5f6;
+  display: flex;
+  flex-direction: column;
+  max-height: min(760px, 88vh);
+  /* Alleen de lijst scrollt; het venster zelf niet, anders krijg je twee
+     scrollbalken en een scheve marge van de gereserveerde gutter. */
+  overflow: hidden;
+  scrollbar-gutter: auto;
 }
 
-.shopping-list-scope {
-  margin: 4px 0 14px;
+.shopping-head {
+  margin: 0 40px 16px 4px;
+}
+
+.shopping-title {
+  margin: 0;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  line-height: 1.15;
+  color: #1d2521;
+}
+
+.shopping-subtitle {
+  margin: 3px 0 0;
   font-size: 13px;
-  font-weight: 600;
-  color: #6b7c70;
+  font-weight: 500;
+  color: #8b968f;
+  overflow-wrap: anywhere;
 }
 
-.shopping-list-scope:empty {
+.shopping-subtitle:empty {
   display: none;
 }
 
-.shopping-list-add {
+/* Toevoegrij: een plusknop en een veld zonder kader, als één witte pil. */
+.shopping-add {
   display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 0 12px 0 6px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(31, 45, 38, 0.06);
 }
 
-.shopping-list-add input {
+.shopping-add-btn {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--green);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.shopping-add input {
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 44px;
-  padding: 0 12px;
-  font-size: 15px;
-  border: 1px solid #d9e3dc;
-  border-radius: var(--radius-sm);
-  background: #fff;
-  box-sizing: border-box;
+  height: 46px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 16px;
+  color: #1d2521;
 }
 
-.shopping-list-add input:focus {
+.shopping-add input::placeholder {
+  color: #a9b3ad;
+}
+
+.shopping-add input:focus {
   outline: none;
-  border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(99, 214, 113, 0.18);
 }
 
-.shopping-list-add .green-btn {
-  flex: 0 0 auto;
-  min-height: 44px;
-  padding: 0 16px;
-  white-space: nowrap;
+/* Het scrollgebied, zodat de kop en de acties blijven staan. */
+.shopping-scroll {
+  flex: 1 1 auto;
+  min-height: 80px;
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
 }
 
-.shopping-list-body {
-  min-height: 60px;
+/* Dunne, kleurloze scrollbalk; hij mag de rust van de lijst niet breken. */
+.shopping-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d5dcd8 transparent;
 }
 
-.shopping-list-empty {
-  margin: 18px 0;
+.shopping-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.shopping-scroll::-webkit-scrollbar-thumb {
+  background: #d5dcd8;
+  border-radius: 999px;
+}
+
+.shopping-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.shopping-empty {
+  margin: 34px 0;
+  text-align: center;
   font-size: 14px;
-  line-height: 1.5;
-  color: #6b7c70;
+  font-weight: 500;
+  color: #a2ada6;
 }
 
-.shopping-list-progress {
-  margin: 0 0 12px;
-  font-size: 12px;
+.shopping-section + .shopping-section {
+  margin-top: 18px;
+}
+
+.shopping-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 4px 6px;
+}
+
+.shopping-section-title {
+  margin: 0;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.2px;
-  color: #5f6b63;
-}
-
-.shopping-group + .shopping-group {
-  margin-top: 16px;
-}
-
-.shopping-group-title {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--green-deep);
+  color: #97a29b;
 }
 
-.shopping-group-done .shopping-group-title {
-  color: #97a49c;
-}
-
-.shopping-group-list {
+/* Rijen in een witte groep met haarlijnen, zoals een iOS-lijst. */
+.shopping-rows {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  background: #ffffff;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(31, 45, 38, 0.06);
 }
 
-.shopping-item {
+.shopping-row {
   display: flex;
   align-items: stretch;
-  gap: 4px;
-  border: 1px solid #e6efe9;
-  border-radius: var(--radius-sm);
-  background: #fff;
-  overflow: hidden;
 }
 
-.shopping-item-toggle {
+.shopping-row + .shopping-row {
+  box-shadow: inset 0 1px 0 #f0f2f1;
+}
+
+.shopping-row-main {
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 44px;
+  min-height: 50px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 4px 8px 10px;
+  gap: 12px;
+  padding: 9px 6px 9px 14px;
   background: none;
   border: none;
   cursor: pointer;
@@ -6516,268 +6572,148 @@ body.mobile-menu-open .mobile-nav-header {
   font: inherit;
 }
 
-.shopping-item-check {
+.shopping-check {
   flex: 0 0 auto;
   width: 22px;
   height: 22px;
-  border-radius: 6px;
-  border: 2px solid #cfdcd4;
+  border-radius: 999px;
+  border: 1.5px solid #d3dbd6;
+  background: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: transparent;
-  font-size: 11px;
+  font-size: 10px;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.shopping-item.is-checked .shopping-item-check {
+/* Afgevinkt op de lijst, of aangevinkt in de kiezer: allebei groen gevuld. */
+.shopping-row.is-done .shopping-check,
+.shopping-row.is-on .shopping-check {
   background: var(--green);
   border-color: var(--green);
   color: #fff;
 }
 
-.shopping-item-text {
+.shopping-row-text {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
 
-.shopping-item-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #2f3a35;
+.shopping-row-name {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: #1d2521;
   overflow-wrap: anywhere;
 }
 
-.shopping-item.is-checked .shopping-item-name {
+.shopping-row-sub {
+  font-size: 12px;
+  font-weight: 500;
+  color: #a2ada6;
+  overflow-wrap: anywhere;
+}
+
+.shopping-row.is-done .shopping-row-name {
+  color: #b0bab4;
   text-decoration: line-through;
-  color: #9aa79f;
 }
 
-.shopping-item-source {
-  font-size: 11px;
-  font-weight: 600;
-  color: #8e9a92;
-  overflow-wrap: anywhere;
+.ingredient-pick-modal-content .shopping-row:not(.is-on) .shopping-row-name {
+  color: #b0bab4;
 }
 
-.shopping-item-remove {
+.shopping-row-remove {
   flex: 0 0 auto;
-  width: 40px;
-  min-height: 44px;
+  width: 42px;
   background: none;
   border: none;
-  color: #b3bfb8;
-  font-size: 14px;
+  color: #cbd4ce;
+  font-size: 13px;
   cursor: pointer;
+  transition: color 0.15s ease;
 }
 
-.shopping-item-remove:hover {
+.shopping-row-remove:hover {
   color: var(--danger);
 }
 
-.shopping-list-footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: space-between;
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid #eef4f0;
-}
-
-.shopping-list-footer button[disabled] {
-  opacity: 0.45;
-  cursor: default;
-}
-
-/* Popup om ingrediënten aan/uit te vinken voordat ze op de lijst komen */
-.modal-content.ingredient-pick-modal-content {
-  width: min(660px, 96vw);
-  max-width: min(660px, 96vw);
-  padding: 28px 22px 22px;
-}
-
-.ingredient-pick-sub {
-  margin: 4px 0 14px;
+/* Kleine, kleurloze tekstknoppen: 'Wis', 'Alles aan', 'Annuleer'. */
+.shopping-text-btn {
+  padding: 6px 8px;
+  margin: -6px -8px;
+  background: none;
+  border: none;
+  color: #7d8a83;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
-  color: #6b7c70;
-}
-
-.ingredient-pick-toolbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.ingredient-pick-count {
-  font-size: 12px;
-  font-weight: 700;
-  color: #6b7c70;
-  margin-left: auto;
-}
-
-.ingredient-pick-body {
-  max-height: 46vh;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-.ingredient-pick-empty {
-  margin: 18px 0;
-  font-size: 14px;
-  color: #6b7c70;
-}
-
-.ingredient-pick-group + .ingredient-pick-group {
-  margin-top: 14px;
-}
-
-.ingredient-pick-group-title {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--green-deep);
-}
-
-.ingredient-pick-tiles {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 6px;
-}
-
-@media (min-width: 620px) {
-  .ingredient-pick-tiles {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-/* Uitgevinkt is bewust duidelijk grijs: je moet in één oogopslag zien wat
-   er straks wél op de lijst komt. */
-.ingredient-tile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 8px 12px 8px 10px;
-  border: 1px solid #e6efe9;
-  border-radius: var(--radius-sm);
-  background: #f7faf8;
   cursor: pointer;
-  text-align: left;
-  font: inherit;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: color 0.15s ease;
 }
 
-.ingredient-tile.selected {
-  background: #edfaef;
-  border-color: var(--green);
+.shopping-text-btn:hover {
+  color: #46524b;
 }
 
-.ingredient-tile-check {
-  flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  border: 2px solid #cfdcd4;
-  background: #fff;
-  display: inline-flex;
+.shopping-text-btn.is-danger {
+  color: #b9857c;
+}
+
+.shopping-text-btn.is-danger:hover {
+  color: var(--danger);
+}
+
+.shopping-toolbar {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  color: transparent;
-  font-size: 11px;
-}
-
-.ingredient-tile.selected .ingredient-tile-check {
-  background: var(--green);
-  border-color: var(--green);
-  color: #fff;
-}
-
-.ingredient-tile-text {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.ingredient-tile-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #2f3a35;
-  overflow-wrap: anywhere;
-}
-
-.ingredient-tile:not(.selected) .ingredient-tile-name {
-  color: #97a49c;
-}
-
-.ingredient-tile-source {
-  font-size: 11px;
-  font-weight: 600;
-  color: #8e9a92;
-  overflow-wrap: anywhere;
-}
-
-.ingredient-pick-footer {
-  display: flex;
-  flex-wrap: wrap;
+  justify-content: space-between;
   gap: 10px;
-  justify-content: flex-end;
-  align-items: center;
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid #eef4f0;
+  margin: 0 4px 12px;
 }
 
-.ingredient-pick-footer .green-btn {
-  min-height: 44px;
+.shopping-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #8b968f;
 }
 
-.ingredient-pick-footer .green-btn[disabled] {
-  opacity: 0.45;
-  cursor: default;
-}
-
-/* 'Boodschappen voor deze week': een rustige chip onder het weeklabel, in het
-   oranje weekmenu-thema. Bewust geen groene CTA — het is een hulpactie naast
-   de kalender, niet de hoofdknop van de pagina. */
-.weekmenu-week-info {
+.shopping-actions {
+  flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  min-width: 0;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 4px 0;
 }
 
-.weekmenu-shopping-btn {
-  padding: 6px 13px;
+.shopping-actions-end {
+  justify-content: flex-end;
+  min-height: 20px;
+}
+
+.shopping-primary-btn {
+  min-height: 44px;
+  padding: 0 22px;
   border: none;
   border-radius: 999px;
-  background: rgba(209, 128, 82, 0.10);
-  color: var(--accent-strong);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 12px;
+  background: var(--green);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
   font-weight: 600;
-  line-height: 1.2;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, opacity 0.15s ease;
 }
 
-.weekmenu-shopping-btn:hover {
-  background: rgba(209, 128, 82, 0.18);
-  color: #a9541f;
+.shopping-primary-btn:hover {
+  background: var(--green-hover);
 }
 
-/* Op de telefoon een ruimer tikdoel; de chip blijft optisch even licht. */
-@media (max-width: 767px) {
-  .weekmenu-shopping-btn {
-    padding: 10px 16px;
-  }
+.shopping-primary-btn[disabled] {
+  opacity: 0.4;
+  cursor: default;
 }
