@@ -4688,8 +4688,7 @@ body.mobile-menu-open .mobile-nav-header {
 
 /* Soepele 'pop'-animatie wanneer de random-popup verschijnt */
 @keyframes randomPopIn {
-  0%   { opacity: 0; transform: scale(0.85); }
-  60%  { opacity: 1; transform: scale(1.03); }
+  0%   { opacity: 0; transform: scale(0.94); }
   100% { opacity: 1; transform: scale(1); }
 }
 
@@ -6814,5 +6813,274 @@ body.mobile-menu-open .mobile-nav-header {
 
   .shopping-check {
     border-color: #6b7770;
+  }
+}
+
+
+/* =========================================================================
+   INTERACTIE & MATERIAAL
+   Apple's regels voor 'fluid interfaces', toegepast op de bestaande huisstijl.
+   Kleuren, iconen en lettertypen blijven zoals ze zijn; wat verandert is de
+   manier waarop de site antwoord geeft. Deze laag staat bewust achteraan: hij
+   overschrijft daardoor de oudere regels en is in zijn geheel te verwijderen.
+   ========================================================================= */
+
+:root {
+  /* De standaardcurve is die van iOS-panelen: meteen weg, zacht landend.
+     De veercurve schiet licht door en is alleen voor iets dat de gebruiker
+     zelf net bevestigd heeft. */
+  --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-press: 0.1s;
+  --duration-fast: 0.16s;
+  --duration-base: 0.26s;
+}
+
+/* -------- 1. Reactie op het indrukken -------------------------------------
+   De site gaf tot nu toe alleen antwoord op hover, en hover bestaat niet op
+   een telefoon: je zag pas iets nadat je had losgelaten. Nu reageert elke
+   bedienbare vorm op het moment dat je hem raakt. */
+
+button,
+a,
+select,
+summary,
+[role="button"],
+[tabindex] {
+  /* De grijsblauwe flits van de browser vervangen we door onze eigen reactie. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(.mobile-menu-btn):active,
+.tab-link:active,
+.ext-link:active,
+.mobile-header-menu-link:active,
+.guest-demo-banner-cta:active,
+.hiw-dot:active {
+  transform: scale(0.97);
+}
+
+/* Kleine, ronde bedieningen mogen iets verder inzakken; op 40 pixels is 3%
+   nauwelijks te zien. */
+.modal-close:active,
+.recipe-note-trigger:active,
+.weekmenu-mobile-arrow:active,
+.hiw-arrow:active,
+.week-nav-btn:active,
+.recipe-shopping-btn:active,
+.shopping-add-btn:active {
+  transform: scale(0.9);
+}
+
+/* -------- 2. Alleen tekenen wat de compositor aankan ----------------------
+   'transition: all' laat ook breedte, hoogte en marges meelopen. Dat kost
+   frames en is nooit wat je bedoelt. */
+
+button,
+.nav-tabs li a,
+input,
+select,
+textarea {
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-press) var(--ease-out);
+}
+
+/* -------- 3. Zweefstanden horen bij een muis -----------------------------
+   Op een aanraakscherm blijft een hover-stand na het tikken hangen, waardoor
+   een knop omhoog blijft staan. Daar is de indruk-reactie het antwoord. */
+
+@media (hover: none) {
+  .green-btn:hover,
+  .accent-btn:hover,
+  .danger-btn:hover,
+  .ghost-btn:hover,
+  .recipe-card:hover,
+  .recipe-export-trigger:hover,
+  .recipe-note-trigger:hover,
+  .plan-weekmenu-btn:hover,
+  .logout-btn:hover,
+  .start-btn:hover,
+  .own-recipe-back-btn:hover,
+  .hero-random button:hover {
+    transform: none;
+  }
+}
+
+/* -------- 4. Materiaal: de balk zweeft boven de inhoud --------------------
+   Een doorschijnende laag laat zien dat de inhoud eronder doorloopt, in
+   plaats van dat de balk een strook van het scherm opeet. */
+
+.topbar {
+  background: rgba(255, 255, 255, 0.86);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+}
+
+/* Op de telefoon zweeft de balk als los kaartje over de inhoud, en soms over
+   het groene hero-blok. Daar moet het materiaal dichter zijn, anders schemert
+   de kop erdoorheen en wordt de balk zelf onleesbaar. */
+@media (max-width: 767px) {
+  .topbar {
+    /* Dichter materiaal, en een kleinere vervagingsstraal: een balk over de
+       volle breedte opnieuw vervagen bij elke scrollframe is juist op de
+       zwakkere telefoons het duurste wat je kunt vragen. */
+    background: rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    backdrop-filter: blur(12px) saturate(160%);
+  }
+}
+
+.mobile-header-menu {
+  background: rgba(255, 255, 255, 0.88);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+/* Een groter vlak leest als een dikker materiaal: sterkere vervaging en een
+   diepere schaduw dan een losse knop. */
+.modal {
+  background: rgba(24, 32, 28, 0.34);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  backdrop-filter: blur(8px) saturate(120%);
+  animation: surface-scrim-in var(--duration-base) var(--ease-out);
+}
+
+.modal-content {
+  box-shadow:
+    0 1px 2px rgba(24, 32, 28, 0.06),
+    0 12px 40px rgba(24, 32, 28, 0.16);
+}
+
+/* -------- 5. Een venster komt aan als materiaal, het valt niet in ---------
+   Schaal en dekking lopen samen op, met de curve van een iOS-paneel. De
+   random-popup heeft zijn eigen animatie en slaan we over. */
+
+@keyframes surface-in {
+  from { opacity: 0; transform: scale(0.965) translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes surface-scrim-in {
+  from { background-color: rgba(24, 32, 28, 0); }
+}
+
+.modal:not(.hidden) > .modal-content:not(.random-recipe-modal-content) {
+  animation: surface-in var(--duration-base) var(--ease-standard);
+}
+
+/* Een uitklapmenu hoort te groeien vanuit de knop die het opende, niet
+   vanuit zijn eigen midden. */
+.recipe-export-dropdown {
+  transform-origin: top right;
+}
+
+/* -------- 6. Waar je bent moet zichtbaar blijven -------------------------
+   Invoervelden lieten hun focus al zien via rand en gloed; knoppen en links
+   deden dat nergens. */
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--green-deep);
+  outline-offset: 3px;
+}
+
+/* -------- 7. Randen die meegeven ----------------------------------------
+   Horizontaal schuiven stopt binnen het onderdeel zelf, zodat je niet per
+   ongeluk de pagina erachter meesleept. */
+
+.weekmenu-calendar,
+.hiw-viewport,
+.table-container,
+.overview-grid-container {
+  overscroll-behavior-x: contain;
+}
+
+/* -------- 8. Typografie: regelval ---------------------------------------
+   Koppen breken op de plek waar de regels even lang worden, in plaats van
+   met een los woord op de laatste regel. */
+
+h1, h2, h3,
+.assign-modal-title,
+.shopping-title {
+  text-wrap: balance;
+}
+
+/* -------- 9. Voorkeuren van de gebruiker --------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Minder beweging betekent niet minder antwoord: kleur en dekking blijven,
+     verschuiven en veren gaan eruit. */
+  .modal:not(.hidden) > .modal-content:not(.random-recipe-modal-content) {
+    animation: none;
+  }
+
+  .modal {
+    animation: none;
+  }
+
+  button:not(.mobile-menu-btn):active,
+  .tab-link:active,
+  .ext-link:active,
+  .mobile-header-menu-link:active,
+  .guest-demo-banner-cta:active,
+  .hiw-dot:active,
+  .modal-close:active,
+  .recipe-note-trigger:active,
+  .weekmenu-mobile-arrow:active,
+  .hiw-arrow:active,
+  .week-nav-btn:active,
+  .recipe-shopping-btn:active,
+  .shopping-add-btn:active {
+    transform: none;
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  /* Doorschijnend wordt dicht: hetzelfde materiaal, zonder doorkijk. */
+  .topbar {
+    background: #ffffff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .mobile-header-menu {
+    background: #ffffff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .modal {
+    background: rgba(24, 32, 28, 0.55);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .topbar {
+    background: #ffffff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: 0 1px 0 #46524b;
+  }
+
+  .modal-content {
+    border: 1px solid #46524b;
+  }
+
+  button:focus-visible,
+  a:focus-visible {
+    outline-width: 3px;
   }
 }
