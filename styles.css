@@ -6418,9 +6418,11 @@ body.mobile-menu-open .mobile-nav-header {
   margin: 0;
   font-size: 27px;
   font-weight: 800;
-  letter-spacing: -0.4px;
+  /* Grote tekst leest te los met neutrale tracking; kleine tekst juist te dicht. */
+  letter-spacing: -0.02em;
   line-height: 1.15;
   color: #1d2521;
+  overflow-wrap: anywhere;
 }
 
 .shopping-subtitle {
@@ -6485,8 +6487,12 @@ body.mobile-menu-open .mobile-nav-header {
   flex: 1 1 auto;
   min-height: 80px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   margin: 0 -4px;
-  padding: 0 4px;
+  padding: 2px 4px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
 }
 
 /* Dunne, kleurloze scrollbalk; hij mag de rust van de lijst niet breken. */
@@ -6557,19 +6563,38 @@ body.mobile-menu-open .mobile-nav-header {
   box-shadow: inset 0 1px 0 #f0f2f1;
 }
 
+/* De globale button-regel zet nowrap en min-width: 100px; hier moet tekst juist
+   kunnen afbreken en mag de knop zo smal worden als de rij toelaat. */
+.shopping-add-btn,
+.shopping-row-main,
+.shopping-row-remove,
+.shopping-text-btn,
+.shopping-primary-btn {
+  min-width: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .shopping-row-main {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 50px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  padding: 9px 6px 9px 14px;
+  padding: 13px 6px 13px 14px;
   background: none;
   border: none;
+  border-radius: 0;
   cursor: pointer;
   text-align: left;
   font: inherit;
+  white-space: normal;
+  transition: background-color 0.12s ease;
+}
+
+/* Feedback op het indrukken zelf, niet pas bij het loslaten. */
+.shopping-row-main:active {
+  background-color: rgba(29, 37, 33, 0.045);
 }
 
 .shopping-check {
@@ -6582,9 +6607,21 @@ body.mobile-menu-open .mobile-nav-header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: transparent;
+  color: #fff;
   font-size: 10px;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.shopping-check i {
+  transform: scale(0.3);
+  opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.14s ease;
+}
+
+.shopping-row.is-done .shopping-check i,
+.shopping-row.is-on .shopping-check i {
+  transform: scale(1);
+  opacity: 1;
 }
 
 /* Afgevinkt op de lijst, of aangevinkt in de kiezer: allebei groen gevuld. */
@@ -6607,14 +6644,19 @@ body.mobile-menu-open .mobile-nav-header {
   font-weight: 500;
   line-height: 1.3;
   color: #1d2521;
+  white-space: normal;
   overflow-wrap: anywhere;
+  transition: color 0.18s ease;
 }
 
 .shopping-row-sub {
   font-size: 12px;
   font-weight: 500;
+  line-height: 1.3;
   color: #a2ada6;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .shopping-row.is-done .shopping-row-name {
@@ -6628,13 +6670,19 @@ body.mobile-menu-open .mobile-nav-header {
 
 .shopping-row-remove {
   flex: 0 0 auto;
-  width: 42px;
+  width: 44px;
+  padding: 0;
   background: none;
   border: none;
+  border-radius: 0;
   color: #cbd4ce;
   font-size: 13px;
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, background-color 0.12s ease;
+}
+
+.shopping-row-remove:active {
+  background-color: rgba(29, 37, 33, 0.045);
 }
 
 .shopping-row-remove:hover {
@@ -6643,16 +6691,22 @@ body.mobile-menu-open .mobile-nav-header {
 
 /* Kleine, kleurloze tekstknoppen: 'Wis', 'Alles aan', 'Annuleer'. */
 .shopping-text-btn {
-  padding: 6px 8px;
-  margin: -6px -8px;
+  padding: 8px 10px;
+  margin: -8px -10px;
   background: none;
   border: none;
+  border-radius: 8px;
   color: #7d8a83;
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, background-color 0.12s ease;
+}
+
+.shopping-text-btn:active {
+  background-color: rgba(29, 37, 33, 0.06);
 }
 
 .shopping-text-btn:hover {
@@ -6676,6 +6730,8 @@ body.mobile-menu-open .mobile-nav-header {
 }
 
 .shopping-count {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
   color: #8b968f;
@@ -6696,8 +6752,10 @@ body.mobile-menu-open .mobile-nav-header {
 }
 
 .shopping-primary-btn {
+  flex: 0 1 auto;
   min-height: 44px;
   padding: 0 22px;
+  white-space: nowrap;
   border: none;
   border-radius: 999px;
   background: var(--green);
@@ -6713,7 +6771,48 @@ body.mobile-menu-open .mobile-nav-header {
   background: var(--green-hover);
 }
 
+.shopping-primary-btn:active {
+  transform: scale(0.97);
+}
+
 .shopping-primary-btn[disabled] {
   opacity: 0.4;
   cursor: default;
+}
+
+/* Minder beweging: het vinkje verschijnt zonder veer, de rest zonder verschuiving. */
+@media (prefers-reduced-motion: reduce) {
+  .shopping-check i {
+    transition: opacity 0.12s ease;
+    transform: none;
+  }
+
+  .shopping-row.is-done .shopping-check i,
+  .shopping-row.is-on .shopping-check i {
+    transform: none;
+  }
+
+  .shopping-primary-btn:active {
+    transform: none;
+  }
+}
+
+/* Meer contrast: witte rijen met een echte rand in plaats van een zachte schaduw. */
+@media (prefers-contrast: more) {
+  .shopping-rows,
+  .shopping-add {
+    border: 1px solid #6b7770;
+    box-shadow: none;
+  }
+
+  .shopping-section-title,
+  .shopping-row-sub,
+  .shopping-count,
+  .shopping-subtitle {
+    color: #4a554e;
+  }
+
+  .shopping-check {
+    border-color: #6b7770;
+  }
 }

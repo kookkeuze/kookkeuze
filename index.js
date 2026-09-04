@@ -2339,58 +2339,134 @@ const ingredientPickConfirmBtn = document.getElementById('ingredientPickConfirmB
 let shoppingListItems = [];
 let shoppingListLoaded = false;
 let ingredientPickState = { items: [], selected: new Set() };
+let shoppingReorderTimer = null;
 
 // Schapindeling voor de winkel. Bewust een simpele woordenlijst: hij hoeft niet
 // perfect te zijn, alles wat we niet herkennen valt netjes onder 'Overig'.
+// Schapindeling voor de winkel. Nederlandse ingredienten zijn bijna altijd
+// samenstellingen met het hoofdwoord achteraan ('rundergehakt', 'groentebouillon'),
+// dus we kijken van rechts naar links en herkennen behalve hele woorden ook
+// achtervoegsels ('*bouillon') en voorvoegsels ('basilicum*'). De uitzonderingen
+// die daar doorheen glippen ('kokosmelk' is geen zuivel) staan er los boven.
 const SHOPPING_CATEGORIES = [
   {
     key: 'groente-fruit',
     label: 'Groente & fruit',
-    words: ['ui', 'uien', 'sjalot', 'sjalotten', 'knoflook', 'teen', 'tenen', 'tomaat', 'tomaten', 'trostomaten', 'cherrytomaatjes', 'paprika', 'paprikas', 'courgette', 'aubergine', 'wortel', 'wortels', 'wortelen', 'winterpeen', 'prei', 'broccoli', 'bloemkool', 'spinazie', 'sla', 'ijsbergsla', 'komkommer', 'champignon', 'champignons', 'appel', 'appels', 'banaan', 'bananen', 'citroen', 'limoen', 'sinaasappel', 'avocado', 'aardappel', 'aardappels', 'aardappelen', 'krieltjes', 'boon', 'bonen', 'sperziebonen', 'haricots', 'doperwten', 'erwten', 'mais', 'pompoen', 'spruitjes', 'kool', 'witlof', 'rucola', 'veldsla', 'peterselie', 'basilicum', 'koriander', 'bieslook', 'dille', 'tijm', 'rozemarijn', 'munt', 'gember', 'bosui', 'bosuitjes', 'selderij', 'bleekselderij', 'venkel', 'asperges', 'radijs', 'biet', 'bietjes', 'druiven', 'peer', 'peren', 'aardbeien', 'frambozen', 'bosbessen', 'mango', 'ananas', 'meloen', 'perzik', 'kersen', 'rozijnen', 'dadels', 'olijven', 'taugé', 'pastinaak', 'raap' ]
+    words: ['ui', 'uien', 'uitje', 'uitjes', 'sjalot', 'sjalotten', 'sjalotje', 'knoflook', 'tomaat', 'tomaten', 'trostomaten', 'cherrytomaatjes', 'cherrytomaten', 'paprika', 'paprikas', 'courgette', 'courgettes', 'aubergine', 'aubergines', 'wortel', 'wortels', 'wortelen', 'worteltjes', 'winterpeen', 'waspeen', 'prei', 'broccoli', 'bloemkool', 'spinazie', 'sla', 'ijsbergsla', 'komkommer', 'champignon', 'champignons', 'kastanjechampignons', 'appel', 'appels', 'banaan', 'bananen', 'citroen', 'citroenen', 'limoen', 'limoenen', 'sinaasappel', 'sinaasappels', 'mandarijn', 'avocado', 'avocados', 'aardappel', 'aardappels', 'aardappelen', 'krieltjes', 'boon', 'bonen', 'sperziebonen', 'snijbonen', 'tuinbonen', 'peultjes', 'doperwten', 'erwten', 'mais', 'maiskolf', 'pompoen', 'spruitjes', 'spruiten', 'kool', 'spitskool', 'witlof', 'rucola', 'veldsla', 'peterselie', 'basilicum', 'koriander', 'bieslook', 'dille', 'tijm', 'rozemarijn', 'salie', 'munt', 'gember', 'bosui', 'bosuitjes', 'lenteui', 'selderij', 'bleekselderij', 'knolselderij', 'venkel', 'asperges', 'radijs', 'radijsjes', 'biet', 'bietjes', 'bieten', 'druiven', 'peer', 'peren', 'aardbei', 'aardbeien', 'frambozen', 'bosbessen', 'bramen', 'mango', 'ananas', 'meloen', 'watermeloen', 'perzik', 'perziken', 'nectarine', 'kersen', 'rozijnen', 'dadels', 'abrikozen', 'pruimen', 'vijgen', 'kiwi', 'granaatappel', 'olijven', 'tauge', 'pastinaak', 'andijvie', 'boerenkool', 'paksoi', 'snijbiet', 'raapstelen', 'rammenas', 'cranberries', 'citroensap', 'limoensap', 'citroenrasp', 'limoenrasp'],
+    endings: ['sla', 'kool', 'peen', 'wortel', 'wortels', 'wortelen', 'appel', 'appels', 'appelen', 'tomaat', 'tomaten', 'ui', 'uien', 'uitjes', 'peterselie', 'blaadjes', 'bes', 'bessen', 'druiven', 'olijven', 'champignons'],
+    stems: ['tomaat', 'tomat', 'aardappel', 'paprika', 'champignon', 'knoflook', 'spinazie', 'basilicum', 'peterselie', 'koriander', 'komkommer', 'citroen', 'limoen', 'sinaasappel', 'banaan', 'wortel', 'courgette', 'aubergine', 'broccoli', 'bloemkool', 'pompoen', 'avocado', 'mango', 'ananas', 'meloen', 'prei', 'venkel', 'asperge', 'rucola', 'olijf', 'druif', 'aardbei', 'framboos', 'bosbes', 'rozijn', 'dadel', 'spruit', 'witlof', 'radijs', 'biet', 'appel', 'peer']
   },
   {
     key: 'vlees-vis',
     label: 'Vlees & vis',
-    words: ['kip', 'kipfilet', 'kipdijfilet', 'kippenbout', 'gehakt', 'gehaktballen', 'rundergehakt', 'rundvlees', 'biefstuk', 'entrecote', 'varkensvlees', 'speklap', 'speklappen', 'spek', 'spekjes', 'bacon', 'ham', 'worst', 'rookworst', 'chorizo', 'salami', 'kalkoen', 'lamsvlees', 'zalm', 'zalmfilet', 'tonijn', 'kabeljauw', 'garnaal', 'garnalen', 'mosselen', 'vis', 'visfilet', 'ansjovis', 'makreel', 'schol', 'tilapia', 'shoarma', 'hamburger', 'hamburgers', 'schnitzel', 'saucijs', 'saucijzen', 'kipreepjes', 'runderlappen', 'braadworst', 'tofu', 'tempeh', 'vegaburger']
+    words: ['kip', 'kipfilet', 'kipfilets', 'kipdijfilet', 'kippendijen', 'kippenbout', 'kippenpoten', 'kipreepjes', 'kipgehakt', 'gehakt', 'gehaktballen', 'rundergehakt', 'rundvlees', 'runderlappen', 'sucadelappen', 'biefstuk', 'entrecote', 'rosbief', 'varkensvlees', 'varkenshaas', 'speklap', 'speklappen', 'spek', 'spekjes', 'ontbijtspek', 'katenspek', 'bacon', 'ham', 'achterham', 'beenham', 'worst', 'worstjes', 'rookworst', 'braadworst', 'chorizo', 'salami', 'kalkoen', 'kalkoenfilet', 'lamsvlees', 'kotelet', 'koteletten', 'zalm', 'zalmfilet', 'tonijn', 'kabeljauw', 'koolvis', 'garnaal', 'garnalen', 'gamba', 'gambas', 'mosselen', 'inktvis', 'surimi', 'vis', 'visfilet', 'ansjovis', 'makreel', 'schol', 'tilapia', 'pangasius', 'shoarma', 'gyros', 'hamburger', 'hamburgers', 'schnitzel', 'saucijs', 'saucijzen', 'carpaccio', 'rookvlees', 'tofu', 'tempeh', 'seitan', 'vegaburger', 'vleesvervanger'],
+    endings: ['gehakt', 'filet', 'filets', 'worst', 'worstjes', 'vlees', 'spek', 'haas', 'bout', 'burger', 'burgers', 'lapjes', 'lappen', 'poot', 'poten', 'schnitzel', 'balletjes'],
+    stems: ['kip', 'gehakt', 'rund', 'varken', 'kalfs', 'lams', 'zalm', 'tonijn', 'garnaal', 'garnalen', 'spek', 'worst']
   },
   {
     key: 'zuivel-eieren',
     label: 'Zuivel & eieren',
-    words: ['melk', 'karnemelk', 'yoghurt', 'kwark', 'room', 'slagroom', 'kookroom', 'creme', 'crème', 'fraiche', 'fraîche', 'kaas', 'geraspte', 'parmezaan', 'parmezaanse', 'mozzarella', 'feta', 'geitenkaas', 'roomkaas', 'boter', 'roomboter', 'margarine', 'ei', 'eieren', 'eiwit', 'eidooier', 'eigeel', 'mascarpone', 'ricotta', 'skyr', 'vla', 'cheddar', 'gruyere', 'halloumi']
+    words: ['melk', 'karnemelk', 'yoghurt', 'kwark', 'room', 'slagroom', 'kookroom', 'creme', 'fraiche', 'kaas', 'parmezaan', 'parmezaanse', 'mozzarella', 'feta', 'geitenkaas', 'roomkaas', 'boter', 'roomboter', 'kruidenboter', 'margarine', 'ei', 'eieren', 'eiwit', 'eiwitten', 'eidooier', 'eidooiers', 'eigeel', 'eierdooier', 'mascarpone', 'ricotta', 'skyr', 'vla', 'cheddar', 'gruyere', 'halloumi', 'brie', 'camembert', 'gorgonzola', 'huttenkase'],
+    endings: ['kaas', 'melk', 'yoghurt', 'room', 'boter'],
+    stems: ['yoghurt', 'kwark', 'mozzarella', 'parmezaan', 'mascarpone', 'ricotta', 'cheddar', 'slagroom']
   },
   {
     key: 'brood-banket',
     label: 'Brood & banket',
-    words: ['brood', 'stokbrood', 'ciabatta', 'boterham', 'boterhammen', 'wrap', 'wraps', 'tortilla', 'tortillas', 'pita', 'pitabroodjes', 'broodje', 'broodjes', 'beschuit', 'crackers', 'cracker', 'naan', 'croissant', 'bladerdeeg', 'filodeeg', 'pizzabodem', 'paneermeel']
+    words: ['brood', 'stokbrood', 'ciabatta', 'boterham', 'boterhammen', 'wrap', 'wraps', 'tortilla', 'tortillas', 'pita', 'pitabroodjes', 'broodje', 'broodjes', 'beschuit', 'cracker', 'crackers', 'naan', 'croissant', 'bladerdeeg', 'filodeeg', 'pizzabodem', 'bagel', 'bagels', 'focaccia', 'baguette', 'toast', 'toastjes', 'muffins', 'cake', 'koek', 'koekjes', 'speculaas', 'taart', 'taartbodem'],
+    endings: ['brood', 'broodje', 'broodjes', 'boterham', 'boterhammen', 'deeg', 'koek', 'koekjes'],
+    stems: ['brood']
   },
   {
     key: 'voorraadkast',
     label: 'Voorraadkast',
-    words: ['bloem', 'suiker', 'basterdsuiker', 'zout', 'olie', 'olijfolie', 'zonnebloemolie', 'sesamolie', 'azijn', 'balsamico', 'rijst', 'basmatirijst', 'zilvervliesrijst', 'pasta', 'spaghetti', 'penne', 'macaroni', 'lasagne', 'lasagnebladen', 'noedels', 'mie', 'couscous', 'quinoa', 'linzen', 'kikkererwten', 'bulgur', 'meel', 'gist', 'bakpoeder', 'honing', 'stroop', 'mosterd', 'ketchup', 'mayonaise', 'sambal', 'sojasaus', 'ketjap', 'vissaus', 'kokosmelk', 'bouillon', 'bouillonblokje', 'bouillonblokjes', 'tomatenblokjes', 'tomatenpuree', 'passata', 'noten', 'amandelen', 'walnoten', 'cashewnoten', 'pinda', 'pindas', 'sesamzaad', 'zaden', 'kaneel', 'kerrie', 'paprikapoeder', 'komijn', 'oregano', 'kurkuma', 'chilipoeder', 'currypasta', 'pesto', 'kokos', 'kokosrasp', 'chocolade', 'cacao', 'havermout', 'muesli', 'pindakaas', 'jam', 'hagelslag', 'kruidenmix', 'laurierblad', 'laurier', 'nootmuskaat', 'vanille', 'maizena', 'gelatine', 'peper', 'zwarte']
+    words: ['bloem', 'suiker', 'basterdsuiker', 'poedersuiker', 'rietsuiker', 'zout', 'zeezout', 'peper', 'olie', 'olijfolie', 'zonnebloemolie', 'sesamolie', 'kokosolie', 'azijn', 'balsamico', 'rijst', 'basmatirijst', 'zilvervliesrijst', 'risottorijst', 'pasta', 'spaghetti', 'penne', 'fusilli', 'tagliatelle', 'macaroni', 'lasagne', 'lasagnebladen', 'noedels', 'mie', 'mihoen', 'couscous', 'quinoa', 'linzen', 'kikkererwten', 'kidneybonen', 'bulgur', 'gierst', 'meel', 'gist', 'bakpoeder', 'baksoda', 'honing', 'ahornsiroop', 'stroop', 'mosterd', 'ketchup', 'mayonaise', 'sambal', 'sojasaus', 'ketjap', 'vissaus', 'oestersaus', 'worcestersaus', 'sriracha', 'tabasco', 'bouillon', 'bouillonblokje', 'bouillonblokjes', 'tomatenblokjes', 'tomatenpuree', 'passata', 'noten', 'amandelen', 'walnoten', 'cashewnoten', 'hazelnoten', 'pinda', 'pindas', 'pijnboompitten', 'zonnebloempitten', 'sesamzaad', 'zaden', 'chiazaad', 'lijnzaad', 'kaneel', 'kerrie', 'kerriepoeder', 'paprikapoeder', 'komijn', 'komijnzaad', 'oregano', 'kurkuma', 'chilipoeder', 'chilivlokken', 'currypasta', 'pesto', 'kokos', 'kokosrasp', 'chocolade', 'chocola', 'cacao', 'havermout', 'muesli', 'cornflakes', 'pindakaas', 'jam', 'hagelslag', 'kruiden', 'kruidenmix', 'laurier', 'laurierblad', 'laurierblaadjes', 'nootmuskaat', 'vanille', 'maizena', 'gelatine', 'paneermeel', 'augurken', 'kappertjes', 'tahin', 'hummus', 'kokosmelk', 'groentebouillon', 'kippenbouillon'],
+    endings: ['olie', 'azijn', 'saus', 'ketchup', 'poeder', 'suiker', 'meel', 'zaad', 'zaden', 'noten', 'bouillon', 'siroop', 'stroop', 'kruiden', 'pasta', 'spaghetti', 'macaroni', 'noedels', 'rijst', 'mout', 'pitten', 'vlokken'],
+    stems: ['kokos', 'kruiden', 'bouillon', 'suiker', 'chocola', 'pinda', 'noedel', 'spaghetti', 'macaroni']
   },
   {
     key: 'diepvries',
     label: 'Diepvries',
-    words: ['diepvries', 'diepvrieserwten', 'bevroren', 'ijs', 'friet', 'frites']
+    words: ['diepvries', 'diepvrieserwten', 'diepvriesspinazie', 'bevroren', 'ijs', 'roomijs', 'friet', 'frites'],
+    endings: [],
+    stems: ['diepvries']
   },
   {
     key: 'drinken',
     label: 'Drinken',
-    words: ['water', 'sap', 'sinaasappelsap', 'appelsap', 'wijn', 'bier', 'cola', 'thee', 'koffie', 'limonade', 'frisdrank', 'prosecco']
+    words: ['water', 'sap', 'sinaasappelsap', 'appelsap', 'wijn', 'bier', 'cola', 'thee', 'koffie', 'limonade', 'frisdrank', 'prosecco', 'champagne', 'port', 'sherry', 'rum', 'wodka', 'likeur', 'kokoswater'],
+    endings: ['sap', 'wijn', 'bier'],
+    stems: []
   }
 ];
 
 const SHOPPING_CATEGORY_FALLBACK = { key: 'overig', label: 'Overig' };
 
+// Losse woorden die anders in het verkeerde schap belanden: plantaardige melk
+// is geen zuivel, pindakaas geen kaas, en citroensap hoort bij het fruit.
+const SHOPPING_WORD_OVERRIDES = {
+  kokosmelk: 'voorraadkast',
+  amandelmelk: 'voorraadkast',
+  sojamelk: 'voorraadkast',
+  havermelk: 'voorraadkast',
+  rijstmelk: 'voorraadkast',
+  pindakaas: 'voorraadkast',
+  pindaboter: 'voorraadkast',
+  amandelboter: 'voorraadkast',
+  laurierblad: 'voorraadkast',
+  laurierblaadjes: 'voorraadkast',
+  appelmoes: 'voorraadkast',
+  appelstroop: 'voorraadkast',
+  citroensap: 'groente-fruit',
+  limoensap: 'groente-fruit',
+  boterham: 'brood-banket',
+  boterhammen: 'brood-banket'
+};
+
+// Combinaties waarbij pas de hele regel duidelijk maakt welk schap het is:
+// een rode peper ligt bij de groente, gemalen peper in de voorraadkast.
+const SHOPPING_PHRASE_RULES = [
+  [/\b(rode|groene|gele|spaanse|verse)\s+peper/, 'groente-fruit'],
+  [/\b(chilipeper|jalapeno|rawit)/, 'groente-fruit'],
+  [/\b(peper en zout|zwarte peper|witte peper|cayennepeper|versgemalen peper)/, 'voorraadkast']
+];
+
+// Maat- en bereidingswoorden dragen niets bij aan het schap en zouden het
+// hoofdwoord alleen maar in de weg zitten.
+const SHOPPING_NOISE_WORDS = new Set([
+  'gr', 'gram', 'kg', 'ml', 'cl', 'dl', 'liter', 'el', 'tl', 'eetlepel', 'eetlepels',
+  'theelepel', 'theelepels', 'snuf', 'snufje', 'snuifje', 'mespunt', 'teen', 'tenen',
+  'teentje', 'teentjes', 'stuk', 'stuks', 'blik', 'blikje', 'blikjes', 'pak', 'pakje',
+  'zak', 'zakje', 'pot', 'potje', 'bak', 'bakje', 'doos', 'fles', 'bos', 'bosje',
+  'bosjes', 'krop', 'struik', 'bol', 'plak', 'plakje', 'plakjes', 'scheut', 'scheutje',
+  'handvol', 'hand', 'takje', 'takjes', 'reep', 'reepjes', 'stengel', 'stengels',
+  'portie', 'porties', 'kop', 'kopje', 'punt', 'rol', 'rolletje', 'vel', 'vellen',
+  'verse', 'vers', 'gedroogde', 'gedroogd', 'gemalen', 'geraspte', 'geraspt',
+  'gesneden', 'fijngesneden', 'grofgesneden', 'fijngehakte', 'gehakte', 'gepelde',
+  'gewassen', 'geschilde', 'gekookte', 'gebakken', 'gegrilde', 'gerookte',
+  'gemarineerde', 'ongezouten', 'gezouten', 'ongezoete', 'uitgelekte', 'extra',
+  'vierge', 'biologische', 'magere', 'volle', 'halfvolle', 'oude', 'jonge', 'zoete',
+  'zure', 'kleine', 'grote', 'halve', 'hele', 'dunne', 'dikke', 'kruimige',
+  'vastkokende', 'flinke', 'ruime', 'naar', 'smaak', 'eventueel', 'optioneel',
+  'ongeveer', 'ca', 'evt', 'plus', 'van', 'voor', 'met', 'zonder', 'the', 'een'
+]);
+
 function normalizeShoppingText(value) {
   return String(value || '')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 }
 
-// Woorden vergelijken op token-niveau: 'kokosmelk' mag niet als 'melk' tellen.
-// Enkelvoud/meervoud vangen we af met een paar veelvoorkomende uitgangen.
+function shoppingTokens(name) {
+  return normalizeShoppingText(name)
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[^a-z\s]+/g, ' ')
+    .split(/\s+/)
+    .filter(token => token.length > 1 && !SHOPPING_NOISE_WORDS.has(token));
+}
+
+// Enkelvoud en meervoud van hetzelfde woord tellen als dezelfde match.
 function shoppingTokenMatches(token, word) {
   if (token === word) return true;
   if (token === `${word}s` || token === `${word}en` || token === `${word}je` || token === `${word}jes`) return true;
@@ -2398,21 +2474,38 @@ function shoppingTokenMatches(token, word) {
   return false;
 }
 
+function shoppingCategoryByKey(key) {
+  return SHOPPING_CATEGORIES.find(category => category.key === key) || SHOPPING_CATEGORY_FALLBACK;
+}
+
 function detectShoppingCategory(name) {
-  const tokens = normalizeShoppingText(name)
-    .replace(/[^a-z0-9\s]+/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean);
+  const normalized = normalizeShoppingText(name);
+  const phrase = SHOPPING_PHRASE_RULES.find(([pattern]) => pattern.test(normalized));
+  if (phrase) return shoppingCategoryByKey(phrase[1]);
+
+  const tokens = shoppingTokens(name);
   if (!tokens.length) return SHOPPING_CATEGORY_FALLBACK;
 
-  for (const token of tokens) {
-    for (const category of SHOPPING_CATEGORIES) {
-      if (category.words.some(word => shoppingTokenMatches(token, normalizeShoppingText(word)))) {
-        return category;
-      }
+  // Van achter naar voren, want het hoofdwoord staat achteraan. Hele woorden
+  // gaan voor samenstellingen: 'vissaus' is voorraadkast, niet vis.
+  const scan = test => {
+    for (let i = tokens.length - 1; i >= 0; i--) {
+      const hit = test(tokens[i]);
+      if (hit) return hit;
     }
-  }
-  return SHOPPING_CATEGORY_FALLBACK;
+    return null;
+  };
+
+  return scan(token => {
+      const override = SHOPPING_WORD_OVERRIDES[token];
+      if (override) return shoppingCategoryByKey(override);
+      return SHOPPING_CATEGORIES.find(c => c.words.some(w => shoppingTokenMatches(token, w)));
+    })
+    || scan(token => SHOPPING_CATEGORIES.find(c =>
+        c.endings.some(e => token.length > e.length && token.endsWith(e))))
+    || scan(token => SHOPPING_CATEGORIES.find(c =>
+        c.stems.some(st => token.length > st.length && token.startsWith(st))))
+    || SHOPPING_CATEGORY_FALLBACK;
 }
 
 function groupByShoppingCategory(entries, getName) {
@@ -2487,6 +2580,7 @@ async function loadShoppingList(force = false) {
 
 function renderShoppingList() {
   if (!shoppingListBody) return;
+  clearTimeout(shoppingReorderTimer);
   renderShoppingListScope();
 
   const open = shoppingListItems.filter(item => !item.is_checked);
@@ -2523,15 +2617,16 @@ function renderShoppingList() {
 
   const section = (title, rows, action = '') => `
     <section class="shopping-section">
-      <div class="shopping-section-head">
+      ${title || action ? `<div class="shopping-section-head">
         <h4 class="shopping-section-title">${escapeHtml(title)}</h4>
         ${action}
-      </div>
+      </div>` : ''}
       <ul class="shopping-rows">${rows}</ul>
     </section>`;
 
-  let html = groupByShoppingCategory(open, item => item.name)
-    .map(group => section(group.label, group.entries.map(renderRow).join('')))
+  const groups = groupByShoppingCategory(open, item => item.name);
+  let html = groups
+    .map(group => section(groups.length > 1 ? group.label : '', group.entries.map(renderRow).join('')))
     .join('');
 
   if (done.length) {
@@ -2585,11 +2680,12 @@ function renderIngredientPicker() {
     return;
   }
 
-  ingredientPickBody.innerHTML = groupByShoppingCategory(items, item => item.name).map(group => `
+  const groups = groupByShoppingCategory(items, item => item.name);
+  ingredientPickBody.innerHTML = groups.map(group => `
     <section class="shopping-section">
-      <div class="shopping-section-head">
+      ${groups.length > 1 ? `<div class="shopping-section-head">
         <h4 class="shopping-section-title">${escapeHtml(group.label)}</h4>
-      </div>
+      </div>` : ''}
       <ul class="shopping-rows">
         ${group.entries.map(item => `
           <li class="shopping-row${selected.has(item.key) ? ' is-on' : ''}">
@@ -2770,9 +2866,17 @@ shoppingListBody?.addEventListener('click', async e => {
     const item = shoppingListItems.find(row => Number(row.id) === itemId);
     if (!item) return;
     const nextChecked = !item.is_checked;
-    // Meteen omzetten voelt sneller; bij een fout draaien we het terug.
     item.is_checked = nextChecked;
-    renderShoppingList();
+
+    // Direct de rij zelf omzetten in plaats van de hele lijst opnieuw te tekenen:
+    // je ziet het vinkje landen op het moment dat je tikt. Pas daarna verspringt
+    // de regel naar Voltooid, zodat de beweging navolgbaar blijft.
+    const row = toggleBtn.closest('.shopping-row');
+    row?.classList.toggle('is-done', nextChecked);
+    toggleBtn.setAttribute('aria-pressed', nextChecked ? 'true' : 'false');
+    clearTimeout(shoppingReorderTimer);
+    shoppingReorderTimer = setTimeout(renderShoppingList, 340);
+
     try {
       await shoppingListRequest(`/api/shopping-list/${itemId}`, {
         method: 'PATCH',
@@ -2781,6 +2885,7 @@ shoppingListBody?.addEventListener('click', async e => {
     } catch (err) {
       console.error(err);
       item.is_checked = !nextChecked;
+      clearTimeout(shoppingReorderTimer);
       renderShoppingList();
       showRecipeAddedToast(err.message || 'Afvinken mislukte.', 'error');
     }
