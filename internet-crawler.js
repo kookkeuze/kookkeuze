@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { browserFetch } = require('./browser-fetch');
 
 const DEFAULT_FETCH_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (compatible; KookkeuzeCrawler/1.0; +https://www.kookkeuze.nl)',
@@ -446,14 +447,15 @@ async function fetchText(url, headers = {}, acceptHeader = 'application/xml,text
   // Sommige sites knijpen af zodra er een paar verzoeken snel achter elkaar
   // binnenkomen. Even wachten en opnieuw proberen scheelt een gemiste sitemap.
   for (let attempt = 0; ; attempt += 1) {
-    const response = await fetch(url, {
+    // browserFetch i.p.v. fetch: sites achter een bot-filter (o.a. plus.nl)
+    // sturen Node's TLS-handshake weg met 403. Zie browser-fetch.js.
+    const response = await browserFetch(url, {
       headers: {
         ...DEFAULT_FETCH_HEADERS,
         Accept: acceptHeader,
         ...headers
       },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(15000)
+      timeoutMs: 15000
     });
 
     if (response.ok) return response.text();

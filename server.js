@@ -13,6 +13,7 @@ const {
   INDEX_FILE: INTERNET_CRAWLER_INDEX_FILE
 } = require('./internet-crawler');
 const { registerSeoPages, getSeoPageUrls } = require('./seo-pages');
+const { browserFetch } = require('./browser-fetch');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -95,48 +96,57 @@ function extractMetaContent(tag) {
   return match ? match[1] : null;
 }
 
-function extractRecipeImage(html) {
-  const patterns = [
-    /<meta[^>]+property=["']og:image:secure_url["'][^>]*>/i,
-    /<meta[^>]+property=["']og:image["'][^>]*>/i,
-    /<meta[^>]+name=["']twitter:image:src["'][^>]*>/i,
-    /<meta[^>]+name=["']twitter:image["'][^>]*>/i,
-    /<meta[^>]+itemprop=["']image["'][^>]*>/i
-  ];
-
-  for (const re of patterns) {
-    const tag = html.match(re);
-    const content = extractMetaContent(tag && tag[0]);
-    if (content) return content;
+// Haalt de plaatjes uit een JSON-LD-waarde: die is soms een string, soms een
+// lijst, soms een object met url/contentUrl/@id.
+function collectImageCandidates(raw, out = []) {
+  if (!raw) return out;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (trimmed && !out.includes(trimmed)) out.push(trimmed);
+    return out;
   }
-  return null;
-}
-
-function normalizeImageCandidate(raw) {
-  if (!raw) return null;
-  if (typeof raw === 'string') return raw.trim() || null;
   if (Array.isArray(raw)) {
-    for (const item of raw) {
-      const found = normalizeImageCandidate(item);
-      if (found) return found;
-    }
-    return null;
+    raw.forEach(item => collectImageCandidates(item, out));
+    return out;
   }
   if (typeof raw === 'object') {
-    return normalizeImageCandidate(raw.url || raw.contentUrl || raw['@id']);
+    collectImageCandidates(raw.url || raw.contentUrl || raw['@id'], out);
   }
-  return null;
+  return out;
 }
 
-function extractRecipeImageFromJsonLd(html) {
-  const blocks = parseJsonLdBlocks(html);
-  for (const block of blocks) {
+function extractRecipeImagesFromJsonLd(html) {
+  const found = [];
+  for (const block of parseJsonLdBlocks(html)) {
     const recipe = findRecipeObject(block);
     if (!recipe) continue;
-    const candidate = normalizeImageCandidate(recipe.image);
-    if (candidate) return candidate;
+    collectImageCandidates(recipe.image, found);
   }
-  return null;
+  return found;
+}
+
+// Alle plaatjes die de pagina aandraagt, op volgorde van betrouwbaarheid:
+// eerst de social-meta tags, daarna wat er in de JSON-LD van het recept staat.
+function collectRecipeImageCandidates(html) {
+  const metaPatterns = [
+    /<meta[^>]+property=["']og:image:secure_url["'][^>]*>/gi,
+    /<meta[^>]+property=["']og:image["'][^>]*>/gi,
+    /<meta[^>]+name=["']twitter:image:src["'][^>]*>/gi,
+    /<meta[^>]+name=["']twitter:image["'][^>]*>/gi,
+    /<meta[^>]+itemprop=["']image["'][^>]*>/gi
+  ];
+
+  const candidates = [];
+  for (const re of metaPatterns) {
+    for (const tag of html.match(re) || []) {
+      const content = extractMetaContent(tag);
+      if (content && !candidates.includes(content)) candidates.push(content);
+    }
+  }
+  extractRecipeImagesFromJsonLd(html).forEach(item => {
+    if (!candidates.includes(item)) candidates.push(item);
+  });
+  return candidates;
 }
 
 // Een opgehaalde pagina is pas bruikbaar als er recept-data in lijkt te staan.
@@ -213,10 +223,9 @@ async function fetchHtmlWithRetries(targetUrl) {
 
   for (const headers of attempts) {
     try {
-      const response = await fetch(targetUrl, {
+      const response = await browserFetch(targetUrl, {
         headers,
-        redirect: 'follow',
-        signal: AbortSignal.timeout(14000)
+        timeoutMs: 14000
       });
       if (!response.ok) continue;
       const html = await response.text();
@@ -1501,6 +1510,59 @@ app.get('/api/recipe-info', async (req, res) => {
   }
 });
 
+// Sites laten hun og:image nog weleens naar een verwijderd bestand wijzen,
+// terwijl er verderop in dezelfde pagina (meestal in de JSON-LD) wél een
+// werkend plaatje staat. Zonder deze controle blijft de kaart dan op "Geen
+// foto" staan. We kijken maximaal een paar kandidaten na en stoppen bij de
+// eerste die echt een afbeelding teruggeeft; het resultaat gaat 24 uur in de
+// cache, dus dit kost hooguit één extra verzoek per recept per dag.
+const MAX_IMAGE_CANDIDATES_CHECKED = 4;
+
+async function isReachableImage(absoluteUrl, refererUrl) {
+  try {
+    const response = await browserFetch(absoluteUrl, {
+      headers: {
+        'User-Agent': DEFAULT_HTML_HEADERS['User-Agent'],
+        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        Referer: refererUrl
+      },
+      method: 'HEAD',
+      timeoutMs: 8000
+    });
+    // Niet elke server accepteert HEAD. Weigert hij de methode, dan weten we
+    // niets over dit plaatje — en dan is doorlaten beter dan afkeuren, want dat
+    // is precies wat er vóór deze controle ook gebeurde.
+    if (response.status === 405 || response.status === 501) return true;
+    if (!response.ok) return false;
+    const type = response.headers.get('content-type') || '';
+    // Sommige servers geven bij HEAD geen content-type mee; dan gaan we op de
+    // status af in plaats van het plaatje onterecht af te keuren.
+    return !type || type.startsWith('image/') || type === 'application/octet-stream';
+  } catch (_err) {
+    return false;
+  }
+}
+
+async function pickReachableImage(candidates, pageUrl) {
+  const absolute = [];
+  for (const candidate of candidates) {
+    try {
+      const resolved = new URL(candidate, pageUrl).toString();
+      if (!absolute.includes(resolved)) absolute.push(resolved);
+    } catch (_err) {
+      // onbruikbare URL, volgende kandidaat
+    }
+  }
+  if (!absolute.length) return null;
+  // Eén kandidaat: niet nakijken, de proxy merkt het vanzelf als hij stuk is.
+  if (absolute.length === 1) return absolute[0];
+
+  for (const url of absolute.slice(0, MAX_IMAGE_CANDIDATES_CHECKED)) {
+    if (await isReachableImage(url, pageUrl.toString())) return url;
+  }
+  return absolute[0];
+}
+
 // Receptafbeelding ophalen via URL (og:image / twitter:image)
 app.get('/api/recipe-image', async (req, res) => {
   const { url } = req.query;
@@ -1528,10 +1590,7 @@ app.get('/api/recipe-image', async (req, res) => {
       return res.json({ imageUrl: null });
     }
 
-    let imageUrl = extractRecipeImage(html) || extractRecipeImageFromJsonLd(html);
-    if (imageUrl) {
-      imageUrl = new URL(imageUrl, pageUrl).toString();
-    }
+    const imageUrl = await pickReachableImage(collectRecipeImageCandidates(html), pageUrl);
     const proxiedImageUrl = imageUrl
       ? `/api/image-proxy?url=${encodeURIComponent(imageUrl)}&ref=${encodeURIComponent(cacheKey)}`
       : null;
@@ -1573,14 +1632,13 @@ app.get('/api/image-proxy', async (req, res) => {
   }
 
   try {
-    const response = await fetch(imageUrl.toString(), {
+    const response = await browserFetch(imageUrl.toString(), {
       headers: {
         'User-Agent': DEFAULT_HTML_HEADERS['User-Agent'],
         'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
         ...(referer ? { Referer: referer } : {})
       },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(12000)
+      timeoutMs: 12000
     });
 
     if (!response.ok) {
