@@ -7182,3 +7182,126 @@ h1, h2, h3,
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+
+/* =========================================================================
+   KNOPPEN OVER DE HELE SITE
+   Nagemeten op 375 px. Tekstknoppen groeien gewoon naar 44 px hoog; kleine
+   ronde bedieningen houden hun formaat en krijgen een onzichtbaar raakvlak.
+   Kleuren, randen en lettertypen blijven zoals ze zijn.
+   ========================================================================= */
+
+/* -------- 1. Tekstknoppen naar 44 px ------------------------------------
+   Ze zaten tussen de 22 en 40: 'Intrekken' 22, 'Recept pakketten' 25,
+   'Raster' 25, 'Inplannen' 29, 'Haal informatie op' 30, 'Ik heb een link' 30,
+   'In je database' 32, 'Uitnodigen' 38, 'Uitloggen' 40. */
+
+.green-btn,
+.accent-btn,
+.danger-btn,
+.ghost-btn,
+.add-recipe-mode-btn,
+.recipe-source-switch-btn,
+.logout-btn,
+.mobile-nav-close,
+.shopping-text-btn {
+  min-height: 44px;
+}
+
+/* Deze twee hadden een vaste breedte van 34 en 156 bij een te lage hoogte. */
+.mobile-nav-close {
+  min-width: 44px;
+}
+
+.site-footer-inner > a,
+.topbar-inner > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+/* De weekknoppen zetten hun hoogte via een id-selector, die zwaarder weegt
+   dan de klasse hierboven. */
+@media (max-width: 767px) {
+  #weekPrevBtn,
+  #weekNextBtn {
+    min-height: 44px;
+  }
+}
+
+/* Deze zette een vaste hoogte, dus min-height alleen was niet genoeg. */
+.overview-view-btn {
+  height: auto;
+  min-height: 44px;
+}
+
+/* -------- 2. Kleine bedieningen houden hun beeld ------------------------
+   De bolletjes onder 'Hoe werkt het' waren 7x7. Ze mogen niet groter worden
+   getekend, dus het raakvlak groeit eromheen. Verticaal is er ruimte zat;
+   horizontaal begrenst de afstand tot het buurbolletje, dus die gaat van 8
+   naar 14 px zodat er 22 px per bolletje overblijft. */
+
+.hiw-dots {
+  gap: 14px;
+}
+
+.hiw-dot {
+  position: relative;
+}
+
+.hiw-dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+.shopping-row-remove {
+  width: 44px;
+}
+
+/* -------- 3. Links die zich als knop gedragen ---------------------------
+   Deze zijn geen <button>, dus de indruk-reactie van de interactielaag sloeg
+   ze over: je kreeg geen antwoord bij het aanraken. */
+
+.start-btn:active,
+.site-footer a:active,
+.weekmenu-open-link:active,
+.weekmenu-preview-title:active {
+  transform: scale(0.97);
+}
+
+.site-footer .footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+/* De recepttitel in de zoekpopup is een rij om op te tikken. */
+.weekmenu-preview-title {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* In de weekkalender blijft het bij 34: elke extra pixel hier rekt via de
+   gedeelde rijsporen alle zeven dagen uit. Het is een brede regel van 295 px,
+   en de knop ernaast om het recept te bekijken is wel 44. */
+.weekmenu-open-link {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .start-btn:active,
+  .site-footer a:active,
+  .weekmenu-open-link:active,
+  .weekmenu-preview-title:active {
+    transform: none;
+    opacity: 0.7;
+  }
+}

@@ -2839,10 +2839,15 @@ async function clearShoppingList(scope) {
   }
 }
 
-shoppingListClearAllBtn?.addEventListener('click', () => {
+shoppingListClearAllBtn?.addEventListener('click', async () => {
   if (!shoppingListItems.length) return;
-  if (!confirm('Weet je zeker dat je de hele boodschappenlijst wilt legen?')) return;
-  clearShoppingList('all');
+  const bevestigd = await openConfirmModal({
+    title: 'Lijst legen?',
+    message: 'Alle producten verdwijnen van de lijst, ook de afgevinkte.',
+    confirmLabel: 'Legen',
+    danger: true
+  });
+  if (bevestigd) clearShoppingList('all');
 });
 
 /* ========= WEEKMENU PLANNER ========= */
