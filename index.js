@@ -1834,18 +1834,18 @@ function buildRecipeCardsHtml(arr, options = {}) {
             <li><img src="icons/doel.svg" alt="" class="recipe-meta-icon" /> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
           </ul>
           <div class="recipe-shopping">
-            <p class="recipe-shopping-label">Maak boodschappenlijst</p>
+            <p class="recipe-shopping-label">Ingrediënten naar</p>
             <div class="recipe-shopping-actions">
               <button
                 type="button"
-                class="recipe-shopping-btn kookkeuze-list-option"
+                class="recipe-shopping-btn shopping-list-option"
                 data-recipe-url="${safeUrl}"
                 data-recipe-title="${safeTitle}"
-                title="Zet de ingrediënten op je boodschappenlijst in Kookkeuze"
-                aria-label="Ingrediënten van ${safeTitle} op je Kookkeuze-boodschappenlijst zetten"
+                title="Zet de ingrediënten op je boodschappenlijst"
+                aria-label="Ingrediënten van ${safeTitle} op je boodschappenlijst zetten"
               >
                 <img src="icons/boodschappenlijst-tegel.svg" alt="" class="recipe-shopping-icon" />
-                <span class="recipe-shopping-name">Kookkeuze</span>
+                <span class="recipe-shopping-name">Boodschappen</span>
               </button>
               <button
                 type="button"
@@ -2145,11 +2145,11 @@ async function onRecipeCardClick(e) {
     return;
   }
 
-  const kookkeuzeListBtn = e.target.closest('.kookkeuze-list-option');
-  if (kookkeuzeListBtn) {
-    const recipeUrl = decodeURIComponent(kookkeuzeListBtn.dataset.recipeUrl || '');
+  const listBtn = e.target.closest('.shopping-list-option');
+  if (listBtn) {
+    const recipeUrl = decodeURIComponent(listBtn.dataset.recipeUrl || '');
     closeAllRecipeExportMenus();
-    openIngredientPickerForRecipe(recipeUrl, kookkeuzeListBtn.dataset.recipeTitle || 'Recept');
+    openIngredientPickerForRecipe(recipeUrl, listBtn.dataset.recipeTitle || 'Recept');
     return;
   }
 
@@ -3585,11 +3585,11 @@ function bindWeekPlannerUi() {
       return;
     }
 
-    const kookkeuzeListBtn = e.target.closest('.kookkeuze-list-option');
-    if (kookkeuzeListBtn) {
-      const recipeUrl = decodeURIComponent(kookkeuzeListBtn.dataset.recipeUrl || '');
+    const listBtn = e.target.closest('.shopping-list-option');
+    if (listBtn) {
+      const recipeUrl = decodeURIComponent(listBtn.dataset.recipeUrl || '');
       closeAllRecipeExportMenus();
-      openIngredientPickerForRecipe(recipeUrl, kookkeuzeListBtn.dataset.recipeTitle || 'Recept');
+      openIngredientPickerForRecipe(recipeUrl, listBtn.dataset.recipeTitle || 'Recept');
       return;
     }
 
