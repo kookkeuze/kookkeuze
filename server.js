@@ -12,6 +12,7 @@ const {
   looksLikeRecipeRoundup,
   INDEX_FILE: INTERNET_CRAWLER_INDEX_FILE
 } = require('./internet-crawler');
+const { registerSeoPages, getSeoPageUrls } = require('./seo-pages');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -1319,6 +1320,46 @@ app.get('/over-ons.html', (req, res) => {
 
 app.get('/voorwaarden.html', (req, res) => {
   res.redirect(301, '/voorwaarden');
+});
+
+// Landings- en categoriepagina's voor zoekmachines. Staan hier omdat ze vóór
+// express.static moeten komen, net als de schone URL's hierboven. De recepten
+// die ze tonen komen uit de demo-database — dezelfde voorbeeldrecepten die een
+// niet-ingelogde bezoeker in de app ziet.
+registerSeoPages(app, {
+  fetchDemoRecipes: async (filters) => {
+    const ownerUserId = await resolveDemoDatabaseId();
+    if (!ownerUserId) return [];
+    return dbCall(getRecipes, { ...filters, user_id: ownerUserId });
+  }
+});
+
+// Sitemap wordt gegenereerd in plaats van als bestand bijgehouden, zodat een
+// nieuwe pagina in seo-pages.js er automatisch in komt te staan.
+const STATIC_SITEMAP_URLS = [
+  { path: '/', priority: '1.0', changefreq: 'weekly' },
+  { path: '/over-ons', priority: '0.5', changefreq: 'monthly' },
+  { path: '/privacy', priority: '0.3', changefreq: 'monthly' },
+  { path: '/voorwaarden', priority: '0.3', changefreq: 'monthly' }
+];
+
+app.get('/sitemap.xml', (_req, res) => {
+  const urls = [
+    ...STATIC_SITEMAP_URLS,
+    ...getSeoPageUrls().map(page => ({ ...page, changefreq: 'weekly' }))
+  ];
+  const body = urls
+    .map(url =>
+      `  <url><loc>https://www.kookkeuze.nl${url.path}</loc>` +
+      `<changefreq>${url.changefreq}</changefreq>` +
+      `<priority>${url.priority}</priority></url>`
+    )
+    .join('\n');
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`
+  );
 });
 
 // Eigen recepten hebben een pagina op de site zelf. De pagina haalt het recept

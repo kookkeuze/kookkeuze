@@ -7305,3 +7305,120 @@ h1, h2, h3,
     opacity: 0.7;
   }
 }
+
+/* ===== SEO-landingspagina's (/wat-eten-we-vandaag, /recepten/...) =====
+   Die pagina's draaien op dezelfde .info-page-opmaak als Over Kookkeuze. Wat
+   ze extra nodig hebben: een knop die naar de receptkiezer springt met de
+   filters van die pagina, en een lijst met recepten die al in de HTML staat
+   (zonder foto's, want die worden per recept client-side opgehaald en dat is
+   precies wat een crawler niet doet). Mobile-first: één kolom, pas op bredere
+   schermen twee. */
+.seo-cta {
+  margin: 22px 0 6px;
+}
+
+.info-page a.seo-cta-btn {
+  display: inline-block;
+  padding: 14px 22px;
+  border-radius: var(--btn-radius);
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-hover) 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.3;
+  text-decoration: none;
+  /* 44 px hoog is de minimale tikmaat op telefoon. */
+  min-height: 44px;
+  transition: transform .15s;
+}
+
+.info-page a.seo-cta-btn:hover {
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+.seo-recipe-list {
+  list-style: none;
+  margin: 14px 0 6px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.info-page .seo-recipe-list li {
+  margin-bottom: 0;
+}
+
+.seo-recipe-item {
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid #e3efe6;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 14px rgba(47, 106, 55, 0.07);
+}
+
+.info-page .seo-recipe-title {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.seo-recipe-meta {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #6b756e;
+}
+
+.info-page .seo-recipe-meta {
+  margin: 2px 0 0;
+}
+
+.seo-related-links {
+  list-style: none;
+  margin: 12px 0 4px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.info-page .seo-related-links li {
+  margin-bottom: 0;
+}
+
+.info-page .seo-related-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+}
+
+@media (min-width: 700px) {
+  .seo-recipe-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Linkjes onder de titel van de receptkiezer op de homepage: geven Google een
+   ingang naar de landingspagina's en de bezoeker een snelle voorzet. */
+.hero-header .hero-seo-links {
+  /* Staat op de groene hero, dus donkergroen in plaats van grijs: dat is het
+     enige van de huisstijlkleuren dat hier genoeg contrast houdt. */
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--green-deep);
+}
+
+.hero-header .hero-seo-links a {
+  color: var(--green-deep);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+.hero-header .hero-seo-links a:hover {
+  color: var(--green-deep);
+  text-decoration-thickness: 2px;
+}

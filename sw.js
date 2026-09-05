@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kookkeuze-static-v21';
+const CACHE_NAME = 'kookkeuze-static-v22';
 
 // Bestanden die altijd vers opgehaald worden (network-first)
 const NETWORK_FIRST = ['/', '/index.html', '/styles.css', '/index.js'];
@@ -40,8 +40,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML/JS/CSS: network-first zodat updates direct zichtbaar zijn
-  if (NETWORK_FIRST.includes(requestUrl.pathname)) {
+  // HTML/JS/CSS: network-first zodat updates direct zichtbaar zijn. Elke
+  // paginanavigatie valt hieronder, dus ook de landingspagina's
+  // (/wat-eten-we-vandaag, /recepten/...) — die worden server-side gerenderd
+  // en zouden in de cache-first tak voor altijd blijven hangen.
+  if (event.request.mode === 'navigate' || NETWORK_FIRST.includes(requestUrl.pathname)) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {

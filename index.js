@@ -1700,6 +1700,58 @@ document.getElementById('randomBtn').addEventListener('click', async () => {
     });
 });
 
+/* — Filters uit de URL overnemen —
+   De SEO-pagina's (/wat-eten-we-vandaag, /recepten/...) linken hierheen met de
+   filters die bij die pagina horen in de query, bijvoorbeeld
+   /?time_required=Onder+de+30+minuten#kiesRecept. Dan staat de kiezer meteen
+   goed en zoekt hij ook meteen, zodat de bezoeker niet op een leeg scherm
+   belandt. Draait ná het aanmaken van de multi-selects en de zoekknop, want
+   het gebruikt allebei. */
+(function applyFiltersFromUrl() {
+  const FILTER_PARAMS = [
+    ['dish_type', 'dishType'],
+    ['meal_category', 'mealCategory'],
+    ['meal_type', 'mealType'],
+    ['time_required', 'timeRequired'],
+    ['calorieRange', 'calorieRange']
+  ];
+
+  let params;
+  try {
+    params = new URLSearchParams(window.location.search);
+  } catch (_err) {
+    return;
+  }
+
+  let applied = false;
+  FILTER_PARAMS.forEach(([param, selectId]) => {
+    const values = params.getAll(param).filter(Boolean);
+    if (!values.length) return;
+    setMultiSelectValues(selectId, values);
+    applied = true;
+  });
+
+  const searchTerm = (params.get('search') || '').trim();
+  if (searchTerm) {
+    const searchInput = document.getElementById('searchTerm');
+    if (searchInput) searchInput.value = searchTerm;
+    applied = true;
+  }
+
+  if (!applied) return;
+
+  // De filters staan nu in de UI; de query mag uit de adresbalk zodat een
+  // gedeelde of ververste URL niet steeds opnieuw gaat zoeken.
+  window.history.replaceState(
+    {},
+    document.title,
+    window.location.pathname + window.location.hash
+  );
+
+  activateTab('#kiesRecept');
+  document.getElementById('searchBtn')?.click();
+})();
+
 function showRecipes(arr, options = {}) {
   if (!arr || arr.length === 0) {
     const isInternetMode = options.mode === 'internet';
