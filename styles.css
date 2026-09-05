@@ -5383,35 +5383,70 @@ body.mobile-menu-open .mobile-nav-header {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 8px 14px;
+}
+
+/* De drie hoofdlinks: dit is de eigenlijke sitenavigatie, dus die staat
+   bovenaan en is het zwaarst gezet van de twee rijen. */
+.footer-links {
+  gap: 8px 18px;
+}
+
+/* De landingspagina's zijn een secundair, groeiend lijstje — vandaar kleiner,
+   lichter en met een streepje erboven, zodat het niet als een tweede
+   volwaardige navigatiebalk oogt en de footer op telefoon niet dichtslibt. */
+.footer-recipe-links {
+  gap: 6px 12px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid #eef2ef;
 }
 
 /* Klein kopje boven de landingspagina-links, zodat direct duidelijk is wat
    die rij is. Uppercase op deze maat vraagt om iets positieve tracking —
    zonder dat lopen de letters te dicht op elkaar. */
 .footer-links-label {
-  font-size: 0.75rem;
+  width: 100%;
+  text-align: center;
+  font-size: 0.6875rem;
   font-weight: 600;
   color: #9aa39c;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.footer-links a,
+.footer-links .footer-current {
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.footer-recipe-links a,
+.footer-recipe-links .footer-current {
+  font-size: 0.8125rem;
+  font-weight: 500;
 }
 
 /* De footer is bijzaak: rustig grijs en niet te zwaar gezet, zodat hij niet
    met de inhoud concurreert. Het groen is voorbehouden aan de pagina waar je
-   staat en aan hover — zo springt alleen dat eruit. */
-.footer-current {
+   staat en aan hover — zo springt alleen dat eruit. De hoofdlinks krijgen een
+   donkerdere kleur dan de landingspagina's, in lijn met hun groter gewicht. */
+.footer-links .footer-current,
+.footer-recipe-links .footer-current {
   color: var(--green-soft);
-  font-size: 0.875rem;
-  font-weight: 600;
+}
+
+.footer-links a {
+  color: #262b26;
+}
+
+.footer-recipe-links a {
+  color: #8a938c;
 }
 
 .footer-links a,
 .footer-recipe-links a {
-  color: #3a3a3a;
   text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
   border-bottom: 1px solid transparent;
   transition: border-color .15s ease, color .15s ease;
 }

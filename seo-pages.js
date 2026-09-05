@@ -416,12 +416,12 @@ ${renderExtraSections(page.extraSections)}
       <a href="/" aria-label="Ga naar home">
         <img src="/Logo/Kookkeuze-logo.png" alt="Kookkeuze" class="footer-logo" />
       </a>
-${renderFooterRecipeLinks(page.path)}
       <nav class="footer-links" aria-label="Footer links">
         <a href="/privacy">Privacyverklaring</a>
         <a href="/over-ons">Over Kookkeuze</a>
         <a href="/voorwaarden">Algemene voorwaarden</a>
       </nav>
+${renderFooterRecipeLinks(page.path)}
     </div>
   </footer>
 </body>
