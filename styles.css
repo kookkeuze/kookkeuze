@@ -7084,3 +7084,101 @@ h1, h2, h3,
     outline-width: 3px;
   }
 }
+
+
+/* =========================================================================
+   RAAKVLAKKEN EN UITLIJNING
+   Op de receptkaart, in de receptpopup en in de weekmenu planner waren de
+   bedieningen 9 tot 28 pixels groot, ruim onder de 44 die een duim nodig
+   heeft. Kleuren, iconen en indeling blijven; alleen het raakbare gebied
+   groeit, en waar dat het beeld zou veranderen gebeurt het onzichtbaar.
+   ========================================================================= */
+
+/* -------- 1. Pillen en menu-items op de receptkaart ----------------------
+   'Notitie' en 'Toevoegen aan...' waren 27 px hoog. Die mogen gewoon groter
+   worden: ze staan naast een knop van 42 en ogen zo minder krap. */
+
+.recipe-note-trigger,
+.recipe-export-trigger,
+.recipe-export-option {
+  min-height: 44px;
+}
+
+/* -------- 2. Kleine icoonknoppen ----------------------------------------
+   Het kruisje in de weekmenu-kaart is 9x15, het oogje 17x15 en de sluitknop
+   van een venster 28x28. Die glyphs zelf moeten klein blijven, dus het
+   raakvlak groeit eromheen in plaats van eronder. */
+
+.weekmenu-clear-btn,
+.weekmenu-preview-btn {
+  position: relative;
+}
+
+/* .modal-close staat al op absolute; die niet opnieuw positioneren. */
+.modal-close::after,
+.weekmenu-clear-btn::after,
+.weekmenu-preview-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+/* -------- 3. De plus in een leeg maaltijdvak ----------------------------
+   Een plusje van 15x17 in een vak van 320x74: het vak had de knop moeten
+   zijn. De plus blijft links staan, het raakbare gebied loopt door. */
+
+.weekmenu-cell-actions-empty {
+  display: block;
+}
+
+.weekmenu-slot-item-empty .weekmenu-add-btn {
+  width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  border-radius: var(--radius-sm);
+}
+
+.weekmenu-mobile-arrow {
+  width: 44px;
+  height: 44px;
+}
+
+/* -------- 4. Maaltijdrijen die doorlopen over de week -------------------
+   Elke dag was een eigen kolom, dus 'Avondeten' stond bij maandag 69 px
+   hoger dan bij dinsdag en kon je de week niet op een rij aflezen. Met
+   gedeelde rijsporen bepaalt de hoogste kaart in een rij de hoogte voor
+   alle zeven. Alleen op een breed scherm: op de telefoon zie je een dag
+   tegelijk en valt er niets uit te lijnen. */
+
+@media (min-width: 768px) {
+  @supports (grid-template-rows: subgrid) {
+    .weekmenu-calendar {
+      grid-template-rows: auto repeat(4, auto);
+      row-gap: 0;
+    }
+
+    .weekmenu-day-card {
+      grid-row: span 5;
+      grid-template-rows: subgrid;
+    }
+
+    .weekmenu-day-body {
+      grid-row: span 4;
+      grid-template-rows: subgrid;
+    }
+  }
+}
+
+/* Een lange recepttitel rekte zijn kolom uit en daarmee de hele rij. */
+.weekmenu-open-link-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
