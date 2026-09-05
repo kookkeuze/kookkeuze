@@ -126,6 +126,23 @@ textarea {
   animation: recipeToastToPreview 340ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  /* Zonder animatie zou de toast op zijn statische beginwaarde blijven staan
+     (opacity 0, scale 0.9) — dus het eindresultaat hier expliciet zetten in
+     plaats van alleen de animatie weg te halen. */
+  .recipe-toast.show {
+    animation: none;
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  .recipe-toast.hide,
+  .recipe-toast.to-preview {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 @keyframes recipeToastToPreview {
   from {
     opacity: 1;
@@ -269,7 +286,22 @@ html {
 
 .tab-content.active {
   display: block;
-  animation: tabFadeIn 280ms ease forwards;
+  /* Instromend element: ease-out geeft meteen beweging, ease start traag en
+     voelt daardoor trager aan dan hij is. --ease-out staat verderop in dit
+     bestand als CSS-variabele, dus bruikbaar overal, ook hier vroeg in het
+     bestand. */
+  animation: tabFadeIn 280ms var(--ease-out) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Zonder animatie zou de inhoud op zijn statische beginwaarde blijven
+     staan (opacity 0) en dus onzichtbaar — het eindresultaat hier expliciet
+     zetten in plaats van alleen de animatie weg te halen. */
+  .tab-content.active {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .database-bar {
@@ -557,7 +589,7 @@ html {
   border: 1.5px solid var(--field-border);
   border-radius: var(--radius-sm);
   font-size: 16px;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   width: 100%;
   max-width: 400px;
 }
@@ -595,7 +627,7 @@ html {
   padding: 16px 32px;
   border-radius: var(--btn-radius);
   box-shadow: none;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease;
   font-family: 'EatingPasta', Arial, sans-serif;
   letter-spacing: 2px;
 }
@@ -903,7 +935,7 @@ button {
   font-size: 15px;
   color: #2f3a35;
   background: #ffffff;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 #addRecipeForm input:focus,
@@ -1421,7 +1453,7 @@ select:focus {
 .recipe-thumb-skeleton {
   background: linear-gradient(90deg, #eef7f0 0%, #f9fffb 50%, #eef7f0 100%);
   background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+  animation: shimmer 1.4s linear infinite;
   border: 1px solid #e5f3e7;
 }
 
@@ -1782,7 +1814,7 @@ select:focus {
 .recipe-card-image-skeleton {
   background: linear-gradient(90deg, #eef7f0 0%, #f9fffb 50%, #eef7f0 100%);
   background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+  animation: shimmer 1.4s linear infinite;
   border: 1px solid #e5f3e7;
 }
 
@@ -2017,7 +2049,10 @@ select:focus {
   right: 0;
   top: calc(100% + 8px);
   min-width: 230px;
-  padding: 0 8px;
+  /* Constant in plaats van 0 8px → 8px 8px bij het openen: met max-height:0
+     en overflow:hidden telt de padding toch niet mee zolang de dropdown dicht
+     is (box-sizing: border-box), dus hoeft hij niet ook nog te animeren. */
+  padding: 8px;
   border: 1px solid #dfe8e2;
   border-radius: var(--radius-md);
   background: #ffffff;
@@ -2025,14 +2060,17 @@ select:focus {
   display: grid;
   gap: 6px;
   z-index: 30;
-  /* Soepele slide-uitvouw op alle schermen. */
+  /* Soepele slide-uitvouw op alle schermen. max-height blijft nodig zolang
+     het aantal opties per kaart verschilt (height:auto is niet animeerbaar
+     in CSS) — maar de dropdown staat position:absolute, dus dat kost alleen
+     layout van zichzelf, niet van de rest van de pagina eromheen. */
   max-height: 0;
   opacity: 0;
   overflow: hidden;
   pointer-events: none;
   transform: translateY(-6px);
-  transition: max-height 0.3s ease, opacity 0.22s ease, transform 0.3s ease,
-    padding 0.3s ease;
+  transition: max-height 0.22s var(--ease-out), opacity 0.18s var(--ease-out),
+    transform 0.22s var(--ease-out);
 }
 
 /* Houd de dropdown in de layout (i.p.v. display:none) zodat de animatie kan
@@ -2043,8 +2081,6 @@ select:focus {
 
 .recipe-export-dropdown:not(.hidden) {
   max-height: 70vh;
-  padding-top: 8px;
-  padding-bottom: 8px;
   opacity: 1;
   overflow-y: auto;
   pointer-events: auto;
@@ -2303,6 +2339,9 @@ select:focus {
   }
 }
 
+/* linear i.p.v. ease-in-out: dit loopt oneindig door, en ease-in-out remt af
+   en versnelt weer bij elke herstart van de lus — dat oogt als een hapering
+   in plaats van een doorlopende sweep. */
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
@@ -3216,7 +3255,7 @@ select:focus {
 .weekmenu-slot-thumb-skeleton {
   background: linear-gradient(90deg, #eef7f0 0%, #f9fffb 50%, #eef7f0 100%);
   background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+  animation: shimmer 1.4s linear infinite;
   border: 1px solid #e5f3e7;
 }
 
@@ -3257,7 +3296,7 @@ select:focus {
 .weekmenu-search-thumb-skeleton {
   background: linear-gradient(90deg, #eef7f0 0%, #f9fffb 50%, #eef7f0 100%);
   background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+  animation: shimmer 1.4s linear infinite;
   border: 1px solid #e5f3e7;
 }
 
@@ -3522,8 +3561,11 @@ select:focus {
     max-width: none;
     margin-top: 0;
     box-shadow: 0 8px 18px rgba(28, 47, 35, 0.12);
-    transition: max-height 0.3s ease, opacity 0.22s ease, transform 0.3s ease,
-      margin-top 0.3s ease, padding 0.3s ease;
+    /* margin-top blijft wel animeren: dit staat in de normale flow (position:
+       static), dus die ruimte tussen de knoppenrij en de dropdown moet
+       meegroeien — anders blijft er een kier hangen als de dropdown dicht is. */
+    transition: max-height 0.22s var(--ease-out), opacity 0.18s var(--ease-out),
+      transform 0.22s var(--ease-out), margin-top 0.22s var(--ease-out);
   }
 
   .recipe-export-dropdown:not(.hidden) {
@@ -7034,6 +7076,52 @@ textarea {
   transform-origin: top right;
 }
 
+/* -------- 5b. ...en verdwijnt ook weer als materiaal ---------------------
+   Openen kreeg al een surface-in; sluiten viel tot nu toe in één klap weg
+   (.modal.hidden{display:none} direct na de klik). hideModal() in index.js
+   zet eerst deze 'closing'-klasse, wacht tot de animatie is uitgespeeld en
+   voegt dan pas 'hidden' toe. Sneller dan het openen — de gebruiker heeft de
+   beslissing al genomen, dus mag het venster meteen uit de weg zijn. */
+
+@keyframes surface-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: scale(0.97) translateY(4px); }
+}
+
+@keyframes surface-scrim-out {
+  from { background-color: rgba(24, 32, 28, 0.34); }
+  to   { background-color: rgba(24, 32, 28, 0); }
+}
+
+.modal.closing {
+  animation: surface-scrim-out var(--duration-fast) var(--ease-out) forwards;
+}
+
+.modal.closing > .modal-content:not(.random-recipe-modal-content) {
+  animation: surface-out var(--duration-fast) var(--ease-out) forwards;
+}
+
+/* De random-popup en de in-stijl alert/confirm (.app-dialog) hebben allebei
+   hun eigen, iets speelsere intro (randomPopIn) — de uitgang volgt dezelfde
+   curve terug in plaats van de standaard surface-out. */
+@keyframes randomPopOut {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.95); }
+}
+
+#randomRecipeModal.closing,
+.app-dialog.closing {
+  animation: surface-scrim-out var(--duration-fast) var(--ease-out) forwards;
+}
+
+#randomRecipeModal.closing .modal-content,
+.modal.app-dialog.closing .modal-content {
+  /* .modal erbij is geen stijlkeuze maar specificiteit: zonder die extra
+     klasse verliest deze regel van '.modal.closing > .modal-content:not(...)'
+     hierboven, want :not() telt daar als een extra klasse mee. */
+  animation: randomPopOut var(--duration-fast) var(--ease-out) forwards;
+}
+
 /* -------- 6. Waar je bent moet zichtbaar blijven -------------------------
    Invoervelden lieten hun focus al zien via rand en gloed; knoppen en links
    deden dat nergens. */
@@ -7079,6 +7167,15 @@ h1, h2, h3,
   }
 
   .modal {
+    animation: none;
+  }
+
+  .modal.closing,
+  .modal.closing > .modal-content,
+  #randomRecipeModal.closing,
+  #randomRecipeModal.closing .modal-content,
+  .app-dialog.closing,
+  .app-dialog.closing .modal-content {
     animation: none;
   }
 

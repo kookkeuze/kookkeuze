@@ -742,6 +742,22 @@ let recipePackStats = { added: 0, skipped: 0, inserted: 0, duplicates: 0 };
 let recipePackOnboardingCheckedForUserId = null;
 let recipePackOnboardingMarkedDone = false;
 
+// Modals sluiten met een korte fade/schaal-uitgang in plaats van in één klap
+// verdwijnen (voorheen: classList.add('hidden') meteen, dus display:none
+// voordat er ook maar een frame kon spelen). 'closing' triggert de animatie
+// in CSS (zie styles.css); pas als die is uitgespeeld komt 'hidden' erbij,
+// precies zoals voorheen. Sneller dan het openen — de gebruiker heeft de
+// beslissing al genomen, dus mag het venster meteen uit de weg zijn.
+const MODAL_CLOSE_ANIMATION_MS = 160;
+function hideModal(modalEl) {
+  if (!modalEl || modalEl.classList.contains('hidden')) return;
+  modalEl.classList.add('closing');
+  setTimeout(() => {
+    modalEl.classList.remove('closing');
+    modalEl.classList.add('hidden');
+  }, MODAL_CLOSE_ANIMATION_MS);
+}
+
 function closeMobileHeaderMenu() {
   if (!mobileHeaderMenu || !mobileMenuBtn) return;
   mobileHeaderMenu.classList.add('hidden');
@@ -947,7 +963,7 @@ async function loadAccessibleDatabases() {
     if (shoppingListMenuBtn) shoppingListMenuBtn.classList.add('hidden');
     if (mobileShoppingListMenuBtn) mobileShoppingListMenuBtn.classList.add('hidden');
     if (sharePanel) sharePanel.classList.add('hidden');
-    if (databaseModal) databaseModal.classList.add('hidden');
+    if (databaseModal) hideModal(databaseModal);
     return;
   }
 
@@ -1019,11 +1035,11 @@ databaseMenuBtn?.addEventListener('click', async () => {
 });
 
 closeDatabaseModal?.addEventListener('click', () => {
-  databaseModal?.classList.add('hidden');
+  hideModal(databaseModal);
 });
 
 databaseModal?.addEventListener('click', e => {
-  if (e.target === databaseModal) databaseModal.classList.add('hidden');
+  if (e.target === databaseModal) hideModal(databaseModal);
 });
 
 shareInviteBtn?.addEventListener('click', async () => {
@@ -1211,7 +1227,7 @@ function renderRecipePackStep() {
 }
 
 function closeRecipePackModal() {
-  recipePackModal?.classList.add('hidden');
+  hideModal(recipePackModal);
   if (recipePackFromOnboarding) {
     recipePackFromOnboarding = false;
     activateTab('#kiesRecept');
@@ -1552,7 +1568,7 @@ function openSaveInternetRecipeModal(recipe, onConfirm) {
 
 function closeSaveInternetRecipeModal() {
   const modal = document.getElementById('saveInternetRecipeModal');
-  modal?.classList.add('hidden');
+  hideModal(modal);
   modal?.setAttribute('aria-hidden', 'true');
   _saveInternetRecipePending = null;
 }
@@ -1938,7 +1954,7 @@ function openRandomRecipeModal() {
 
 function closeRandomRecipeModalPanel() {
   if (!randomRecipeModal) return;
-  randomRecipeModal.classList.add('hidden');
+  hideModal(randomRecipeModal);
   randomRecipeModal.classList.remove('from-add');
   randomRecipeModal.setAttribute('aria-hidden', 'true');
   closeAllRecipeExportMenus();
@@ -2029,7 +2045,7 @@ function refreshRecipeNoteButtons() {
 }
 
 function closeRecipeNoteModalPanel() {
-  recipeNoteModal?.classList.add('hidden');
+  hideModal(recipeNoteModal);
   recipeNoteModal?.setAttribute('aria-hidden', 'true');
 }
 
@@ -2504,7 +2520,7 @@ function shoppingItemKey(name) {
 function clearShoppingListCache() {
   shoppingListItems = [];
   shoppingListLoaded = false;
-  shoppingListModal?.classList.add('hidden');
+  hideModal(shoppingListModal);
   shoppingListModal?.setAttribute('aria-hidden', 'true');
 }
 
@@ -2637,7 +2653,7 @@ async function openShoppingListModal() {
 }
 
 function closeShoppingListModalPanel() {
-  shoppingListModal?.classList.add('hidden');
+  hideModal(shoppingListModal);
   shoppingListModal?.setAttribute('aria-hidden', 'true');
 }
 
@@ -2703,7 +2719,7 @@ function openIngredientPicker(subtitle, rawItems) {
 }
 
 function closeIngredientPickerPanel() {
-  ingredientPickModal?.classList.add('hidden');
+  hideModal(ingredientPickModal);
   ingredientPickModal?.setAttribute('aria-hidden', 'true');
 }
 
@@ -3130,7 +3146,7 @@ function openAssignModalForRecipe(recipeId, recipeTitle) {
   // annuleren) keren we terug naar de recept-popup.
   assignReturnToRandomModal = !!(randomRecipeModal && !randomRecipeModal.classList.contains('hidden'));
   if (assignReturnToRandomModal) {
-    randomRecipeModal.classList.add('hidden');
+    hideModal(randomRecipeModal);
     randomRecipeModal.setAttribute('aria-hidden', 'true');
   }
   if (assignModalRecipeTitle) assignModalRecipeTitle.textContent = recipeTitle || 'Recept';
@@ -3144,7 +3160,7 @@ function openAssignModalForRecipe(recipeId, recipeTitle) {
 
 function closeAssignModalPanel() {
   pendingAssignRecipeId = null;
-  assignModal?.classList.add('hidden');
+  hideModal(assignModal);
   assignModal?.setAttribute('aria-hidden', 'true');
   // Terug naar de recept-popup als we daar vandaan kwamen.
   if (assignReturnToRandomModal) {
@@ -3408,7 +3424,7 @@ function openWeekmenuSearchModal(day, slot) {
 function closeWeekmenuSearchModalPanel() {
   if (!weekmenuSearchModal) return;
   closeAllRecipeExportMenus();
-  weekmenuSearchModal.classList.add('hidden');
+  hideModal(weekmenuSearchModal);
   weekmenuSearchModal.setAttribute('aria-hidden', 'true');
 }
 
@@ -3617,7 +3633,7 @@ async function clearPlannerSlot(dayOfWeek, slot) {
 }
 
 function closeWeekmenuPreviewPanel() {
-  weekmenuPreviewModal?.classList.add('hidden');
+  hideModal(weekmenuPreviewModal);
   weekmenuPreviewModal?.setAttribute('aria-hidden', 'true');
 }
 
@@ -3814,7 +3830,11 @@ function showRecipeAddedToast(message, type = 'success') {
   if (iconEl) iconEl.className = isError ? 'fas fa-exclamation-triangle' : 'fas fa-check';
 
   recipeAddedToastText.textContent = message;
-  recipeAddedToast.classList.remove('hide', 'to-preview');
+  // 'show' kan al op het element staan (twee recepten kort na elkaar
+  // toegevoegd) — de klasse opnieuw toevoegen herstart dan de CSS-animatie
+  // niet. Eerst verwijderen en een reflow forceren laat 'm wel opnieuw spelen.
+  recipeAddedToast.classList.remove('show', 'hide', 'to-preview');
+  void recipeAddedToast.offsetWidth;
   recipeAddedToast.classList.add('show');
 
   // Foutmeldingen blijven langer staan zodat je ze zeker kunt lezen.
@@ -3866,12 +3886,17 @@ function openChoiceModal({ title = '', message = '', choices = [] }) {
       if (settled) return;
       settled = true;
       document.removeEventListener('keydown', onKey);
-      overlay.remove();
-      // Focus terug naar het element dat de dialoog opende.
-      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
-        previouslyFocused.focus();
-      }
-      resolve(value);
+      // Zelfde uitgangsanimatie als de andere modals: eerst 'closing' laten
+      // spelen (styles.css), dan pas uit de DOM.
+      overlay.classList.add('closing');
+      setTimeout(() => {
+        overlay.remove();
+        // Focus terug naar het element dat de dialoog opende.
+        if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+          previouslyFocused.focus();
+        }
+        resolve(value);
+      }, MODAL_CLOSE_ANIMATION_MS);
     };
 
     const getFocusable = () => Array.from(
@@ -4715,13 +4740,13 @@ function updateAuthUI(){
     clearRecipeNotesCache();
     recipePackOnboardingCheckedForUserId = null;
     recipePackOnboardingMarkedDone = false;
-    recipePackModal?.classList.add('hidden');
+    hideModal(recipePackModal);
     localStorage.removeItem('activeDatabaseOwnerId');
     if (databaseMenuBtn) databaseMenuBtn.classList.add('hidden');
     if (mobileDatabaseMenuBtn) mobileDatabaseMenuBtn.classList.add('hidden');
     if (shoppingListMenuBtn) shoppingListMenuBtn.classList.add('hidden');
     if (mobileShoppingListMenuBtn) mobileShoppingListMenuBtn.classList.add('hidden');
-    if (databaseModal) databaseModal.classList.add('hidden');
+    if (databaseModal) hideModal(databaseModal);
     if (sharePanel) sharePanel.classList.add('hidden');
     clearShoppingListCache();
     setAuthPane(pendingResetToken ? resetPane : loginPane);
@@ -4734,7 +4759,7 @@ logoutBtn.addEventListener('click', () => {
   localStorage.removeItem('activeDatabaseOwnerId');
   resetForms();
   updateAuthUI();
-  authModal.classList.add('hidden');
+  hideModal(authModal);
   fetchAllRecipes();
   resultDiv.innerHTML = '';
 });
@@ -4788,7 +4813,7 @@ document.getElementById('login-form').addEventListener('submit', async e => {
       showMsg('Ingelogd!', true);
       resetForms();
       updateAuthUI();
-      authModal.classList.add('hidden');
+      hideModal(authModal);
     } else {
       showMsg(data.error || data.message || 'Inloggen mislukt.', false);
     }
@@ -4871,7 +4896,7 @@ async function onGoogleCredential(response) {
       showMsg(data.isNew ? 'Account aangemaakt. Welkom!' : 'Ingelogd!', true);
       resetForms();
       updateAuthUI();
-      authModal.classList.add('hidden');
+      hideModal(authModal);
     } else {
       showMsg(data.error || 'Inloggen met Google mislukt.', false);
     }
@@ -4945,8 +4970,8 @@ authBtn.addEventListener('click', () => {
   authModal.classList.remove('hidden'); 
 });
 
-closeAuth.addEventListener('click', () => authModal.classList.add('hidden'));
-window.addEventListener('click', e => { if (e.target === authModal) authModal.classList.add('hidden'); });
+closeAuth.addEventListener('click', () => hideModal(authModal));
+window.addEventListener('click', e => { if (e.target === authModal) hideModal(authModal); });
 
 /* Banner-CTA bij demo-data opent direct de registratie. Staat de banner in de
    random-receptenkaart, dan sluiten we die kaart eerst zodat je meteen de
