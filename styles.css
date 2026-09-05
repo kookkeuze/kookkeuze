@@ -5375,13 +5375,26 @@ body.mobile-menu-open .mobile-nav-header {
 }
 
 /* Wrap is nodig sinds er een derde link bij kwam: op smalle telefoons
-   (320px) liep de rij anders buiten het scherm en scrolde de pagina zijwaarts. */
-.footer-links {
+   (320px) liep de rij anders buiten het scherm en scrolde de pagina zijwaarts.
+   .footer-recipe-links (de landingspagina's) deelt dezelfde regel. */
+.footer-links,
+.footer-recipe-links {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 8px 14px;
+}
+
+/* Klein kopje boven de landingspagina-links, zodat direct duidelijk is wat
+   die rij is. Uppercase op deze maat vraagt om iets positieve tracking —
+   zonder dat lopen de letters te dicht op elkaar. */
+.footer-links-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #9aa39c;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* De footer is bijzaak: rustig grijs en niet te zwaar gezet, zodat hij niet
@@ -5393,7 +5406,8 @@ body.mobile-menu-open .mobile-nav-header {
   font-weight: 600;
 }
 
-.footer-links a {
+.footer-links a,
+.footer-recipe-links a {
   color: #3a3a3a;
   text-decoration: none;
   font-size: 0.875rem;
@@ -5402,7 +5416,8 @@ body.mobile-menu-open .mobile-nav-header {
   transition: border-color .15s ease, color .15s ease;
 }
 
-.footer-links a:hover {
+.footer-links a:hover,
+.footer-recipe-links a:hover {
   color: var(--green-soft);
   border-color: var(--green-soft);
 }
@@ -7274,7 +7289,8 @@ h1, h2, h3,
   transform: scale(0.97);
 }
 
-.site-footer .footer-links a {
+.site-footer .footer-links a,
+.site-footer .footer-recipe-links a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -7375,50 +7391,8 @@ h1, h2, h3,
   margin: 2px 0 0;
 }
 
-.seo-related-links {
-  list-style: none;
-  margin: 12px 0 4px;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.info-page .seo-related-links li {
-  margin-bottom: 0;
-}
-
-.info-page .seo-related-links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-}
-
 @media (min-width: 700px) {
   .seo-recipe-list {
     grid-template-columns: 1fr 1fr;
   }
-}
-
-/* Linkjes onder de titel van de receptkiezer op de homepage: geven Google een
-   ingang naar de landingspagina's en de bezoeker een snelle voorzet. */
-.hero-header .hero-seo-links {
-  /* Staat op de groene hero, dus donkergroen in plaats van grijs: dat is het
-     enige van de huisstijlkleuren dat hier genoeg contrast houdt. */
-  margin: 10px 0 0;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--green-deep);
-}
-
-.hero-header .hero-seo-links a {
-  color: var(--green-deep);
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  white-space: nowrap;
-}
-
-.hero-header .hero-seo-links a:hover {
-  color: var(--green-deep);
-  text-decoration-thickness: 2px;
 }

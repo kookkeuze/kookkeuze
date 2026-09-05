@@ -58,6 +58,7 @@ function toolLink(filters) {
 const PAGES = [
   {
     path: '/wat-eten-we-vandaag',
+    footerLabel: 'Wat eten we vandaag?',
     title: 'Wat eten we vandaag? Kies snel een recept – Kookkeuze',
     description:
       'Geen idee wat je vandaag moet eten? Filter op tijd, soort gerecht en calorieën, of laat Kookkeuze willekeurig een recept voor je kiezen. Gratis te proberen.',
@@ -79,6 +80,7 @@ const PAGES = [
   },
   {
     path: '/recepten/avondeten/makkelijk',
+    footerLabel: 'Makkelijk avondeten',
     title: 'Makkelijke recepten voor het avondeten – Kookkeuze',
     description:
       'Makkelijke recepten voor het avondeten: hoofdgerechten die binnen 45 minuten klaar zijn. Filter op tijd en soort gerecht, of laat Kookkeuze kiezen.',
@@ -105,6 +107,7 @@ const PAGES = [
   },
   {
     path: '/recepten/avondeten/gezond',
+    footerLabel: 'Gezond avondeten',
     title: 'Gezonde recepten voor het avondeten – Kookkeuze',
     description:
       'Gezonde recepten voor het avondeten: hoofdgerechten en salades met een sportief doel. Filter op calorieën en bereidingstijd in Kookkeuze.',
@@ -123,6 +126,7 @@ const PAGES = [
   },
   {
     path: '/recepten/avondeten/lekker',
+    footerLabel: 'Lekker avondeten',
     title: 'Lekkere recepten voor het avondeten – Kookkeuze',
     description:
       'Lekkere recepten voor het avondeten, van pasta tot ovenschotel. Verzamel je favorieten in je eigen database en laat Kookkeuze kiezen wat het vanavond wordt.',
@@ -141,6 +145,7 @@ const PAGES = [
   },
   {
     path: '/recepten/snel-klaar',
+    footerLabel: 'Snel klaar',
     title: 'Snelle recepten – binnen 30 minuten klaar – Kookkeuze',
     description:
       'Snelle recepten die binnen 30 minuten klaar zijn. Filter op bereidingstijd in Kookkeuze en beslis in één klik wat je vanavond eet.',
@@ -159,6 +164,7 @@ const PAGES = [
   },
   {
     path: '/gezonde-recepten-afvallen',
+    footerLabel: 'Afvallen',
     title: 'Gezonde recepten om af te vallen – filter op calorieën – Kookkeuze',
     description:
       'Gezonde recepten om af te vallen: filter je eigen recepten op calorieën, van onder de 300 tot onder de 700 kcal, en plan er je weekmenu mee.',
@@ -220,15 +226,8 @@ function renderRecipeList(recipes) {
   return `<ul class="seo-recipe-list">${items}</ul>`;
 }
 
-function renderRelatedLinks(currentPath) {
-  const others = PAGES.filter(page => page.path !== currentPath);
-  if (!others.length) return '';
-  const links = others
-    .map(page => `<li><a href="${page.path}">${escapeHtml(page.h1)}</a></li>`)
-    .join('');
-  return `      <h3>Verder kijken</h3>
-      <ul class="seo-related-links">${links}</ul>`;
-}
+// Kruislink tussen de landingspagina's staat in de footer (renderFooterRecipeLinks
+// hieronder) en dus op elke pagina van de site, niet alleen hier in de body.
 
 function renderExtraSections(sections) {
   if (!Array.isArray(sections) || !sections.length) return '';
@@ -250,6 +249,22 @@ function renderExtraSections(sections) {
       <ol class="info-steps">${steps}</ol>`;
     })
     .join('\n');
+}
+
+// Footer-navigatie naar alle landingspagina's, hetzelfde blok dat ook op
+// index.html en de statische info-pagina's staat. Op de pagina zelf wordt de
+// link een <span> in plaats van een <a>, zoals bij Privacyverklaring/Over
+// Kookkeuze/Algemene voorwaarden hierboven.
+function renderFooterRecipeLinks(currentPath) {
+  const items = PAGES.map(page =>
+    page.path === currentPath
+      ? `<span class="footer-current">${escapeHtml(page.footerLabel)}</span>`
+      : `<a href="${page.path}">${escapeHtml(page.footerLabel)}</a>`
+  ).join('\n        ');
+  return `    <nav class="footer-recipe-links" aria-label="Recepten kiezen">
+      <span class="footer-links-label">Recepten kiezen</span>
+        ${items}
+    </nav>`;
 }
 
 function buildJsonLd(page, recipes) {
@@ -393,8 +408,6 @@ ${intro}
 ${listBlock}
 
 ${renderExtraSections(page.extraSections)}
-
-${renderRelatedLinks(page.path)}
     </section>
   </main>
 
@@ -403,6 +416,7 @@ ${renderRelatedLinks(page.path)}
       <a href="/" aria-label="Ga naar home">
         <img src="/Logo/Kookkeuze-logo.png" alt="Kookkeuze" class="footer-logo" />
       </a>
+${renderFooterRecipeLinks(page.path)}
       <nav class="footer-links" aria-label="Footer links">
         <a href="/privacy">Privacyverklaring</a>
         <a href="/over-ons">Over Kookkeuze</a>
