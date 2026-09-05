@@ -1655,9 +1655,9 @@ select:focus {
 }
 
 /* Zie closeAllRecipeExportMenus(): een open exportmenu mag buiten de kaart
-   vallen, anders klipt overflow:hidden de onderste optie (Stuur naar Bring)
-   weg. Beide selectors omdat '.overview-grid-cards .recipe-card' verderop
-   overflow weer op hidden zet. */
+   vallen, anders klipt overflow:hidden de onderste optie weg. Beide selectors
+   omdat '.overview-grid-cards .recipe-card' verderop overflow weer op hidden
+   zet. */
 .recipe-card.has-open-export,
 .overview-grid-cards .recipe-card.has-open-export {
   overflow: visible;

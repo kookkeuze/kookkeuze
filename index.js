@@ -1749,8 +1749,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
     const safeMealType = escapeAttr(r.meal_type || '');
     const safeTimeRequired = escapeAttr(r.time_required || '');
     const safeCalories = r.calories == null ? '' : escapeAttr(String(r.calories));
-    // Eigen recepten openen op Kookkeuze zelf. Bring kan die pagina niet
-    // uitlezen (hij zit achter een login), dus die knop laten we daar weg.
+    // Eigen recepten openen op Kookkeuze zelf, andere in een nieuw tabblad.
     const isOwn = isOwnRecipeUrl(r.url);
     html += `
       <div class="recipe-card">
@@ -1859,17 +1858,6 @@ function buildRecipeCardsHtml(arr, options = {}) {
                 <img src="icons/notities.svg" alt="" class="recipe-shopping-icon" />
                 <span class="recipe-shopping-name">Notities</span>
               </button>
-              ${isOwn ? '' : `<button
-                type="button"
-                class="recipe-shopping-btn bring-export-option"
-                data-recipe-url="${safeUrl}"
-                data-recipe-title="${safeTitle}"
-                title="Stuur de ingrediënten naar Bring"
-                aria-label="Ingrediënten van ${safeTitle} naar Bring sturen"
-              >
-                <img src="icons/bring.svg" alt="" class="recipe-shopping-icon" />
-                <span class="recipe-shopping-name">Bring!</span>
-              </button>`}
             </div>
           </div>
         </div>
@@ -2113,69 +2101,6 @@ async function openNotesExport(recipeUrl, recipeTitle) {
   }
 }
 
-function isInstagramSource(url) {
-  return /^https?:\/\/(www\.)?instagram\.com\//i.test(url || '');
-}
-
-// Bronnen waarvan Bring de ingrediënten niet zelf uit de pagina kan lezen
-// (Instagram heeft geen schema.org; AH en Jumbo leveren hun ingrediënten via
-// JS / blokkeren Bring's crawler; keukenliefde.nl publiceert wel een
-// schema.org Recipe maar zónder recipeIngredient, waardoor Bring afhaakt).
-// Voor deze sturen we Bring naar onze eigen export-pagina, die de door ons
-// uitgelezen ingrediënten als schema.org serveert.
-const BRING_PROXY_HOSTS = [
-  /(^|\.)instagram\.com$/i,
-  /(^|\.)ah\.nl$/i,
-  /(^|\.)albertheijn\.nl$/i,
-  /(^|\.)jumbo\.com$/i,
-  /(^|\.)keukenliefde\.nl$/i
-];
-
-function bringNeedsProxy(url) {
-  try {
-    return BRING_PROXY_HOSTS.some(re => re.test(new URL(url).hostname));
-  } catch {
-    return false;
-  }
-}
-
-function buildBringDeeplink(targetUrl) {
-  return `https://api.getbring.com/rest/bringrecipes/deeplink?url=${encodeURIComponent(targetUrl)}&source=web`;
-}
-
-function openBringExport(recipeUrl) {
-  const cleanUrl = (recipeUrl || '').trim();
-  if (!cleanUrl || !/^https?:\/\//i.test(cleanUrl)) {
-    if (typeof showRecipeAddedToast === 'function') {
-      showRecipeAddedToast('Geen geldige recept-URL voor Bring beschikbaar.');
-    }
-    return;
-  }
-
-  // Bronnen die Bring niet zelf kan uitlezen (Instagram, AH, Jumbo) sturen we
-  // via onze eigen export-pagina met schema.org-data. Andere bronnen gaan
-  // rechtstreeks naar Bring (die leest daar zelf de rijkere data uit).
-  const targetForBring = bringNeedsProxy(cleanUrl)
-    ? `${API_BASE}/api/bring-export?url=${encodeURIComponent(cleanUrl)}`
-    : cleanUrl;
-
-  const bringUrl = buildBringDeeplink(targetForBring);
-  // Universal link: opent de Bring-app op mobiel, anders een nieuw tabblad.
-  // Via een tijdelijke <a> i.p.v. window.open zodat popup-blockers niet de
-  // huidige pagina overnemen.
-  const link = document.createElement('a');
-  link.href = bringUrl;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-
-  if (typeof showRecipeAddedToast === 'function') {
-    showRecipeAddedToast('Bring geopend met de ingrediënten.');
-  }
-}
-
 function findRecipeInDatabase(url) {
   if (!url) return null;
   const decoded = decodeURIComponent(url);
@@ -2191,7 +2116,7 @@ function closeAllRecipeExportMenus(exceptMenu = null) {
     trigger?.setAttribute('aria-expanded', shouldKeepOpen ? 'true' : 'false');
     wrapper?.classList.toggle('is-open', !!shouldKeepOpen);
     // De kaart klipt zijn inhoud af; zolang het menu openstaat moet dat even
-    // niet, anders valt de onderste optie (Stuur naar Bring) weg.
+    // niet, anders valt de onderste optie weg.
     menu.closest('.recipe-card')?.classList.toggle('has-open-export', !!shouldKeepOpen);
   });
 }
@@ -2233,14 +2158,6 @@ async function onRecipeCardClick(e) {
     const recipeUrl = decodeURIComponent(notesBtn.dataset.recipeUrl || '');
     closeAllRecipeExportMenus();
     openNotesExport(recipeUrl, notesBtn.dataset.recipeTitle || 'Recept');
-    return;
-  }
-
-  const bringBtn = e.target.closest('.bring-export-option');
-  if (bringBtn) {
-    const recipeUrl = decodeURIComponent(bringBtn.dataset.recipeUrl || '');
-    closeAllRecipeExportMenus();
-    openBringExport(recipeUrl);
     return;
   }
 
@@ -2309,8 +2226,8 @@ async function onRecipeCardClick(e) {
   openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
 }
 
-// Zelfde kaartacties (export, notities, Bring, plannen, opslaan) zowel in de
-// zoekresultaten als in de random-popup.
+// Zelfde kaartacties (boodschappenlijst, notities, plannen, opslaan) zowel in
+// de zoekresultaten als in de random-popup.
 resultDiv?.addEventListener('click', onRecipeCardClick);
 randomRecipeModal?.addEventListener('click', onRecipeCardClick);
 
@@ -3681,14 +3598,6 @@ function bindWeekPlannerUi() {
       const recipeUrl = decodeURIComponent(notesBtn.dataset.recipeUrl || '');
       closeAllRecipeExportMenus();
       openNotesExport(recipeUrl, notesBtn.dataset.recipeTitle || 'Recept');
-      return;
-    }
-
-    const bringBtn = e.target.closest('.bring-export-option');
-    if (bringBtn) {
-      const recipeUrl = decodeURIComponent(bringBtn.dataset.recipeUrl || '');
-      closeAllRecipeExportMenus();
-      openBringExport(recipeUrl);
       return;
     }
 
