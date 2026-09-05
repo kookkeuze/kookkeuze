@@ -1776,8 +1776,14 @@ function showRecipes(arr, options = {}) {
 
 function buildRecipeCardsHtml(arr, options = {}) {
   const isInternetMode = options.mode === 'internet';
-  const singleClass = arr.length === 1 ? ' single-result' : '';
-  const extraClass = options.extraClass ? ` ${options.extraClass}` : '';
+  // Meerdere resultaten staan op een breed scherm naast elkaar in een raster
+  // (2 of 3 per rij), net als het receptoverzicht. Bij één resultaat — Random
+  // of het weekmenu-voorbeeld — blijft de brede kaart met de grote foto staan.
+  const containerClasses = ['recipe-cards-container', 'search-results'];
+  containerClasses.push(arr.length === 1 ? 'single-result' : 'recipe-grid-cards');
+  if (options.extraClass) containerClasses.push(options.extraClass);
+  // Het overzicht vraagt datzelfde raster expliciet aan; die staat er dan al in.
+  const containerClass = [...new Set(containerClasses)].join(' ');
   const sharedTargets = getSharedDatabaseTargets();
   const importMode = isSharedDatabaseActive()
     ? 'to-own'
@@ -1789,7 +1795,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
   const guestBanner = (!isInternetMode && !options.hideGuestBanner && isGuestUser())
     ? guestDemoBannerHtml()
     : '';
-  let html = `${guestBanner}<div class="recipe-cards-container search-results${singleClass}${extraClass}">`;
+  let html = `${guestBanner}<div class="${containerClass}">`;
   arr.forEach(r => {
     const recipeId = Number(r.id) > 0 ? Number(r.id) : '';
     const safeUrl = encodeURIComponent(r.url || '');
@@ -1897,7 +1903,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
                 aria-label="Ingrediënten van ${safeTitle} op je boodschappenlijst zetten"
               >
                 <img src="icons/boodschappenlijst-tegel.svg" alt="" class="recipe-shopping-icon" />
-                <span class="recipe-shopping-name">Boodschappen</span>
+                <span class="recipe-shopping-name">Boodschappenlijst</span>
               </button>
               <button
                 type="button"
@@ -4540,7 +4546,7 @@ function renderOverviewPage() {
   // notitie-knop en 'Toevoegen aan...' heeft. De guest-banner staat hier al
   // boven het overzicht, dus die niet nog een keer.
   const gridHtml = buildRecipeCardsHtml(pageRecipes, {
-    extraClass: 'overview-grid-cards',
+    extraClass: 'recipe-grid-cards',
     hideGuestBanner: true
   });
 

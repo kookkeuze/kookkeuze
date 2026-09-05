@@ -1634,7 +1634,11 @@ select:focus {
   margin-top: 20px;
 }
 
-.overview-grid-cards {
+/* Receptkaarten in een raster: 3 naast elkaar op een breed scherm, 2 op een
+   middelgroot en 1 op telefoon. Gebruikt door het receptoverzicht én door
+   zoekresultaten met meer dan één treffer — die stonden anders als losse,
+   schermbrede kaarten onder elkaar. */
+.recipe-grid-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
@@ -1656,22 +1660,22 @@ select:focus {
 
 /* Zie closeAllRecipeExportMenus(): een open exportmenu mag buiten de kaart
    vallen, anders klipt overflow:hidden de onderste optie weg. Beide selectors
-   omdat '.overview-grid-cards .recipe-card' verderop overflow weer op hidden
+   omdat '.recipe-grid-cards .recipe-card' verderop overflow weer op hidden
    zet. */
 .recipe-card.has-open-export,
-.overview-grid-cards .recipe-card.has-open-export {
+.recipe-grid-cards .recipe-card.has-open-export {
   overflow: visible;
   z-index: 2;
 }
 
-.overview-grid-cards .recipe-card {
+.recipe-grid-cards .recipe-card {
   width: 100%;
   max-width: none;
   flex: none;
   display: block;
 }
 
-.overview-grid-cards .result-image-cell {
+.recipe-grid-cards .result-image-cell {
   width: 100%;
   height: 200px;
   overflow: hidden;
@@ -1679,9 +1683,9 @@ select:focus {
   align-self: unset;
 }
 
-.overview-grid-cards .recipe-card-image,
-.overview-grid-cards .recipe-card-image-skeleton,
-.overview-grid-cards .recipe-card-image-fallback {
+.recipe-grid-cards .recipe-card-image,
+.recipe-grid-cards .recipe-card-image-skeleton,
+.recipe-grid-cards .recipe-card-image-fallback {
   width: 100%;
   height: 200px;
   min-height: 200px;
@@ -1691,7 +1695,7 @@ select:focus {
   object-fit: cover;
 }
 
-.overview-grid-cards .recipe-card-content {
+.recipe-grid-cards .recipe-card-content {
   display: grid;
   gap: 8px;                 /* gelijke afstand tussen alle regels */
   align-content: start;
@@ -1699,7 +1703,7 @@ select:focus {
 }
 
 /* Knop iets meer lucht geven t.o.v. de eerste parameter (tijd) */
-.overview-grid-cards .recipe-link {
+.recipe-grid-cards .recipe-link {
   margin-bottom: 6px;
 }
 
@@ -2201,12 +2205,12 @@ select:focus {
 
   /* Alle rasterkaarten even hoog: grid-rijen even hoog maken en de kaart de
      cel laten vullen. */
-  .overview-grid-cards {
+  .recipe-grid-cards {
     align-items: stretch;
     grid-auto-rows: 1fr;
   }
 
-  .overview-grid-cards .recipe-card {
+  .recipe-grid-cards .recipe-card {
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -2216,7 +2220,7 @@ select:focus {
     overflow: hidden;
   }
 
-  .overview-grid-cards .result-image-cell {
+  .recipe-grid-cards .result-image-cell {
     width: 100%;
     height: 200px;
     min-height: 200px;
@@ -2226,9 +2230,9 @@ select:focus {
     border-radius: 0;
   }
 
-  .overview-grid-cards .recipe-card-image,
-  .overview-grid-cards .recipe-card-image-skeleton,
-  .overview-grid-cards .recipe-card-image-fallback {
+  .recipe-grid-cards .recipe-card-image,
+  .recipe-grid-cards .recipe-card-image-skeleton,
+  .recipe-grid-cards .recipe-card-image-fallback {
     height: 200px;
     min-height: 200px;
     max-height: 200px;
@@ -2236,7 +2240,7 @@ select:focus {
     display: block;
   }
 
-  .overview-grid-cards .recipe-card-content {
+  .recipe-grid-cards .recipe-card-content {
     width: 100%;
     height: auto;
     padding: 16px 18px 18px;
@@ -2246,7 +2250,7 @@ select:focus {
     flex: 1 1 auto;          /* vult de resterende kaarthoogte */
   }
 
-  .overview-grid-cards .recipe-card h3 {
+  .recipe-grid-cards .recipe-card h3 {
     font-size: 1.55rem;
     min-height: unset;
     max-height: unset;
@@ -2287,14 +2291,14 @@ select:focus {
     height: 210px;
   }
 
-  .overview-grid-cards {
+  .recipe-grid-cards {
     grid-template-columns: 1fr;
     gap: 14px;
   }
 }
 
 @media (min-width: 601px) and (max-width: 1100px) {
-  .overview-grid-cards {
+  .recipe-grid-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
