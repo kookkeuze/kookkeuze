@@ -1959,9 +1959,15 @@ function showRandomResult(recipe, options = {}) {
   openRandomRecipeModal();
 }
 
-// De knop hangt aan de kaart en niet aan het fotovak: dat vak wordt leeggemaakt
-// zodra de foto binnen is.
+// De knop hangt aan het venster en niet aan de kaart, zodat hij op precies
+// dezelfde hoogte staat als de sluitknop aan de andere kant. Aan de kaart zou
+// hij 24 px lager uitkomen, want daar begint de kaart pas.
 function addRandomAgainButton({ swap = false } = {}) {
+  const paneel = randomRecipeModal?.querySelector('.random-recipe-modal-content');
+  if (!paneel) return;
+  paneel.querySelector('.random-again-btn')?.remove();
+
+  // Zonder kaart valt er niets opnieuw te trekken (bijv. bij een foutmelding).
   const kaart = randomRecipeBody?.querySelector('.recipe-card');
   if (!kaart) return;
 
@@ -1976,7 +1982,7 @@ function addRandomAgainButton({ swap = false } = {}) {
   knop.title = 'Nog een willekeurig recept';
   knop.setAttribute('aria-label', 'Nog een willekeurig recept');
   knop.innerHTML = '<i class="fas fa-shuffle" aria-hidden="true"></i>';
-  kaart.appendChild(knop);
+  paneel.appendChild(knop);
 }
 
 function showRandomMessage(message) {
@@ -1985,6 +1991,7 @@ function showRandomMessage(message) {
     return;
   }
   randomRecipeBody.innerHTML = `<p class="random-recipe-empty">${message}</p>`;
+  addRandomAgainButton();
   openRandomRecipeModal();
 }
 
