@@ -1403,6 +1403,27 @@ app.get('/health', (_req, res) => {
   });
 });
 
+// Zelfde mechanisme als de bestaande self-exclusion voor desktop, maar dan
+// bruikbaar op mobiel: eenmalig deze URL bezoeken zet umami.disabled in
+// localStorage, zodat Umami Analytics dit apparaat niet meer meetelt.
+app.get('/no-track', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="nl">
+    <head>
+      <meta charset="UTF-8">
+      <title>Tracking uitgeschakeld</title>
+    </head>
+    <body>
+      <p>Tracking uitgeschakeld op dit apparaat.</p>
+      <script>
+        localStorage.setItem('umami.disabled', 1);
+      </script>
+    </body>
+    </html>
+  `);
+});
+
 /* -------------------- CONTACTFORMULIER -------------------- */
 // Het contactformulier op de Over Kookkeuze-pagina verstuurt de mail via de
 // server (Brevo) naar CONTACT_TO_EMAIL. De afzender is ons eigen geverifieerde
