@@ -7532,3 +7532,81 @@ h1, h2, h3,
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+/* =========================================================================
+   INGREDIENT AANPASSEN IN DE KIEZER
+   Een recept zegt 400 g kipfilet terwijl jij er 500 wilt. Het potlood zet de
+   regel om in een invoerveld; de rij zelf blijft de aan/uit-knop, want dat is
+   wat je het vaakst doet.
+   ========================================================================= */
+
+.shopping-row-edit {
+  flex: 0 0 auto;
+  width: 44px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  min-width: 0;
+  color: #cbd4ce;
+  font-size: 13px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s ease, background-color 0.12s ease;
+}
+
+.shopping-row-edit:hover {
+  color: #46524b;
+}
+
+.shopping-row-edit:active {
+  background-color: rgba(29, 37, 33, 0.045);
+}
+
+/* In de bewerkstand is het vinkje rechts de bevestiging, dus die mag opvallen.
+   De rij staat daar op align-items: center, dus de knop rekt niet meer mee en
+   heeft zijn eigen hoogte nodig. */
+.shopping-row.is-editing .shopping-row-edit {
+  align-self: stretch;
+  min-height: 44px;
+  color: var(--green);
+  font-size: 15px;
+}
+
+/* Het veld neemt de plaats van de tekst in en houdt dezelfde uitlijning, zodat
+   de regel niet verspringt op het moment dat je hem opent. 16 px, want kleiner
+   laat iOS de pagina inzoomen zodra je begint te typen. */
+.shopping-row-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 50px;
+  padding: 9px 6px 9px 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: #1d2521;
+}
+
+.shopping-row-input:focus {
+  outline: none;
+}
+
+/* Het rondje blijft staan zodat je blijft zien of het product aanstaat, en de
+   tekst begint op precies dezelfde plek: de regel verspringt niet op het
+   moment dat je hem opent. */
+.shopping-row.is-editing {
+  align-items: center;
+  gap: 12px;
+  padding-left: 14px;
+  background: #f7fbf8;
+  box-shadow: inset 0 0 0 1.5px var(--green);
+  border-radius: 12px;
+}
+
+.shopping-row.is-editing .shopping-check {
+  flex: 0 0 auto;
+}

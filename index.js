@@ -2329,7 +2329,7 @@ const ingredientPickConfirmBtn = document.getElementById('ingredientPickConfirmB
 
 let shoppingListItems = [];
 let shoppingListLoaded = false;
-let ingredientPickState = { items: [], selected: new Set() };
+let ingredientPickState = { items: [], selected: new Set(), editingKey: null };
 let shoppingReorderTimer = null;
 
 // Schapindeling voor de winkel. Bewust een simpele woordenlijst: hij hoeft niet
@@ -2661,7 +2661,7 @@ function closeShoppingListModalPanel() {
 
 function renderIngredientPicker() {
   if (!ingredientPickBody) return;
-  const { items, selected } = ingredientPickState;
+  const { items, selected, editingKey } = ingredientPickState;
 
   if (!items.length) {
     ingredientPickBody.innerHTML = '<p class="shopping-empty">Geen ingrediënten gevonden</p>';
@@ -2678,12 +2678,25 @@ function renderIngredientPicker() {
         <h4 class="shopping-section-title">${escapeHtml(group.label)}</h4>
       </div>` : ''}
       <ul class="shopping-rows">
-        ${group.entries.map(item => `
+        ${group.entries.map(item => item.key === editingKey ? `
+          <li class="shopping-row is-editing${selected.has(item.key) ? ' is-on' : ''}">
+            <span class="shopping-check" aria-hidden="true"><i class="fas fa-check"></i></span>
+            <input type="text" class="shopping-row-input" maxlength="200" autocomplete="off"
+                   data-ingredient-input="${escapeAttr(item.key)}" value="${escapeAttr(item.name)}"
+                   aria-label="Pas het ingrediënt aan" />
+            <button type="button" class="shopping-row-edit" data-ingredient-save aria-label="Klaar met aanpassen">
+              <i class="fas fa-check" aria-hidden="true"></i>
+            </button>
+          </li>` : `
           <li class="shopping-row${selected.has(item.key) ? ' is-on' : ''}">
             <button type="button" class="shopping-row-main" data-ingredient-key="${escapeAttr(item.key)}"
                     aria-pressed="${selected.has(item.key) ? 'true' : 'false'}">
               <span class="shopping-check" aria-hidden="true"><i class="fas fa-check"></i></span>
               <span class="shopping-row-name">${escapeHtml(item.name)}</span>
+            </button>
+            <button type="button" class="shopping-row-edit" data-ingredient-edit="${escapeAttr(item.key)}"
+                    aria-label="Pas ${escapeAttr(item.name)} aan">
+              <i class="fas fa-pen" aria-hidden="true"></i>
             </button>
           </li>`).join('')}
       </ul>
@@ -2697,6 +2710,34 @@ function renderIngredientPicker() {
   }
   if (selected.size) ingredientPickConfirmBtn?.removeAttribute('disabled');
   else ingredientPickConfirmBtn?.setAttribute('disabled', 'disabled');
+
+  // Meteen kunnen typen, met de cursor achteraan zodat '400 g kipfilet' zich
+  // laat bijwerken zonder eerst te hoeven slepen.
+  if (editingKey) {
+    const veld = ingredientPickBody.querySelector('[data-ingredient-input]');
+    if (veld) {
+      veld.focus();
+      veld.setSelectionRange(veld.value.length, veld.value.length);
+    }
+  }
+}
+
+// Legt een openstaande wijziging vast zonder opnieuw te tekenen. De sleutel
+// blijft die van het oorspronkelijke ingrediënt: daar hangt de aan/uit-stand
+// aan, en die mag niet omvallen doordat je de tekst wijzigt.
+function flushIngredientEdit() {
+  const key = ingredientPickState.editingKey;
+  if (!key) return false;
+  const veld = ingredientPickBody?.querySelector('[data-ingredient-input]');
+  const item = ingredientPickState.items.find(i => i.key === key);
+  const schoon = String(veld?.value ?? '').trim().replace(/\s+/g, ' ').slice(0, 200);
+  if (item && schoon) item.name = schoon;
+  ingredientPickState.editingKey = null;
+  return true;
+}
+
+function commitIngredientEdit() {
+  if (flushIngredientEdit()) renderIngredientPicker();
 }
 
 function openIngredientPicker(subtitle, rawItems) {
@@ -2711,7 +2752,7 @@ function openIngredientPicker(subtitle, rawItems) {
   });
 
   // Standaard staat alles aan: je vinkt uit wat je al in huis hebt.
-  ingredientPickState = { items, selected: new Set(items.map(item => item.key)) };
+  ingredientPickState = { items, selected: new Set(items.map(item => item.key)), editingKey: null };
   if (ingredientPickSub) ingredientPickSub.textContent = subtitle || '';
   renderIngredientPicker();
   ingredientPickModal?.classList.remove('hidden');
@@ -2724,7 +2765,7 @@ function closeIngredientPickerPanel() {
 }
 
 function showIngredientPickerLoading(subtitle) {
-  ingredientPickState = { items: [], selected: new Set() };
+  ingredientPickState = { items: [], selected: new Set(), editingKey: null };
   if (ingredientPickSub) ingredientPickSub.textContent = subtitle || '';
   if (ingredientPickCount) ingredientPickCount.textContent = '';
   ingredientPickToggleAllBtn?.classList.add('hidden');
@@ -2755,6 +2796,9 @@ async function openIngredientPickerForRecipe(recipeUrl, recipeTitle) {
 }
 
 async function confirmIngredientPicker() {
+  // Je kunt op 'Toevoegen' tikken terwijl een veld nog openstaat; dan telt wat
+  // je net getypt hebt, niet de oorspronkelijke regel uit het recept.
+  flushIngredientEdit();
   const chosen = ingredientPickState.items.filter(item => ingredientPickState.selected.has(item.key));
   if (!chosen.length) return;
 
@@ -2808,12 +2852,52 @@ document.addEventListener('keydown', e => {
 });
 
 ingredientPickBody?.addEventListener('click', e => {
+  // In het veld zelf tikken (of selecteren) mag het veld niet sluiten.
+  if (e.target.closest('[data-ingredient-input]')) return;
+
+  const bewerkKnop = e.target.closest('[data-ingredient-edit]');
+  const opslaanKnop = e.target.closest('[data-ingredient-save]');
   const row = e.target.closest('[data-ingredient-key]');
-  if (!row) return;
-  const key = row.dataset.ingredientKey;
-  if (ingredientPickState.selected.has(key)) ingredientPickState.selected.delete(key);
-  else ingredientPickState.selected.add(key);
-  renderIngredientPicker();
+
+  const vorigeKey = ingredientPickState.editingKey;
+  const warOpen = flushIngredientEdit();
+
+  if (bewerkKnop) {
+    const key = bewerkKnop.dataset.ingredientEdit;
+    // Nog een keer op hetzelfde potlood sluit het veld weer.
+    ingredientPickState.editingKey = vorigeKey === key ? null : key;
+    renderIngredientPicker();
+    return;
+  }
+
+  if (row) {
+    const key = row.dataset.ingredientKey;
+    if (ingredientPickState.selected.has(key)) ingredientPickState.selected.delete(key);
+    else ingredientPickState.selected.add(key);
+    renderIngredientPicker();
+    return;
+  }
+
+  if (opslaanKnop || warOpen) renderIngredientPicker();
+});
+
+ingredientPickBody?.addEventListener('keydown', e => {
+  const veld = e.target.closest('[data-ingredient-input]');
+  if (!veld) return;
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    commitIngredientEdit();
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    ingredientPickState.editingKey = null;
+    renderIngredientPicker();
+  }
+});
+
+// Ergens anders tikken slaat op, zoals overal in de app.
+ingredientPickBody?.addEventListener('focusout', e => {
+  if (e.target.closest('[data-ingredient-input]')) commitIngredientEdit();
 });
 
 ingredientPickToggleAllBtn?.addEventListener('click', () => {
