@@ -1672,49 +1672,33 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
 });
 
 /* — Random recept — */
-document.getElementById('randomBtn').addEventListener('click', async () => {
-  if (recipeSourceMode === 'internet') {
+// Eén plek voor het trekken van een random recept, zodat de knop onder de
+// filters en de knop op de kaart in de popup gegarandeerd hetzelfde doen.
+// swap = true betekent: de popup staat al open en de kaart wordt vervangen.
+async function drawRandomRecipe({ swap = false } = {}) {
+  const isInternet = recipeSourceMode === 'internet';
+  try {
+    // Guests mogen een random recept uit de demo-database opvragen.
     if (getValidToken()) await ensureRecipeNotesLoaded();
-    const params = buildRecipeToolParams({ includeSearch: false, includeDatabase: false });
+    const params = buildRecipeToolParams({ includeSearch: false, includeDatabase: !isInternet });
     const qs = params.toString();
-    fetch(`${API_BASE}/api/internet-recipe-random?` + qs, {
-      cache: 'no-store'
-    })
-      .then(r => r.json())
-      .then(d => {
-        if (!d || d.message === 'Geen resultaten gevonden.') {
-          showRandomMessage('Geen resultaten gevonden.');
-        } else {
-          showRandomResult(d, { mode: 'internet' });
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        showRandomMessage('Er ging iets fout bij het ophalen van een random recept.');
-      });
-    return;
-  }
+    const res = isInternet
+      ? await fetch(`${API_BASE}/api/internet-recipe-random?` + qs, { cache: 'no-store' })
+      : await fetch(`${API_BASE}/api/recipes/random?` + qs, { headers: authHeaders() });
+    const d = await res.json();
 
-  // Guests mogen een random recept uit de demo-database opvragen.
-  if (getValidToken()) await ensureRecipeNotesLoaded();
-  const params = buildRecipeToolParams({ includeSearch: false, includeDatabase: true });
-  const qs = params.toString();
-  fetch(`${API_BASE}/api/recipes/random?` + qs, {
-    headers: authHeaders() // ✅ JWT meesturen
-  })
-    .then(r => r.json())
-    .then(d => {
-      if (!d || d.message === 'Geen resultaten gevonden.') {
-        showRandomMessage('Geen resultaten gevonden.');
-      } else {
-        showRandomResult(d);
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      showRandomMessage('Er ging iets fout bij het ophalen van een random recept.');
-    });
-});
+    if (!d || d.message === 'Geen resultaten gevonden.') {
+      showRandomMessage('Geen resultaten gevonden.');
+      return;
+    }
+    showRandomResult(d, isInternet ? { mode: 'internet', swap } : { swap });
+  } catch (err) {
+    console.error(err);
+    showRandomMessage('Er ging iets fout bij het ophalen van een random recept.');
+  }
+}
+
+document.getElementById('randomBtn').addEventListener('click', () => drawRandomRecipe());
 
 /* — Filters uit de URL overnemen —
    De SEO-pagina's (/wat-eten-we-vandaag, /recepten/...) linken hierheen met de
@@ -1971,7 +1955,28 @@ function showRandomResult(recipe, options = {}) {
     extraClass: 'weekmenu-preview-cards'
   });
   hydrateResultImages();
+  addRandomAgainButton({ swap: !!options.swap });
   openRandomRecipeModal();
+}
+
+// De knop hangt aan de kaart en niet aan het fotovak: dat vak wordt leeggemaakt
+// zodra de foto binnen is.
+function addRandomAgainButton({ swap = false } = {}) {
+  const kaart = randomRecipeBody?.querySelector('.recipe-card');
+  if (!kaart) return;
+
+  if (swap) {
+    kaart.classList.add('is-swapping-in');
+    kaart.addEventListener('animationend', () => kaart.classList.remove('is-swapping-in'), { once: true });
+  }
+
+  const knop = document.createElement('button');
+  knop.type = 'button';
+  knop.className = 'random-again-btn';
+  knop.title = 'Nog een willekeurig recept';
+  knop.setAttribute('aria-label', 'Nog een willekeurig recept');
+  knop.innerHTML = '<i class="fas fa-shuffle" aria-hidden="true"></i>';
+  kaart.appendChild(knop);
 }
 
 function showRandomMessage(message) {
@@ -1982,6 +1987,16 @@ function showRandomMessage(message) {
   randomRecipeBody.innerHTML = `<p class="random-recipe-empty">${message}</p>`;
   openRandomRecipeModal();
 }
+
+// Opnieuw trekken zonder de popup te sluiten. Tijdens het ophalen draait het
+// icoon door, zodat de knop niet dood aanvoelt terwijl de server bezig is.
+randomRecipeModal?.addEventListener('click', e => {
+  const knop = e.target.closest('.random-again-btn');
+  if (!knop || knop.disabled) return;
+  knop.disabled = true;
+  knop.classList.add('is-busy');
+  drawRandomRecipe({ swap: true });
+});
 
 closeRandomRecipeModalBtn?.addEventListener('click', closeRandomRecipeModalPanel);
 randomRecipeModal?.addEventListener('click', e => {

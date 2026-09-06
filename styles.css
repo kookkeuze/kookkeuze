@@ -7610,3 +7610,107 @@ h1, h2, h3,
 .shopping-row.is-editing .shopping-check {
   flex: 0 0 auto;
 }
+
+
+/* =========================================================================
+   NOG EEN WILLEKEURIG RECEPT
+   Zwevend op de kaart in de random-popup, zodat je door kunt bladeren zonder
+   te sluiten en opnieuw te beginnen. Bewust geen tweede groene knop: hij ligt
+   als doorschijnend laagje op de foto, tegenover de sluitknop aan de andere
+   kant, en heeft een eigen vorm zodat je hem er niet mee verwart.
+   ========================================================================= */
+
+.random-again-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  width: 44px;
+  height: 44px;
+  min-width: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  box-shadow:
+    0 1px 2px rgba(24, 32, 28, 0.10),
+    0 6px 18px rgba(24, 32, 28, 0.18);
+  color: #2f3740;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              transform var(--duration-press) var(--ease-out);
+}
+
+/* Het lichtrandje bovenaan: daar vangt het materiaal het licht. */
+.random-again-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border-top: 1px solid rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+}
+
+.random-again-btn:hover {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.random-again-btn[disabled] {
+  cursor: default;
+}
+
+.random-again-btn.is-busy i {
+  animation: random-again-spin 0.7s linear infinite;
+}
+
+@keyframes random-again-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* De nieuwe kaart komt aan als materiaal in plaats van dat hij erin klapt.
+   Geen doorschieten: je hebt hem niet zelf in beweging gebracht. */
+@keyframes random-swap-in {
+  from { opacity: 0; transform: scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+.recipe-card.is-swapping-in {
+  animation: random-swap-in var(--duration-base) var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Draaien is hier statusinformatie, dus die blijft; alleen zonder beweging. */
+  .random-again-btn.is-busy i {
+    animation: none;
+    opacity: 0.45;
+  }
+
+  .recipe-card.is-swapping-in {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .random-again-btn {
+    background: #ffffff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .random-again-btn {
+    background: #ffffff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border: 1px solid #46524b;
+  }
+}
