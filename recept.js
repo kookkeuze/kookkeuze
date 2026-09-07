@@ -31,6 +31,13 @@
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
+  // De boodschappenlijst hangt aan de actieve database, precies zoals op de
+  // hoofdpagina. Die keuze staat in localStorage, dus we sturen hem mee.
+  function activeDatabaseQuery() {
+    const ownerId = Number(localStorage.getItem('activeDatabaseOwnerId') || 0);
+    return ownerId > 0 ? `?dbOwnerId=${ownerId}` : '';
+  }
+
   function escapeHtml(value) {
     return String(value ?? '')
       .replace(/&/g, '&amp;')
@@ -59,14 +66,7 @@
 
   function renderMetaRow(recipe) {
     const items = [];
-    if (recipe.servings) {
-      items.push(['person.svg', `${recipe.servings} ${recipe.servings === 1 ? 'persoon' : 'personen'}`]);
-    }
-    if (recipe.prep_minutes) {
-      items.push(['tijd.svg', `${recipe.prep_minutes} min`]);
-    } else if (recipe.time_required) {
-      items.push(['tijd.svg', recipe.time_required]);
-    }
+    if (recipe.time_required) items.push(['tijd.svg', recipe.time_required]);
     if (recipe.calories != null) items.push(['kcal.svg', `${recipe.calories} kcal`]);
     if (!items.length) return '';
 
@@ -77,8 +77,20 @@
       </span>`).join('')}</div>`;
   }
 
+  // Meerdere keuzes komen als "Kip, Vis" terug; elk stuk krijgt zijn eigen label.
+  function splitField(value) {
+    return String(value || '')
+      .split(',')
+      .map(part => part.trim())
+      .filter(Boolean);
+  }
+
   function renderTags(recipe) {
-    const tags = [recipe.dish_type, recipe.meal_category, recipe.meal_type].filter(Boolean);
+    const tags = [
+      ...splitField(recipe.dish_type),
+      ...splitField(recipe.meal_category),
+      ...splitField(recipe.meal_type)
+    ];
     if (!tags.length) return '';
     return `<div class="own-recipe-tags">${tags
       .map(tag => `<span class="own-recipe-tag">${escapeHtml(tag)}</span>`)
@@ -90,32 +102,36 @@
     const steps = toLines(recipe.instructions);
 
     const ingredientsHtml = ingredients.length
-      ? `<section class="own-recipe-section">
+      ? `<div class="own-recipe-block">
            <h2>Ingrediënten</h2>
            <ul class="own-recipe-ingredients">
              ${ingredients.map((item, index) => `
                <li>
-                 <input type="checkbox" id="ingr-${index}" class="own-recipe-check" />
+                 <input type="checkbox" id="ingr-${index}" class="own-recipe-check" data-ingredient="${escapeHtml(item)}" />
                  <label for="ingr-${index}">${escapeHtml(item)}</label>
                </li>`).join('')}
            </ul>
-           <button type="button" id="copyIngredientsBtn" class="own-recipe-copy-btn">
-             <i class="fas fa-clipboard" aria-hidden="true"></i> Kopieer boodschappenlijst
+           <button type="button" id="toShoppingListBtn" class="own-recipe-list-btn">
+             <img src="/icons/boodschappenlijst-tegel.svg" alt="" class="own-recipe-list-icon" />
+             <span id="toShoppingListLabel">Alles op de boodschappenlijst</span>
            </button>
-         </section>`
+           <p id="shoppingListFeedback" class="own-recipe-list-feedback" hidden></p>
+         </div>`
       : '';
 
     const stepsHtml = steps.length
-      ? `<section class="own-recipe-section">
+      ? `<div class="own-recipe-block">
            <h2>Bereiding</h2>
            <ol class="own-recipe-steps">
              ${steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}
            </ol>
-         </section>`
+         </div>`
       : '';
 
-    const sourceHtml = recipe.source_note
-      ? `<p class="own-recipe-source">Bron: ${escapeHtml(recipe.source_note)}</p>`
+    // Ingrediënten en bereiding horen bij elkaar en staan daarom in één kaart,
+    // met een haarlijn ertussen in plaats van een tweede blok.
+    const contentHtml = (ingredientsHtml || stepsHtml)
+      ? `<section class="own-recipe-section">${ingredientsHtml}${stepsHtml}</section>`
       : '';
 
     bodyEl.innerHTML = `
@@ -128,50 +144,94 @@
           <h1>${escapeHtml(recipe.title || 'Recept')}</h1>
           ${renderMetaRow(recipe)}
           ${renderTags(recipe)}
-          ${sourceHtml}
           <div class="own-recipe-actions">
-            <a href="/" class="green-btn own-recipe-back-btn">Terug naar Kookkeuze</a>
             <button type="button" id="editRecipeBtn" class="own-recipe-secondary-btn">
               <i class="fas fa-pen" aria-hidden="true"></i> Bewerken
-            </button>
-            <button type="button" id="printRecipeBtn" class="own-recipe-secondary-btn">
-              <i class="fas fa-print" aria-hidden="true"></i> Printen
             </button>
           </div>
         </div>
       </div>
-      ${ingredientsHtml}
-      ${stepsHtml}
+      ${contentHtml}
     `;
 
     statusEl.hidden = true;
     bodyEl.hidden = false;
     document.title = `${recipe.title || 'Recept'} – Kookkeuze`;
 
-    document.getElementById('printRecipeBtn')?.addEventListener('click', () => window.print());
     document.getElementById('editRecipeBtn')?.addEventListener('click', () => renderEditForm(recipe));
-
-    const copyBtn = document.getElementById('copyIngredientsBtn');
-    copyBtn?.addEventListener('click', async () => {
-      const text = `${recipe.title || 'Recept'}\n\n${ingredients.join('\n')}`;
-      try {
-        // navigator.share opent op mobiel het deelmenu (o.a. Notities);
-        // op desktop valt hij terug op het klembord.
-        if (navigator.share) {
-          await navigator.share({ title: recipe.title || 'Recept', text });
-        } else {
-          await navigator.clipboard.writeText(text);
-          copyBtn.textContent = 'Gekopieerd!';
-          setTimeout(() => {
-            copyBtn.innerHTML = '<i class="fas fa-clipboard" aria-hidden="true"></i> Kopieer boodschappenlijst';
-          }, 2000);
-        }
-      } catch (_err) {
-        /* gebruiker heeft geannuleerd, of het klembord is geblokkeerd */
-      }
-    });
+    initShoppingListButton(recipe, ingredients);
 
     if (recipe.has_photo) loadPhoto(recipe.title);
+  }
+
+  /* ---------- Ingrediënten naar de boodschappenlijst ---------- */
+  // De vinkjes zijn tegelijk de selectie: vink je niets aan, dan gaat de hele
+  // lijst mee. De knoptekst zegt precies wat er gebeurt, zodat je niet hoeft te
+  // raden wat 'toevoegen' deze keer betekent.
+  function initShoppingListButton(recipe, ingredients) {
+    const button = document.getElementById('toShoppingListBtn');
+    const label = document.getElementById('toShoppingListLabel');
+    const feedback = document.getElementById('shoppingListFeedback');
+    if (!button || !label) return;
+
+    const checks = Array.from(document.querySelectorAll('.own-recipe-check'));
+
+    function selection() {
+      const checked = checks.filter(check => check.checked).map(check => check.dataset.ingredient || '');
+      return checked.length ? checked : ingredients;
+    }
+
+    function updateLabel() {
+      const count = checks.filter(check => check.checked).length;
+      label.textContent = count
+        ? `${count} product${count === 1 ? '' : 'en'} op de boodschappenlijst`
+        : 'Alles op de boodschappenlijst';
+    }
+
+    function showFeedback(text, isError) {
+      if (!feedback) return;
+      feedback.textContent = text;
+      feedback.hidden = false;
+      feedback.classList.toggle('is-error', !!isError);
+    }
+
+    checks.forEach(check => check.addEventListener('change', updateLabel));
+    updateLabel();
+
+    button.addEventListener('click', async () => {
+      if (!getValidToken()) {
+        showFeedback('Log in om je boodschappenlijst te gebruiken.', true);
+        return;
+      }
+
+      const items = selection().filter(Boolean);
+      if (!items.length) return;
+
+      button.disabled = true;
+      try {
+        const res = await fetch(`${API_BASE}/api/shopping-list${activeDatabaseQuery()}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({
+            items: items.map(name => ({ name, source_title: recipe.title || 'Recept' }))
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          showFeedback(data.error || 'Toevoegen aan de boodschappenlijst mislukte.', true);
+          return;
+        }
+
+        const added = Number(data.added || items.length);
+        showFeedback(`${added} product${added === 1 ? '' : 'en'} op je boodschappenlijst gezet.`, false);
+        button.classList.add('is-done');
+        setTimeout(() => button.classList.remove('is-done'), 1200);
+      } catch (_err) {
+        showFeedback('Geen verbinding met de server. Probeer het later nog eens.', true);
+      } finally {
+        button.disabled = false;
+      }
+    });
   }
 
   const KEUZE = 'maak een keuze';
@@ -183,18 +243,78 @@
   // De nieuwe foto als data-URL, of de vlag dat de bestaande weg moet.
   let bewerkFoto = null;
   let fotoVerwijderen = false;
+  let stappen = null;
 
-  function selectHtml(id, label, options, current) {
-    const chosen = String(current || '').trim();
-    const items = [KEUZE, ...options]
-      .map(opt => `<option${opt === chosen ? ' selected' : ''}>${escapeHtml(opt)}</option>`)
-      .join('');
+  /* ---------- Meerkeuzevelden ----------
+     Zelfde vorm als op de hoofdpagina: een knop met de gekozen labels en een
+     uitklaplijstje met vinkjes, zodat één recept ook 'Kip' én 'Pasta' kan zijn. */
+  function multiSelectHtml(id, label, options, current) {
+    // "Kip, Pasta" komt terug uit de database; alleen namen die ook echt in de
+    // lijst staan tellen mee, anders wordt "Dressings, sauzen & dips" gesplitst.
+    const text = String(current || '').trim();
+    const chosen = options.filter(opt =>
+      text === opt ||
+      text.startsWith(`${opt}, `) ||
+      text.endsWith(`, ${opt}`) ||
+      text.includes(`, ${opt}, `)
+    );
+
+    const items = options.map(opt => `
+      <label class="multi-select-option">
+        <input type="checkbox" value="${escapeHtml(opt)}"${chosen.includes(opt) ? ' checked' : ''} />
+        <span>${escapeHtml(opt)}</span>
+      </label>`).join('');
+
     return `
       <div class="add-recipe-field">
-        <label for="${id}">${escapeHtml(label)}</label>
-        <select id="${id}">${items}</select>
+        <span class="add-recipe-field-label" id="${id}Label">${escapeHtml(label)}</span>
+        <div class="multi-select" id="${id}" data-placeholder="${escapeHtml(label)}">
+          <button type="button" class="multi-select-trigger" aria-expanded="false" aria-labelledby="${id}Label">
+            <span class="multi-select-text">${escapeHtml(chosen.length ? chosen.join(', ') : label)}</span>
+            <i class="fas fa-chevron-down multi-select-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="multi-select-menu">${items}</div>
+        </div>
       </div>`;
   }
+
+  function initMultiSelects(root) {
+    root.querySelectorAll('.multi-select').forEach(wrapper => {
+      const trigger = wrapper.querySelector('.multi-select-trigger');
+      const text = wrapper.querySelector('.multi-select-text');
+      const placeholder = wrapper.dataset.placeholder || 'Maak een keuze';
+
+      function updateLabel() {
+        const chosen = readMultiSelect(wrapper.id);
+        text.textContent = chosen.length ? chosen.join(', ') : placeholder;
+      }
+
+      trigger?.addEventListener('click', e => {
+        e.stopPropagation();
+        root.querySelectorAll('.multi-select.open').forEach(node => {
+          if (node !== wrapper) node.classList.remove('open');
+        });
+        wrapper.classList.toggle('open');
+        trigger.setAttribute('aria-expanded', wrapper.classList.contains('open') ? 'true' : 'false');
+      });
+
+      wrapper.querySelectorAll('input[type="checkbox"]').forEach(box => {
+        box.addEventListener('change', updateLabel);
+      });
+    });
+  }
+
+  function readMultiSelect(id) {
+    const wrapper = document.getElementById(id);
+    if (!wrapper) return [];
+    return Array.from(wrapper.querySelectorAll('input[type="checkbox"]:checked')).map(box => box.value);
+  }
+
+  document.addEventListener('click', e => {
+    document.querySelectorAll('.multi-select.open').forEach(node => {
+      if (!node.contains(e.target)) node.classList.remove('open');
+    });
+  });
 
   function numberFieldHtml(id, label, value, extra = '') {
     return `
@@ -202,6 +322,126 @@
         <label for="${id}">${escapeHtml(label)}</label>
         <input id="${id}" type="number" ${extra} value="${value == null ? '' : escapeHtml(String(value))}" />
       </div>`;
+  }
+
+  /* ---------- Stappen-bouwer ----------
+     Dezelfde lijst als in het toevoegformulier: per stap een regel, met een
+     plusje eronder en een kruisje per regel. */
+  const STEP_MIN_ROWS = 3;
+
+  function createStepBuilder(listEl, addBtn) {
+    if (!listEl) return null;
+
+    function autoGrow(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+
+    function rows() {
+      return Array.from(listEl.querySelectorAll('.step-row'));
+    }
+
+    function refresh() {
+      const all = rows();
+      all.forEach((row, index) => {
+        const num = row.querySelector('.step-row-num');
+        if (num) num.textContent = String(index + 1);
+        const remove = row.querySelector('.step-remove-btn');
+        if (remove) remove.hidden = all.length <= 1;
+      });
+    }
+
+    function removeRow(row) {
+      if (rows().length <= 1) return;
+      const next = row.nextElementSibling || row.previousElementSibling;
+
+      row.style.height = `${row.offsetHeight}px`;
+      row.classList.add('is-leaving');
+      // Reflow afdwingen, anders ziet de browser alleen de eindhoogte en slaat hij
+      // de overgang over. Werkt ook in een tabblad op de achtergrond, waar
+      // requestAnimationFrame stilstaat.
+      void row.offsetWidth;
+      row.style.height = '0px';
+      row.style.opacity = '0';
+
+      const done = () => {
+        if (!row.isConnected) return;
+        row.remove();
+        refresh();
+      };
+      row.addEventListener('transitionend', done, { once: true });
+      setTimeout(done, 400);
+
+      next?.querySelector('.step-row-input')?.focus();
+    }
+
+    function addRow(value = '', { focus = false, after = null, animate = false } = {}) {
+      const row = document.createElement('li');
+      row.className = 'step-row';
+      if (animate) row.classList.add('is-entering');
+
+      const num = document.createElement('span');
+      num.className = 'step-row-num';
+      num.setAttribute('aria-hidden', 'true');
+
+      const input = document.createElement('textarea');
+      input.className = 'step-row-input';
+      input.rows = 1;
+      input.maxLength = 2000;
+      input.placeholder = 'Beschrijf deze stap';
+      input.value = value;
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'step-remove-btn';
+      remove.setAttribute('aria-label', 'Deze stap verwijderen');
+      remove.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i>';
+
+      row.append(num, input, remove);
+      if (after && after.parentElement === listEl) after.after(row);
+      else listEl.appendChild(row);
+
+      input.addEventListener('input', () => autoGrow(input));
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          addRow('', { focus: true, after: row, animate: true });
+          return;
+        }
+        if (e.key === 'Backspace' && input.value === '' && rows().length > 1) {
+          e.preventDefault();
+          removeRow(row);
+        }
+      });
+      remove.addEventListener('click', () => removeRow(row));
+
+      refresh();
+      autoGrow(input);
+
+      if (animate) {
+        void row.offsetWidth;
+        row.classList.remove('is-entering');
+      }
+      if (focus) input.focus();
+      return row;
+    }
+
+    function setValues(values) {
+      listEl.innerHTML = '';
+      (Array.isArray(values) ? values : []).filter(v => String(v).trim()).forEach(step => addRow(step));
+      while (rows().length < STEP_MIN_ROWS) addRow('');
+      refresh();
+    }
+
+    function getValues() {
+      return rows()
+        .map(row => row.querySelector('.step-row-input')?.value.trim() || '')
+        .filter(Boolean);
+    }
+
+    addBtn?.addEventListener('click', () => addRow('', { focus: true, animate: true }));
+
+    return { getValues, setValues };
   }
 
   function renderEditForm(recipe) {
@@ -243,7 +483,7 @@
           <div class="add-recipe-section-head">
             <div class="add-recipe-section-title">
               <h3>Ingrediënten en bereiding</h3>
-              <p>Eén per regel.</p>
+              <p>Ingrediënten één per regel; de bereiding vul je per stap in.</p>
             </div>
           </div>
           <div class="add-recipe-field">
@@ -251,8 +491,11 @@
             <textarea id="editIngredients" rows="8" maxlength="10000">${escapeHtml(recipe.ingredients || '')}</textarea>
           </div>
           <div class="add-recipe-field">
-            <label for="editInstructions">Bereiding</label>
-            <textarea id="editInstructions" rows="8" maxlength="20000">${escapeHtml(recipe.instructions || '')}</textarea>
+            <span class="add-recipe-field-label" id="editStepsLabel">Bereiding</span>
+            <ol class="step-builder" id="editStepsList" aria-labelledby="editStepsLabel"></ol>
+            <button type="button" class="step-add-btn" id="editStepAddBtn">
+              <i class="fas fa-plus step-add-plus" aria-hidden="true"></i> Stap toevoegen
+            </button>
           </div>
         </section>
 
@@ -263,17 +506,11 @@
             </div>
           </div>
           <div class="add-recipe-grid">
-            ${selectHtml('editDishType', 'Soort gerecht', SOORTEN, recipe.dish_type)}
-            ${selectHtml('editMealCategory', 'Menugang', MENUGANGEN, recipe.meal_category)}
-            ${selectHtml('editMealType', 'Doel gerecht', DOELEN, recipe.meal_type)}
-            ${selectHtml('editTimeRequired', 'Tijd', TIJDEN, recipe.time_required)}
-            ${numberFieldHtml('editPrepMinutes', 'Bereidingstijd in minuten', recipe.prep_minutes, 'min="0" max="6000"')}
-            ${numberFieldHtml('editServings', 'Aantal personen', recipe.servings, 'min="1" max="100"')}
+            ${multiSelectHtml('editDishType', 'Soort gerecht', SOORTEN, recipe.dish_type)}
+            ${multiSelectHtml('editMealCategory', 'Menugang', MENUGANGEN, recipe.meal_category)}
+            ${multiSelectHtml('editMealType', 'Doel gerecht', DOELEN, recipe.meal_type)}
+            ${multiSelectHtml('editTimeRequired', 'Tijd', TIJDEN, recipe.time_required)}
             ${numberFieldHtml('editCalories', 'Calorieën', recipe.calories, 'min="0"')}
-            <div class="add-recipe-field">
-              <label for="editSourceNote">Waar komt het vandaan</label>
-              <input id="editSourceNote" type="text" maxlength="255" value="${escapeHtml(recipe.source_note || '')}" />
-            </div>
           </div>
         </section>
 
@@ -288,6 +525,13 @@
     statusEl.hidden = true;
     bodyEl.hidden = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    initMultiSelects(bodyEl);
+    stappen = createStepBuilder(
+      document.getElementById('editStepsList'),
+      document.getElementById('editStepAddBtn')
+    );
+    stappen?.setValues(toLines(recipe.instructions));
 
     if (recipe.has_photo) loadPhoto(recipe.title, 'editPhotoPreview');
 
@@ -388,11 +632,6 @@
     return raw ? parseInt(raw, 10) : null;
   }
 
-  function leesKeuze(id) {
-    const value = document.getElementById(id)?.value || '';
-    return value === KEUZE ? '' : value;
-  }
-
   async function opslaan(vorigRecept) {
     const titel = document.getElementById('editTitle')?.value.trim() || '';
     if (!titel) return toonBericht('Geef je recept een titel.', true);
@@ -402,16 +641,13 @@
 
     const body = {
       title: titel,
-      dish_type: leesKeuze('editDishType'),
-      meal_category: leesKeuze('editMealCategory'),
-      meal_type: leesKeuze('editMealType'),
-      time_required: leesKeuze('editTimeRequired'),
+      dish_type: readMultiSelect('editDishType'),
+      meal_category: readMultiSelect('editMealCategory'),
+      meal_type: readMultiSelect('editMealType'),
+      time_required: readMultiSelect('editTimeRequired'),
       calories: leesGetal('editCalories'),
-      servings: leesGetal('editServings'),
-      prep_minutes: leesGetal('editPrepMinutes'),
-      source_note: document.getElementById('editSourceNote')?.value.trim() || '',
       ingredients: document.getElementById('editIngredients')?.value.trim() || '',
-      instructions: document.getElementById('editInstructions')?.value.trim() || ''
+      instructions: (stappen?.getValues() || []).join('\n')
     };
     if (bewerkFoto) body.photo = bewerkFoto;
     else if (fotoVerwijderen) body.removePhoto = true;

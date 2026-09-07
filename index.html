@@ -568,7 +568,7 @@
             <span class="add-recipe-step-badge" aria-hidden="true">2</span>
             <div class="add-recipe-section-title">
               <h3>Ingrediënten en bereiding</h3>
-              <p>Eén per regel. Die regels worden op de receptpagina een lijst met vinkjes en genummerde stappen.</p>
+              <p>Ingrediënten één per regel; de bereiding vul je per stap in.</p>
             </div>
           </div>
 
@@ -578,8 +578,14 @@
           </div>
 
           <div class="add-recipe-field">
-            <label for="ownInstructions">Bereiding</label>
-            <textarea id="ownInstructions" rows="8" maxlength="20000" placeholder="Verwarm de oven voor op 200 graden.&#10;Snijd de ui fijn en fruit hem glazig.&#10;..."></textarea>
+            <span class="add-recipe-field-label" id="ownStepsLabel">Bereiding</span>
+            <!-- De stappen staan als losse regels in de database; deze lijst
+                 bouwt die regels op, zodat je per stap typt in plaats van in
+                 een lap tekst. -->
+            <ol class="step-builder" id="ownStepsList" aria-labelledby="ownStepsLabel"></ol>
+            <button type="button" class="step-add-btn" id="ownStepAddBtn">
+              <i class="fas fa-plus step-add-plus" aria-hidden="true"></i> Stap toevoegen
+            </button>
           </div>
         </section>
 
@@ -650,20 +656,8 @@
               </select>
             </div>
             <div class="add-recipe-field">
-              <label for="ownPrepMinutes">Bereidingstijd in minuten <span class="add-recipe-optional">optioneel</span></label>
-              <input id="ownPrepMinutes" type="number" min="0" max="6000" placeholder="bijv. 40" />
-            </div>
-            <div class="add-recipe-field">
-              <label for="ownServings">Aantal personen <span class="add-recipe-optional">optioneel</span></label>
-              <input id="ownServings" type="number" min="1" max="100" placeholder="bijv. 4" />
-            </div>
-            <div class="add-recipe-field">
               <label for="ownCalories">Calorieën <span class="add-recipe-optional">optioneel</span></label>
               <input id="ownCalories" type="number" min="0" placeholder="bijv. 450 per persoon" />
-            </div>
-            <div class="add-recipe-field">
-              <label for="ownSourceNote">Waar komt het vandaan <span class="add-recipe-optional">optioneel</span></label>
-              <input id="ownSourceNote" type="text" maxlength="255" placeholder="bijv. van oma, of zelf bedacht" />
             </div>
           </div>
         </section>

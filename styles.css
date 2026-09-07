@@ -843,7 +843,8 @@ button {
 
 #addRecipeForm .add-recipe-field > label,
 #ownRecipeForm .add-recipe-field > label,
-#ownRecipeEditForm .add-recipe-field > label {
+#ownRecipeEditForm .add-recipe-field > label,
+.add-recipe-field > .add-recipe-field-label {
   font-weight: 700;
   color: #3f4e45;
   margin-top: 0;
@@ -959,6 +960,16 @@ button {
   resize: vertical;
   line-height: 1.45;
   font-family: inherit;
+}
+
+/* De stapregels groeien met hun eigen tekst mee, dus geen vaste minimumhoogte
+   en geen sleepgreep: die zouden de nummering scheeftrekken. */
+#ownRecipeForm .step-row-input,
+#ownRecipeEditForm .step-row-input {
+  min-height: 42px;
+  padding: 10px 13px;
+  resize: none;
+  overflow: hidden;
 }
 
 #addRecipeForm .field-missing {
@@ -6188,6 +6199,152 @@ body.mobile-menu-open .mobile-nav-header {
   }
 }
 
+/* --- Stappen-bouwer: de bereiding per stap ------------------------------
+   Drie regels staan klaar; het plusje eronder maakt er een bij en het
+   kruisje ernaast haalt er een weg. Beide zijn bewust stil: ze staan er
+   voor als je ze nodig hebt, maar ze vragen niet om aandacht. Alles reageert
+   op het indrukken zelf, niet pas bij het loslaten. */
+.step-builder {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.step-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 28px;
+  align-items: start;
+  gap: 10px;
+  overflow: hidden;
+  transition: height .28s cubic-bezier(.32, .72, 0, 1), opacity .2s ease;
+}
+
+/* Nieuwe stap komt van net boven zijn plek binnen, in de richting waarin de
+   lijst groeit. */
+.step-row.is-entering {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.step-row:not(.is-entering) {
+  opacity: 1;
+  transform: none;
+  transition: height .28s cubic-bezier(.32, .72, 0, 1),
+              opacity .24s ease,
+              transform .28s cubic-bezier(.32, .72, 0, 1);
+}
+
+.step-row-num {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 42px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #9aa79c;
+  font-variant-numeric: tabular-nums;
+}
+
+.step-row-input {
+  width: 100%;
+  min-height: 42px;
+  resize: none;
+  overflow: hidden;
+  padding: 9px 12px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #3a3a3a;
+  background: #ffffff;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-sm);
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.step-row-input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: var(--field-focus-ring);
+}
+
+.step-remove-btn {
+  /* De algemene knopregel geeft elke button 100 px breedte en dikke padding;
+     dit kruisje moet juist precies in zijn kolom van 28 px passen. */
+  width: 28px;
+  min-width: 0;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #c3cec5;
+  font-size: 13px;
+  cursor: pointer;
+  opacity: .6;
+  transition: opacity .18s ease, color .18s ease, transform .12s ease;
+}
+
+.step-row:hover .step-remove-btn,
+.step-row:focus-within .step-remove-btn {
+  opacity: 1;
+}
+
+.step-remove-btn:hover {
+  color: var(--danger);
+}
+
+.step-remove-btn:active {
+  transform: scale(0.88);
+}
+
+.step-add-btn {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  padding: 8px 15px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green-deep);
+  background: #ffffff;
+  border: 1px dashed #d5e3d8;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color .18s ease, background-color .18s ease, transform .12s ease;
+}
+
+.step-add-btn:hover {
+  border-color: var(--green);
+  background: #f6fbf7;
+}
+
+.step-add-btn:active {
+  transform: scale(0.97);
+}
+
+.step-add-plus {
+  font-size: 11px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-row,
+  .step-row:not(.is-entering) {
+    transition: opacity .15s ease;
+    transform: none !important;
+  }
+
+  .step-remove-btn:active,
+  .step-add-btn:active {
+    transform: none;
+  }
+}
+
 /* --- De receptpagina zelf (/recept/<id>) --- */
 .own-recipe-page {
   display: grid;
@@ -6305,31 +6462,8 @@ body.mobile-menu-open .mobile-nav-header {
   margin-top: 4px;
 }
 
-/* De knopvorm (padding, radius, lettertype) staat op de button-selector, dus
-   een link met .green-btn erft alleen de kleur. Hier zetten we de rest erbij. */
-.own-recipe-back-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 24px;
-  border-radius: var(--btn-radius);
-  font-family: 'EatingPasta', Arial, sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: .5px;
-  white-space: nowrap;
-  text-decoration: none;
-  color: #ffffff;
-  transition: background-color .2s ease, transform .2s ease;
-}
-
-.own-recipe-back-btn:hover {
-  background-color: var(--green-hover);
-  transform: translateY(-1px);
-}
-
 .own-recipe-secondary-btn,
-.own-recipe-copy-btn {
+.own-recipe-list-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -6345,7 +6479,7 @@ body.mobile-menu-open .mobile-nav-header {
 }
 
 .own-recipe-secondary-btn:hover,
-.own-recipe-copy-btn:hover {
+.own-recipe-list-btn:hover {
   border-color: #c6d4ca;
   color: #2f3b34;
 }
@@ -6360,9 +6494,26 @@ body.mobile-menu-open .mobile-nav-header {
   gap: 16px;
 }
 
+/* Ingredienten en bereiding staan in een kaart, met een haarlijn ertussen in
+   plaats van twee losse blokken die tegen elkaar aan schuiven. */
+.own-recipe-block {
+  display: grid;
+  gap: 16px;
+}
+
+.own-recipe-block + .own-recipe-block {
+  border-top: 1px solid #eef3ef;
+  padding-top: 22px;
+}
+
+/* EatingPasta heeft geen trema-e, dus 'Ingrediënten' viel er half uit. Deze
+   koppen krijgen daarom dezelfde tekstletter als de inhoud eronder. */
 .own-recipe-section h2 {
   margin: 0;
-  font-size: 1.5rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   color: #2f3a35;
 }
 
@@ -6386,14 +6537,40 @@ body.mobile-menu-open .mobile-nav-header {
   border-bottom: none;
 }
 
-/* Afvinken tijdens het koken: puur visueel, wordt niet bewaard. */
+/* Afvinken tijdens het koken, en tegelijk de selectie voor de
+   boodschappenlijst. Leeg is een rondje met een randje; aangevinkt is het
+   groene rondje met het witte vinkje uit icons/check.svg. */
 .own-recipe-check {
-  width: 20px;
-  height: 20px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
   margin-top: 1px;
   flex-shrink: 0;
-  accent-color: var(--green);
+  border: 1.5px solid #d6e2d9;
+  border-radius: 50%;
+  background: #ffffff;
   cursor: pointer;
+  transition: border-color .18s ease, transform .12s ease;
+}
+
+.own-recipe-check:hover {
+  border-color: #b9cdbd;
+}
+
+.own-recipe-check:active {
+  transform: scale(0.92);
+}
+
+.own-recipe-check:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.own-recipe-check:checked {
+  border-color: transparent;
+  background: url('/icons/check.svg') center / 100% 100% no-repeat;
 }
 
 .own-recipe-ingredients label {
@@ -6409,28 +6586,68 @@ body.mobile-menu-open .mobile-nav-header {
   text-decoration: line-through;
 }
 
-.own-recipe-copy-btn {
+.own-recipe-list-btn {
   justify-self: start;
 }
 
+.own-recipe-list-btn.is-done {
+  border-color: var(--green);
+  color: var(--green-deep);
+}
+
+.own-recipe-list-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.own-recipe-list-feedback {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  color: var(--green-deep);
+}
+
+.own-recipe-list-feedback.is-error {
+  color: var(--danger);
+}
+
+/* Eigen nummering in plaats van ::marker, want een marker kan geen rondje met
+   een eigen achtergrondkleur zijn. */
 .own-recipe-steps {
+  list-style: none;
+  counter-reset: own-recipe-step;
   display: grid;
   gap: 14px;
   margin: 0;
-  padding-left: 22px;
+  padding: 0;
 }
 
 .own-recipe-steps li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 15px;
   line-height: 1.6;
   color: #3a3a3a;
-  padding-left: 4px;
 }
 
-.own-recipe-steps li::marker {
-  color: var(--green-deep);
-  font-weight: 700;
+.own-recipe-steps li::before {
+  counter-increment: own-recipe-step;
+  content: counter(own-recipe-step);
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: #43FD68;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 @media (min-width: 760px) {
@@ -6464,7 +6681,8 @@ body.mobile-menu-open .mobile-nav-header {
 @media print {
   .topbar,
   .own-recipe-actions,
-  .own-recipe-copy-btn {
+  .own-recipe-list-btn,
+  .own-recipe-list-feedback {
     display: none !important;
   }
 
@@ -7002,7 +7220,6 @@ textarea {
   .plan-weekmenu-btn:hover,
   .logout-btn:hover,
   .start-btn:hover,
-  .own-recipe-back-btn:hover,
   .hero-random button:hover {
     transform: none;
   }

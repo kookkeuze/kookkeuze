@@ -1458,7 +1458,11 @@ function createMultiSelect(select, placeholderLabel) {
   [document.getElementById('dishTypeNew'), 'Soort gerecht'],
   [document.getElementById('mealCategoryNew'), 'Menugang'],
   [document.getElementById('mealTypeNew'), 'Doel gerecht'],
-  [document.getElementById('timeRequiredNew'), 'Tijd']
+  [document.getElementById('timeRequiredNew'), 'Tijd'],
+  [document.getElementById('ownDishType'), 'Soort gerecht'],
+  [document.getElementById('ownMealCategory'), 'Menugang'],
+  [document.getElementById('ownMealType'), 'Doel gerecht'],
+  [document.getElementById('ownTimeRequired'), 'Tijd']
 ].forEach(([select, placeholder]) => createMultiSelect(select, placeholder));
 
 document.addEventListener('click', e => {
@@ -4408,6 +4412,143 @@ ownPhotoInput?.addEventListener('change', async () => {
 
 ownPhotoRemoveBtn?.addEventListener('click', () => showOwnPhotoPreview(null));
 
+/* ========= STAPPEN-BOUWER =========
+   De bereiding staat als losse regels in de database. In plaats van één lap
+   tekst typ je per stap; het lijstje nummert zichzelf en groeit mee. Enter
+   maakt de volgende stap, backspace in een lege stap haalt hem weer weg —
+   dezelfde reflexen als in een notitie-app, zodat je handen aan het toetsenbord
+   kunnen blijven. */
+const STEP_BUILDER_MIN_ROWS = 3;
+
+function createStepBuilder(listEl, addBtn) {
+  if (!listEl) return null;
+
+  // Meebewegen met de tekst: een stap van drie regels hoort ook drie regels
+  // hoog te zijn, anders scroll je binnen een veldje van 40 pixels.
+  function autoGrow(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }
+
+  function rows() {
+    return Array.from(listEl.querySelectorAll('.step-row'));
+  }
+
+  // Nummers en de zichtbaarheid van de kruisjes kloppen na elke wijziging: bij
+  // één overgebleven stap valt er niets te verwijderen.
+  function refresh() {
+    const all = rows();
+    all.forEach((row, index) => {
+      const num = row.querySelector('.step-row-num');
+      if (num) num.textContent = String(index + 1);
+      const remove = row.querySelector('.step-remove-btn');
+      if (remove) remove.hidden = all.length <= 1;
+    });
+  }
+
+  function removeRow(row) {
+    if (rows().length <= 1) return;
+    const next = row.nextElementSibling || row.previousElementSibling;
+
+    // Van de gemeten hoogte naar nul, zodat de stappen eronder meeschuiven in
+    // plaats van te verspringen.
+    row.style.height = `${row.offsetHeight}px`;
+    row.classList.add('is-leaving');
+    // Reflow afdwingen, anders ziet de browser alleen de eindhoogte en slaat hij
+    // de overgang over. Werkt ook in een tabblad op de achtergrond, waar
+    // requestAnimationFrame stilstaat.
+    void row.offsetWidth;
+    row.style.height = '0px';
+    row.style.opacity = '0';
+
+    const done = () => {
+      if (!row.isConnected) return;
+      row.remove();
+      refresh();
+    };
+    row.addEventListener('transitionend', done, { once: true });
+    setTimeout(done, 400);
+
+    next?.querySelector('.step-row-input')?.focus();
+  }
+
+  function addRow(value = '', { focus = false, after = null, animate = false } = {}) {
+    const row = document.createElement('li');
+    row.className = 'step-row';
+    if (animate) row.classList.add('is-entering');
+
+    const num = document.createElement('span');
+    num.className = 'step-row-num';
+    num.setAttribute('aria-hidden', 'true');
+
+    const input = document.createElement('textarea');
+    input.className = 'step-row-input';
+    input.rows = 1;
+    input.maxLength = 2000;
+    input.placeholder = 'Beschrijf deze stap';
+    input.value = value;
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'step-remove-btn';
+    remove.setAttribute('aria-label', 'Deze stap verwijderen');
+    remove.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i>';
+
+    row.append(num, input, remove);
+    if (after && after.parentElement === listEl) after.after(row);
+    else listEl.appendChild(row);
+
+    input.addEventListener('input', () => autoGrow(input));
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        addRow('', { focus: true, after: row, animate: true });
+        return;
+      }
+      // Een lege stap wegtikken voelt logischer dan naar het kruisje reiken.
+      if (e.key === 'Backspace' && input.value === '' && rows().length > 1) {
+        e.preventDefault();
+        removeRow(row);
+      }
+    });
+    remove.addEventListener('click', () => removeRow(row));
+
+    refresh();
+    autoGrow(input);
+
+    if (animate) {
+      void row.offsetWidth;
+      row.classList.remove('is-entering');
+    }
+    if (focus) input.focus();
+    return row;
+  }
+
+  function setValues(values) {
+    listEl.innerHTML = '';
+    const steps = (Array.isArray(values) ? values : []).filter(v => String(v).trim());
+    steps.forEach(step => addRow(step));
+    while (rows().length < STEP_BUILDER_MIN_ROWS) addRow('');
+    refresh();
+  }
+
+  function getValues() {
+    return rows()
+      .map(row => row.querySelector('.step-row-input')?.value.trim() || '')
+      .filter(Boolean);
+  }
+
+  addBtn?.addEventListener('click', () => addRow('', { focus: true, animate: true }));
+
+  setValues([]);
+  return { getValues, setValues, reset: () => setValues([]) };
+}
+
+const ownStepBuilder = createStepBuilder(
+  document.getElementById('ownStepsList'),
+  document.getElementById('ownStepAddBtn')
+);
+
 ownRecipeForm?.addEventListener('submit', async e => {
   e.preventDefault();
   if (!ensureLoggedInOrNotify(addMessageDiv)) return;
@@ -4426,11 +4567,8 @@ ownRecipeForm?.addEventListener('submit', async e => {
     meal_type:     getSelectedValues(document.getElementById('ownMealType')),
     time_required: getSelectedValues(document.getElementById('ownTimeRequired')),
     calories:      readNumber('ownCalories'),
-    servings:      readNumber('ownServings'),
-    prep_minutes:  readNumber('ownPrepMinutes'),
-    source_note:   readValue('ownSourceNote'),
     ingredients:   document.getElementById('ownIngredients')?.value.trim() || '',
-    instructions:  document.getElementById('ownInstructions')?.value.trim() || '',
+    instructions:  (ownStepBuilder?.getValues() || []).join('\n'),
     photo:         ownRecipePhotoData || null
   };
 
@@ -4482,6 +4620,7 @@ ownRecipeForm?.addEventListener('submit', async e => {
     showRecipeAddedToast(toastMessage);
     ownRecipeForm.reset();
     showOwnPhotoPreview(null);
+    ownStepBuilder?.reset();
     ['ownDishType', 'ownMealCategory', 'ownMealType', 'ownTimeRequired']
       .forEach(id => document.getElementById(id)?._multiSelectApi?.clear());
 
