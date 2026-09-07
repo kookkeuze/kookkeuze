@@ -6484,18 +6484,17 @@ body.mobile-menu-open .mobile-nav-header {
   color: #2f3b34;
 }
 
+/* Geen eigen kaart: .container is er al een. Een witte kaart op een witte
+   kaart gaf alleen maar een tweede rand om hetzelfde blok. De ruimte
+   erboven zet het los van de titel en de foto. */
 .own-recipe-section {
-  background: #ffffff;
-  border: 1px solid #e6efe8;
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 16px rgba(47, 106, 55, 0.07);
-  padding: 22px;
+  margin-top: 40px;
   display: grid;
   gap: 16px;
 }
 
-/* Ingredienten en bereiding staan in een kaart, met een haarlijn ertussen in
-   plaats van twee losse blokken die tegen elkaar aan schuiven. */
+/* Ingredienten en bereiding staan in een blok, met een haarlijn ertussen in
+   plaats van twee losse kaarten die tegen elkaar aan schuiven. */
 .own-recipe-block {
   display: grid;
   gap: 16px;
@@ -6686,9 +6685,7 @@ body.mobile-menu-open .mobile-nav-header {
     display: none !important;
   }
 
-  .own-recipe-section {
-    box-shadow: none;
-    border-color: #d9d9d9;
+  .own-recipe-block {
     break-inside: avoid;
   }
 
