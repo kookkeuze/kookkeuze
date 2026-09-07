@@ -1937,17 +1937,27 @@ select:focus {
   border-top: 1px solid #eef4f0;
 }
 
+/* Het kopje en de twee tegels staan gecentreerd, op elk schermformaat: als
+   paar onder de receptgegevens staan ze zo rustiger dan links uitgelijnd. */
 .recipe-shopping-label {
   margin: 0 0 8px;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.2px;
   color: #5f6b63;
+  text-align: center;
 }
 
+/* Twee even brede kolommen, samen zo breed als het langste bijschrift en dan
+   gecentreerd. Met flex zou de brede tekst 'Boodschappenlijst' zijn tegel naar
+   links duwen en stonden de twee tegels scheef om het midden. */
 .recipe-shopping-actions {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 10px;
+  width: fit-content;
+  margin: 0 auto;
 }
 
 /* Het icoon is zelf al een gekleurde tegel met ronde hoeken, dus geen kader
