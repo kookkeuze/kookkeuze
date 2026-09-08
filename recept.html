@@ -40,6 +40,30 @@
     </article>
   </main>
 
+  <!-- Kiezen welke ingredienten daadwerkelijk op de lijst komen. Zelfde
+       venster als op de hoofdpagina. -->
+  <div id="ingredientPickModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content ingredient-pick-modal-content">
+      <button id="closeIngredientPickModal" class="modal-close" aria-label="Sluiten">
+        <i class="fas fa-times"></i>
+      </button>
+      <div class="shopping-head">
+        <h3 class="shopping-title">Ingrediënten</h3>
+        <p id="ingredientPickSub" class="shopping-subtitle"></p>
+      </div>
+      <div class="shopping-toolbar">
+        <span id="ingredientPickCount" class="shopping-count"></span>
+        <button id="ingredientPickToggleAllBtn" type="button" class="shopping-text-btn">Alles uit</button>
+      </div>
+      <div id="ingredientPickBody" class="shopping-scroll"></div>
+      <div class="shopping-actions">
+        <button id="ingredientPickCancelBtn" type="button" class="shopping-text-btn">Annuleer</button>
+        <button id="ingredientPickConfirmBtn" type="button" class="shopping-primary-btn">Toevoegen</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/ingredient-picker.js" defer></script>
   <script src="/recept.js" defer></script>
 </body>
 </html>

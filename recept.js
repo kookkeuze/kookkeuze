@@ -65,8 +65,8 @@
   }
 
   function renderMetaRow(recipe) {
+    // Alleen de calorieen; de tijd staat bewust niet meer op de pagina.
     const items = [];
-    if (recipe.time_required) items.push(['tijd.svg', recipe.time_required]);
     if (recipe.calories != null) items.push(['kcal.svg', `${recipe.calories} kcal`]);
     if (!items.length) return '';
 
@@ -107,13 +107,13 @@
            <ul class="own-recipe-ingredients">
              ${ingredients.map((item, index) => `
                <li>
-                 <input type="checkbox" id="ingr-${index}" class="own-recipe-check" data-ingredient="${escapeHtml(item)}" />
+                 <input type="checkbox" id="ingr-${index}" class="own-recipe-check" />
                  <label for="ingr-${index}">${escapeHtml(item)}</label>
                </li>`).join('')}
            </ul>
            <button type="button" id="toShoppingListBtn" class="own-recipe-list-btn">
              <img src="/icons/boodschappenlijst-tegel.svg" alt="" class="own-recipe-list-icon" />
-             <span id="toShoppingListLabel">Alles op de boodschappenlijst</span>
+             <span>Op de boodschappenlijst</span>
            </button>
            <p id="shoppingListFeedback" class="own-recipe-list-feedback" hidden></p>
          </div>`
@@ -140,7 +140,6 @@
           <div id="ownRecipePhoto" class="own-recipe-photo is-empty" aria-hidden="true"></div>
         </div>
         <div class="own-recipe-intro">
-          <p class="own-recipe-kicker">Eigen recept</p>
           <h1>${escapeHtml(recipe.title || 'Recept')}</h1>
           ${renderMetaRow(recipe)}
           ${renderTags(recipe)}
@@ -164,29 +163,15 @@
     if (recipe.has_photo) loadPhoto(recipe.title);
   }
 
-  /* ---------- Ingrediënten naar de boodschappenlijst ---------- */
-  // De vinkjes zijn tegelijk de selectie: vink je niets aan, dan gaat de hele
-  // lijst mee. De knoptekst zegt precies wat er gebeurt, zodat je niet hoeft te
-  // raden wat 'toevoegen' deze keer betekent.
+  /* ---------- Ingrediënten naar de boodschappenlijst ----------
+     De knop opent hetzelfde kiesvenster als bij een recept van een andere site:
+     alles staat aan, je vinkt uit wat je al in huis hebt en je kunt een regel
+     nog bijschaven voordat hij op de lijst komt. De vinkjes op de pagina zelf
+     blijven puur om af te strepen tijdens het koken. */
   function initShoppingListButton(recipe, ingredients) {
     const button = document.getElementById('toShoppingListBtn');
-    const label = document.getElementById('toShoppingListLabel');
     const feedback = document.getElementById('shoppingListFeedback');
-    if (!button || !label) return;
-
-    const checks = Array.from(document.querySelectorAll('.own-recipe-check'));
-
-    function selection() {
-      const checked = checks.filter(check => check.checked).map(check => check.dataset.ingredient || '');
-      return checked.length ? checked : ingredients;
-    }
-
-    function updateLabel() {
-      const count = checks.filter(check => check.checked).length;
-      label.textContent = count
-        ? `${count} product${count === 1 ? '' : 'en'} op de boodschappenlijst`
-        : 'Alles op de boodschappenlijst';
-    }
+    if (!button) return;
 
     function showFeedback(text, isError) {
       if (!feedback) return;
@@ -195,42 +180,45 @@
       feedback.classList.toggle('is-error', !!isError);
     }
 
-    checks.forEach(check => check.addEventListener('change', updateLabel));
-    updateLabel();
+    const title = recipe.title || 'Recept';
 
-    button.addEventListener('click', async () => {
-      if (!getValidToken()) {
-        showFeedback('Log in om je boodschappenlijst te gebruiken.', true);
-        return;
-      }
-
-      const items = selection().filter(Boolean);
-      if (!items.length) return;
-
-      button.disabled = true;
+    // Geeft false terug bij een fout: het venster blijft dan staan, zodat je
+    // niet opnieuw hoeft uit te vinken.
+    async function toevoegen(chosen) {
       try {
         const res = await fetch(`${API_BASE}/api/shopping-list${activeDatabaseQuery()}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify({
-            items: items.map(name => ({ name, source_title: recipe.title || 'Recept' }))
-          })
+          body: JSON.stringify({ items: chosen })
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           showFeedback(data.error || 'Toevoegen aan de boodschappenlijst mislukte.', true);
-          return;
+          return false;
         }
 
-        const added = Number(data.added || items.length);
+        const added = Number(data.added || chosen.length);
         showFeedback(`${added} product${added === 1 ? '' : 'en'} op je boodschappenlijst gezet.`, false);
-        button.classList.add('is-done');
-        setTimeout(() => button.classList.remove('is-done'), 1200);
+        return true;
       } catch (_err) {
         showFeedback('Geen verbinding met de server. Probeer het later nog eens.', true);
-      } finally {
-        button.disabled = false;
+        return false;
       }
+    }
+
+    button.addEventListener('click', () => {
+      if (!getValidToken()) {
+        showFeedback('Log in om je boodschappenlijst te gebruiken.', true);
+        return;
+      }
+      if (!ingredients.length) return;
+      if (feedback) feedback.hidden = true;
+
+      IngredientPicker.open({
+        subtitle: title,
+        items: ingredients.map(name => ({ name, source_title: title })),
+        onConfirm: toevoegen
+      });
     });
   }
 
