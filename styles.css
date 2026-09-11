@@ -5716,13 +5716,18 @@ body.mobile-menu-open .mobile-nav-header {
 
 /* ===== Statische info-pagina's (Over Kookkeuze, Privacyverklaring) ===== */
 /* Meer lucht tussen koppen en tekst, en groene subkoppen/links in de
-   Kookkeuze-kleur. De grote titel (h2) houdt zijn eigen stijl. */
-.info-page h3 {
+   Kookkeuze-kleur. De grote titel (h1) houdt zijn eigen stijl: die pakt de
+   EatingPasta-regel bovenaan dit bestand. De subkoppen zijn h2 om de
+   koppenhierarchie sluitend te houden, maar mogen die display-letter niet
+   erven - vandaar de expliciete terugzet naar de body-letter. */
+.info-page h2 {
   color: var(--green);
   margin: 30px 0 8px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: normal;
 }
 
-.info-page h3:first-of-type {
+.info-page h2:first-of-type {
   margin-top: 22px;
 }
 
@@ -5835,7 +5840,7 @@ body.mobile-menu-open .mobile-nav-header {
   min-width: 0;
 }
 
-.info-page .info-step-body h4 {
+.info-page .info-step-body h3 {
   margin: 2px 0 6px;
   font-size: 1.05rem;
   color: var(--green-deep);
@@ -5857,7 +5862,7 @@ body.mobile-menu-open .mobile-nav-header {
     font-size: 1.25rem;
   }
 
-  .info-page .info-step-body h4 {
+  .info-page .info-step-body h3 {
     font-size: 1rem;
   }
 }
@@ -5873,7 +5878,7 @@ body.mobile-menu-open .mobile-nav-header {
   box-shadow: 0 10px 26px rgba(47, 106, 55, 0.12);
 }
 
-.contact-block h3 {
+.contact-block h2 {
   margin-top: 0;
   color: var(--green);
 }

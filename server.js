@@ -3,6 +3,7 @@ const express    = require('express');
 const bodyParser = require('body-parser');
 const cors       = require('cors');
 const path       = require('path');
+const fs         = require('fs');
 const crypto     = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const {
@@ -1287,6 +1288,21 @@ const {
   replaceDemoRecipes
 } = require('./database');
 
+// Beveiligingsheaders op alles wat we serveren. Staat bovenaan zodat ook de
+// redirect hieronder en de statische bestanden ze meekrijgen.
+// Bewust zonder 'includeSubDomains' en 'preload' op HSTS: dat legt de hele
+// domeinboom een jaar lang vast op HTTPS en is daarna nauwelijks terug te
+// draaien. Eerst zeker weten dat elk toekomstig subdomein HTTPS spreekt.
+app.disable('x-powered-by');
+app.use((_req, res, next) => {
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
 // Canonieke hostnaam: kookkeuze.nl stuurt door naar www.kookkeuze.nl, anders
 // indexeert Google dezelfde pagina's op twee hostnames. Staat vóór alle routes
 // en express.static, want die zouden de content anders gewoon serveren.
@@ -1352,17 +1368,49 @@ const STATIC_SITEMAP_URLS = [
   { path: '/voorwaarden', priority: '0.3', changefreq: 'monthly' }
 ];
 
+// Welk bestand bepaalt de inhoud van een statische pagina. De wijzigingsdatum
+// daarvan is de eerlijke lastmod: een vaste datum in de code veroudert stilletjes,
+// en een lastmod die niet klopt negeert Google alsnog.
+const SITEMAP_BRONBESTANDEN = {
+  '/': 'index.html',
+  '/over-ons': 'over-ons.html',
+  '/privacy': 'privacy.html',
+  '/voorwaarden': 'voorwaarden.html'
+};
+
+function alsDatum(waarde) {
+  const d = waarde instanceof Date ? waarde : new Date(waarde);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+function lastmodVoor(pad) {
+  const bestand = SITEMAP_BRONBESTANDEN[pad];
+  if (bestand) {
+    try {
+      return alsDatum(fs.statSync(path.join(__dirname, bestand)).mtime);
+    } catch {
+      return null;
+    }
+  }
+  // De landingspagina's tonen recepten uit de crawler-index. Verandert die,
+  // dan verandert hun inhoud - dus dat is hun echte wijzigingsdatum.
+  return alsDatum(internetCrawlerIndexState?.generatedAt);
+}
+
 app.get('/sitemap.xml', (_req, res) => {
   const urls = [
     ...STATIC_SITEMAP_URLS,
     ...getSeoPageUrls().map(page => ({ ...page, changefreq: 'weekly' }))
   ];
   const body = urls
-    .map(url =>
-      `  <url><loc>https://www.kookkeuze.nl${url.path}</loc>` +
-      `<changefreq>${url.changefreq}</changefreq>` +
-      `<priority>${url.priority}</priority></url>`
-    )
+    .map(url => {
+      const lastmod = lastmodVoor(url.path);
+      return `  <url><loc>https://www.kookkeuze.nl${url.path}</loc>` +
+        `<changefreq>${url.changefreq}</changefreq>` +
+        `<priority>${url.priority}</priority>` +
+        (lastmod ? `<lastmod>${lastmod}</lastmod>` : '') +
+        `</url>`;
+    })
     .join('\n');
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
   res.send(

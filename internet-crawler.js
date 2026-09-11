@@ -41,6 +41,12 @@ const INTERNET_CRAWLER_SITES = [
     baseUrl: 'https://www.eiwitchef.nl',
     allowedHosts: ['eiwitchef.nl', 'www.eiwitchef.nl'],
     recipePathIncludes: ['/recept', '/recepten'],
+    // Recepten staan hier op de root (/low-carb-brownies/) in plaats van onder
+    // /recept, dus accepteren we paden van een enkel segment. Omdat daar
+    // ook categorie- en blogpagina's tussen zitten, moet de pagina een echt
+    // schema.org-recept bevatten voordat hij in de index belandt.
+    allowRootRecipePaths: true,
+    requireRecipeSchema: true,
     listingPageCandidates: ['/recepten', '/blog'],
     maxRecipeUrls: 200
   },
@@ -155,6 +161,12 @@ const INTERNET_CRAWLER_SITES = [
     baseUrl: 'https://miljuschka.nl',
     allowedHosts: ['miljuschka.nl', 'www.miljuschka.nl'],
     recipePathIncludes: ['/recept', '/recepten'],
+    // Recepten staan hier op de root (/mac-cheese-broccoli/) in plaats van onder
+    // /recept, dus accepteren we paden van een enkel segment. Omdat daar
+    // ook categorie- en blogpagina's tussen zitten, moet de pagina een echt
+    // schema.org-recept bevatten voordat hij in de index belandt.
+    allowRootRecipePaths: true,
+    requireRecipeSchema: true,
     listingPageCandidates: ['/recepten', '/category/recepten'],
     maxRecipeUrls: 250
   },
@@ -182,6 +194,12 @@ const INTERNET_CRAWLER_SITES = [
     baseUrl: 'https://familieoverdekook.nl',
     allowedHosts: ['familieoverdekook.nl', 'www.familieoverdekook.nl'],
     recipePathIncludes: ['/recept', '/recepten'],
+    // Recepten staan hier op de root (/indiase-kruidige-pompoensoep/) in plaats van onder
+    // /recept, dus accepteren we paden van een enkel segment. Omdat daar
+    // ook categorie- en blogpagina's tussen zitten, moet de pagina een echt
+    // schema.org-recept bevatten voordat hij in de index belandt.
+    allowRootRecipePaths: true,
+    requireRecipeSchema: true,
     listingPageCandidates: ['/recepten', '/category/recepten'],
     maxRecipeUrls: 250
   },
@@ -191,6 +209,12 @@ const INTERNET_CRAWLER_SITES = [
     baseUrl: 'https://kookmutsjes.com',
     allowedHosts: ['kookmutsjes.com', 'www.kookmutsjes.com'],
     recipePathIncludes: ['/recept', '/recepten'],
+    // Recepten staan hier op de root (/aardbeientaartje/) in plaats van onder
+    // /recept, dus accepteren we paden van een enkel segment. Omdat daar
+    // ook categorie- en blogpagina's tussen zitten, moet de pagina een echt
+    // schema.org-recept bevatten voordat hij in de index belandt.
+    allowRootRecipePaths: true,
+    requireRecipeSchema: true,
     listingPageCandidates: ['/recepten', '/category/recepten'],
     maxRecipeUrls: 250
   },
@@ -794,6 +818,23 @@ function loadInternetRecipeIndexSync() {
   }
 }
 
+// Tijdsbudget per site. Zonder dit kan een site die onze verzoeken laat
+// doodlopen (geen TCP-antwoord, dus elk verzoek wacht de volle timeout uit) de
+// hele crawl urenlang ophouden: 250 recepten x 15 sec gedeeld door 3 tegelijk is
+// al ruim 20 minuten voor nul resultaat. Na het budget slaan we de rest van die
+// site over en gaan we door met de volgende.
+const DEFAULT_SITE_BUDGET_MS = 5 * 60 * 1000;
+
+// Laat een belofte niet langer duren dan het budget. Bij overschrijding gooien
+// we, zodat de aanroeper in zijn bestaande catch belandt.
+function withDeadline(promise, ms, label) {
+  let timer;
+  const bewaker = new Promise((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label}: tijdsbudget van ${Math.round(ms / 1000)}s overschreden`)), ms);
+  });
+  return Promise.race([promise, bewaker]).finally(() => clearTimeout(timer));
+}
+
 async function crawlInternetRecipeIndex({ fetchRecipePayload, log = () => {} }) {
   const allRecipes = [];
   const seenUrls = new Set();
@@ -809,18 +850,34 @@ async function crawlInternetRecipeIndex({ fetchRecipePayload, log = () => {} }) 
       discoveredRecipeUrls: 0,
       indexedRecipes: 0,
       failedRecipes: 0,
+      skippedForTime: 0,
       errors: []
     };
 
     log(`Start crawl voor ${site.source}`);
 
+    const budgetMs = Number(site.maxCrawlMs || DEFAULT_SITE_BUDGET_MS);
+    const deadline = Date.now() + budgetMs;
+
     try {
-      const { sitemapUrls, listingPagesVisited, recipeUrls } = await collectRecipeUrlsForSite(site, log);
+      const { sitemapUrls, listingPagesVisited, recipeUrls } = await withDeadline(
+        collectRecipeUrlsForSite(site, log),
+        budgetMs,
+        'URL-verzameling'
+      );
       summary.sitemapCount = sitemapUrls.length;
       summary.listingPagesVisited = listingPagesVisited;
       summary.discoveredRecipeUrls = recipeUrls.length;
 
       const entries = await mapWithConcurrency(recipeUrls, Number(site.fetchConcurrency || 3), async (recipeUrl) => {
+        // Budget op: de resterende recepten laten we lopen. Ze staan er de
+        // volgende run weer, en een site die nu niet antwoordt gaat dat binnen
+        // deze run ook niet meer doen.
+        if (Date.now() > deadline) {
+          summary.skippedForTime += 1;
+          return null;
+        }
+
         try {
           const payload = await fetchRecipePayload(new URL(recipeUrl));
           if (!payload || payload.error) {
@@ -870,19 +927,34 @@ async function crawlInternetRecipeIndex({ fetchRecipePayload, log = () => {} }) 
     }
 
     siteSummaries.push(summary);
-    log(`Klaar met ${site.source}: ${summary.indexedRecipes} recepten`);
+    const overgeslagen = summary.skippedForTime
+      ? `, ${summary.skippedForTime} overgeslagen (tijdsbudget)`
+      : '';
+    log(`Klaar met ${site.source}: ${summary.indexedRecipes} recepten${overgeslagen}`);
+
+    // Na elke site wegschrijven in plaats van alleen aan het eind. Een crawl
+    // duurt tientallen minuten; gaat hij halverwege onderuit of breek je hem af,
+    // dan houd je zo alles wat er tot dan toe is opgehaald.
+    try {
+      await saveInternetRecipeIndex(bouwIndex());
+    } catch (err) {
+      log(`tussentijds opslaan mislukt: ${err.message}`);
+    }
   }
 
-  const index = {
-    version: CRAWLER_INDEX_VERSION,
-    generatedAt: new Date().toISOString(),
-    totalRecipes: allRecipes.length,
-    sites: siteSummaries,
-    recipes: allRecipes
-  };
-
+  const index = bouwIndex();
   await saveInternetRecipeIndex(index);
   return index;
+
+  function bouwIndex() {
+    return {
+      version: CRAWLER_INDEX_VERSION,
+      generatedAt: new Date().toISOString(),
+      totalRecipes: allRecipes.length,
+      sites: siteSummaries,
+      recipes: allRecipes
+    };
+  }
 }
 
 module.exports = {

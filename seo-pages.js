@@ -239,13 +239,13 @@ function renderExtraSections(sections) {
           <li class="info-step">
             <span class="info-step-number" aria-hidden="true">${index + 1}</span>
             <div class="info-step-body">
-              <h4>${escapeHtml(step.title)}</h4>
+              <h3>${escapeHtml(step.title)}</h3>
               <p>${escapeHtml(step.body)}</p>
             </div>
           </li>`
         )
         .join('');
-      return `      <h3>${escapeHtml(section.heading)}</h3>
+      return `      <h2>${escapeHtml(section.heading)}</h2>
       <ol class="info-steps">${steps}</ol>`;
     })
     .join('\n');
@@ -307,7 +307,7 @@ function renderPage(page, recipes) {
   const intro = page.intro.map(paragraph => `      <p>${paragraph}</p>`).join('\n');
   const list = renderRecipeList(recipes);
   const listBlock = list
-    ? `      <h3>${escapeHtml(page.listHeading)}</h3>
+    ? `      <h2>${escapeHtml(page.listHeading)}</h2>
       ${page.listIntro ? `<p>${escapeHtml(page.listIntro)}</p>` : ''}
       ${list}`
     : '';
@@ -397,7 +397,7 @@ ${buildJsonLd(page, recipes)}
 
   <main class="container">
     <section class="tab-content active info-page">
-      <h2>${escapeHtml(page.h1)}</h2>
+      <h1>${escapeHtml(page.h1)}</h1>
 
 ${intro}
 
