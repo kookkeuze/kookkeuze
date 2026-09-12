@@ -494,12 +494,21 @@ function registerSeoPages(app, { fetchDemoRecipes, fetchIndexRecipes = () => [] 
       // Op URL ontdubbelen: de voorbeeldrecepten komen van dezelfde kooksites
       // die de crawler langsgaat, dus ze kunnen elkaar overlappen.
       const gezien = new Set(recipes.map(r => String(r.url || '').replace(/\/$/, '')));
+      // Ook op titel ontdubbelen: sommige sites zetten hetzelfde recept onder
+      // twee URL's (Jumbo doet dat met verschillende ID's achter dezelfde slug).
+      // Op de pagina zie je dan twee keer dezelfde regel staan.
+      const gezienTitels = new Set(
+        recipes.map(r => String(r.title || '').trim().toLowerCase()).filter(Boolean)
+      );
       const treffers = [];
       for (const kandidaat of fetchIndexRecipes()) {
         const url = String(kandidaat?.url || '').replace(/\/$/, '');
         if (!url || gezien.has(url)) continue;
+        const titel = String(kandidaat?.title || '').trim().toLowerCase();
+        if (titel && gezienTitels.has(titel)) continue;
         if (!indexFilterSets.some(filters => matchesFilters(kandidaat, filters))) continue;
         gezien.add(url);
+        if (titel) gezienTitels.add(titel);
         treffers.push(kandidaat);
       }
       treffers
