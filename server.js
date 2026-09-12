@@ -1349,14 +1349,19 @@ app.get('/voorwaarden.html', (req, res) => {
 
 // Landings- en categoriepagina's voor zoekmachines. Staan hier omdat ze vóór
 // express.static moeten komen, net als de schone URL's hierboven. De recepten
-// die ze tonen komen uit de demo-database — dezelfde voorbeeldrecepten die een
-// niet-ingelogde bezoeker in de app ziet.
+// die ze tonen komen eerst uit de demo-database — dezelfde voorbeeldrecepten
+// die een niet-ingelogde bezoeker in de app ziet — en worden daarna aangevuld
+// uit de crawler-index.
 registerSeoPages(app, {
   fetchDemoRecipes: async (filters) => {
     const ownerUserId = await resolveDemoDatabaseId();
     if (!ownerUserId) return [];
     return dbCall(getRecipes, { ...filters, user_id: ownerUserId });
-  }
+  },
+  // De crawler-index vult de lijsten aan: de voorbeelddatabase heeft er tien,
+  // de index bijna drieduizend. Zonder die aanvulling bleven de pagina's op
+  // een handvol recepten steken.
+  fetchIndexRecipes: () => internetCrawlerIndexState?.recipes || []
 });
 
 // Sitemap wordt gegenereerd in plaats van als bestand bijgehouden, zodat een

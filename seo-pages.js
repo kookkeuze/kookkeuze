@@ -21,6 +21,10 @@ const OG_IMAGE = SITE_URL + '/Logo/icon-kookkeuze-512.png';
 // meerdere pagina's achter elkaar op. Tien minuten cache scheelt die queries.
 const LIST_CACHE_MS = 10 * 60 * 1000;
 
+// Hoeveel recepten er hoogstens op een landingspagina komen. Genoeg om de
+// pagina te vullen, niet zoveel dat het een eindeloze muur tekst wordt.
+const LIST_MAX = 30;
+
 function escapeHtml(value) {
   return String(value == null ? '' : value)
     .replace(/&/g, '&amp;')
@@ -177,10 +181,12 @@ const PAGES = [
     ],
     ctaLabel: 'Open de receptkiezer',
     ctaFilters: { meal_type: 'Sporten' },
-    // Geen receptenlijst: in de voorbeelddatabase staan bewust geen calorieën
-    // (die staan niet in de brondata en verzinnen we niet). Een lijst met
-    // "caloriearme" recepten zonder cijfers zou een loze belofte zijn.
+    // De voorbeelddatabase heeft geen calorieen (die staan niet in de brondata
+    // en verzinnen we niet), dus daaruit halen we hier niets: filterSets blijft
+    // leeg. De crawler-index leest calorieen wel uit de bron, dus die vult de
+    // lijst wel - alleen met recepten waar echt een getal bij staat.
     filterSets: [],
+    indexFilterSets: [{ calories_max: 500 }],
     extraSections: [
       {
         heading: 'Zo gebruik je het calorieënfilter',
@@ -208,6 +214,35 @@ const PAGES = [
 ];
 
 /* -------------------- RENDEREN -------------------- */
+
+// Stabiele pseudo-willekeurige sleutel per (pagina, recept). Twee pagina's met
+// hetzelfde filter - /wat-eten-we-vandaag en /recepten/snel-klaar zoeken allebei
+// op "onder de 30 minuten" - zouden anders exact dezelfde lijst tonen, en dat
+// leest voor Google als dubbele inhoud. Deterministisch, dus de volgorde blijft
+// tussen verzoeken gelijk en de cache blijft zinvol.
+function volgordeSleutel(paginaPad, url) {
+  let h = 2166136261;
+  const invoer = `${paginaPad}|${url}`;
+  for (let i = 0; i < invoer.length; i += 1) {
+    h ^= invoer.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+// Past een recept uit de crawler-index binnen een filterset? Elke sleutel moet
+// kloppen; een lijst met waarden betekent "een van deze". calories_max is
+// numeriek in plaats van een keuzelijst, want calorieen zijn een getal.
+function matchesFilters(recipe, filters) {
+  return Object.entries(filters).every(([sleutel, waarde]) => {
+    if (sleutel === 'calories_max') {
+      const kcal = Number(recipe?.calories);
+      return Number.isFinite(kcal) && kcal > 0 && kcal < Number(waarde);
+    }
+    const opties = Array.isArray(waarde) ? waarde : [waarde];
+    return opties.includes(recipe?.[sleutel]);
+  });
+}
 
 function renderRecipeList(recipes) {
   if (!recipes.length) return '';
@@ -431,15 +466,19 @@ ${renderFooterRecipeLinks(page.path)}
 
 /* -------------------- ROUTES -------------------- */
 
-function registerSeoPages(app, { fetchDemoRecipes }) {
+function registerSeoPages(app, { fetchDemoRecipes, fetchIndexRecipes = () => [] }) {
   const cache = new Map();
 
   async function loadRecipes(page) {
-    if (!page.filterSets.length) return [];
+    const indexFilterSets = page.indexFilterSets || page.filterSets;
+    if (!page.filterSets.length && !indexFilterSets.length) return [];
 
     const cached = cache.get(page.path);
     if (cached && Date.now() - cached.at < LIST_CACHE_MS) return cached.recipes;
 
+    // De voorbeeldrecepten eerst: die zijn met zorg gekozen en compleet
+    // ingevuld. De crawler-index vult daarna aan tot LIST_MAX, zodat een
+    // pagina niet op drie regels blijft steken.
     const byId = new Map();
     for (const filters of page.filterSets) {
       const rows = await fetchDemoRecipes(filters);
@@ -450,6 +489,25 @@ function registerSeoPages(app, { fetchDemoRecipes }) {
     const recipes = Array.from(byId.values()).sort((a, b) =>
       String(a.title || '').localeCompare(String(b.title || ''), 'nl')
     );
+
+    if (recipes.length < LIST_MAX && indexFilterSets.length) {
+      // Op URL ontdubbelen: de voorbeeldrecepten komen van dezelfde kooksites
+      // die de crawler langsgaat, dus ze kunnen elkaar overlappen.
+      const gezien = new Set(recipes.map(r => String(r.url || '').replace(/\/$/, '')));
+      const treffers = [];
+      for (const kandidaat of fetchIndexRecipes()) {
+        const url = String(kandidaat?.url || '').replace(/\/$/, '');
+        if (!url || gezien.has(url)) continue;
+        if (!indexFilterSets.some(filters => matchesFilters(kandidaat, filters))) continue;
+        gezien.add(url);
+        treffers.push(kandidaat);
+      }
+      treffers
+        .sort((a, b) => volgordeSleutel(page.path, a.url) - volgordeSleutel(page.path, b.url))
+        .slice(0, LIST_MAX - recipes.length)
+        .forEach(kandidaat => recipes.push(kandidaat));
+    }
+
     cache.set(page.path, { at: Date.now(), recipes });
     return recipes;
   }
