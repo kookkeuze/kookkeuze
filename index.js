@@ -457,6 +457,12 @@ function renderRecipeNoteButton(recipeId, recipeUrl, recipeTitle, extraClass = '
 
 /* ========= RECEPT AFBEELDINGEN ========= */
 const recipeImageCache = new Map();
+// Verzoeken die nog onderweg zijn. De cache hierboven wordt pas gevuld als het
+// antwoord binnen is, dus twee aanvragen voor hetzelfde recept die kort na
+// elkaar vertrekken missen elkaar en gaan allebei het net op. Op de
+// overzichtspagina gebeurde dat bij elk plaatje: achttien verzoeken voor negen
+// afbeeldingen.
+const recipeImageInFlight = new Map();
 let pendingResetToken = null;
 
 // Eigen recepten wijzen naar een pagina op Kookkeuze zelf ("/recept/12") in
@@ -485,23 +491,27 @@ function fetchOwnRecipePhoto(url) {
 function fetchRecipeImage(url) {
   if (!url) return Promise.resolve(null);
   if (recipeImageCache.has(url)) return Promise.resolve(recipeImageCache.get(url));
+  // Al onderweg: meelopen met dat verzoek in plaats van een tweede sturen.
+  if (recipeImageInFlight.has(url)) return recipeImageInFlight.get(url);
 
-  if (isOwnRecipeUrl(url)) {
-    return fetchOwnRecipePhoto(url).then(imageUrl => {
-      recipeImageCache.set(url, imageUrl);
-      return imageUrl;
-    });
-  }
+  const bezig = (isOwnRecipeUrl(url)
+    ? fetchOwnRecipePhoto(url).then(imageUrl => {
+        recipeImageCache.set(url, imageUrl);
+        return imageUrl;
+      })
+    : fetch(`${API_BASE}/api/recipe-image?url=${encodeURIComponent(url)}`, { headers: authHeaders() })
+        .then(r => r.json())
+        .then(d => {
+          const imageUrl = d && d.imageUrl ? d.imageUrl : null;
+          recipeImageCache.set(url, imageUrl);
+          return imageUrl;
+        })
+  )
+    .catch(() => null)
+    .finally(() => recipeImageInFlight.delete(url));
 
-  const endpoint = `${API_BASE}/api/recipe-image?url=${encodeURIComponent(url)}`;
-  return fetch(endpoint, { headers: authHeaders() })
-    .then(r => r.json())
-    .then(d => {
-      const imageUrl = d && d.imageUrl ? d.imageUrl : null;
-      recipeImageCache.set(url, imageUrl);
-      return imageUrl;
-    })
-    .catch(() => null);
+  recipeImageInFlight.set(url, bezig);
+  return bezig;
 }
 
 function setOverviewImage(cell, imageUrl, title) {

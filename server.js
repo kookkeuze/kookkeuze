@@ -160,10 +160,35 @@ function looksLikeUsableRecipeHtml(html) {
   return /"recipeIngredient"/i.test(html) || /itemprop=["']recipeIngredient["']/i.test(html);
 }
 
+// Totaalbudget voor het ophalen van een receptafbeelding. Elke losse stap had
+// al een timeout, maar niets bewaakte de som: vijf pogingen van 14s, een
+// reader-proxy van 22s en vier plaatjescontroles van 8s tikken op tot ruim twee
+// minuten voor een site die ons laat hangen (plus.nl doet dat). De bezoeker
+// wacht dat uit terwijl de pagina niet afrendert. Vijf seconden is genoeg voor
+// een site die gewoon antwoordt, en kort genoeg om niet op te vallen.
+const RECIPE_IMAGE_BUDGET_MS = 5000;
+
+// Blokkeert een site ons structureel, dan heeft het geen zin om het tien
+// minuten later meteen weer te proberen: dan betaalt elke tiende bezoeker de
+// volle wachttijd. Een uitgeput budget onthouden we daarom langer dan een
+// gewone misser.
+const IMAGE_TIMEOUT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+function resterendBudget(deadline) {
+  return deadline ? Math.max(0, deadline - Date.now()) : Infinity;
+}
+
+// De gewenste timeout, maar nooit langer dan er nog budget over is.
+function budgetTimeout(deadline, gewenst) {
+  const rest = resterendBudget(deadline);
+  return Number.isFinite(rest) ? Math.min(gewenst, rest) : gewenst;
+}
+
 // Laatste redmiddel: haal de pagina op via een externe reader-proxy (r.jina.ai).
 // Helpt bij sites die direct ophalen blokkeren of die volledig via JavaScript
 // renderen. We vragen HTML terug zodat eventuele JSON-LD blokken bewaard blijven.
-async function fetchViaReaderProxy(targetUrl) {
+async function fetchViaReaderProxy(targetUrl, deadline) {
+  if (resterendBudget(deadline) <= 0) return null;
   const proxyUrl = `https://r.jina.ai/${targetUrl}`;
   try {
     const response = await fetch(proxyUrl, {
@@ -173,7 +198,7 @@ async function fetchViaReaderProxy(targetUrl) {
         'X-Locale': 'nl-NL'
       },
       redirect: 'follow',
-      signal: AbortSignal.timeout(22000)
+      signal: AbortSignal.timeout(budgetTimeout(deadline, 22000))
     });
     if (!response.ok) return null;
     const html = await response.text();
@@ -184,7 +209,7 @@ async function fetchViaReaderProxy(targetUrl) {
   return null;
 }
 
-async function fetchHtmlWithRetries(targetUrl) {
+async function fetchHtmlWithRetries(targetUrl, deadline) {
   const origin = (() => {
     try { return new URL(targetUrl).origin + '/'; } catch { return undefined; }
   })();
@@ -223,10 +248,12 @@ async function fetchHtmlWithRetries(targetUrl) {
   let fallbackHtml = null;
 
   for (const headers of attempts) {
+    // Budget op: stoppen met proberen. Wat we tot nu toe hebben is het antwoord.
+    if (resterendBudget(deadline) <= 0) break;
     try {
       const response = await browserFetch(targetUrl, {
         headers,
-        timeoutMs: 14000
+        timeoutMs: budgetTimeout(deadline, 14000)
       });
       if (!response.ok) continue;
       const html = await response.text();
@@ -239,7 +266,7 @@ async function fetchHtmlWithRetries(targetUrl) {
   }
 
   // Niets bruikbaars via directe pogingen → probeer de reader-proxy.
-  const proxied = await fetchViaReaderProxy(targetUrl);
+  const proxied = await fetchViaReaderProxy(targetUrl, deadline);
   if (proxied && (looksLikeUsableRecipeHtml(proxied) || !fallbackHtml)) {
     return proxied;
   }
@@ -1592,7 +1619,7 @@ app.get('/api/recipe-info', async (req, res) => {
 // cache, dus dit kost hooguit één extra verzoek per recept per dag.
 const MAX_IMAGE_CANDIDATES_CHECKED = 4;
 
-async function isReachableImage(absoluteUrl, refererUrl) {
+async function isReachableImage(absoluteUrl, refererUrl, deadline) {
   try {
     const response = await browserFetch(absoluteUrl, {
       headers: {
@@ -1601,7 +1628,7 @@ async function isReachableImage(absoluteUrl, refererUrl) {
         Referer: refererUrl
       },
       method: 'HEAD',
-      timeoutMs: 8000
+      timeoutMs: budgetTimeout(deadline, 8000)
     });
     // Niet elke server accepteert HEAD. Weigert hij de methode, dan weten we
     // niets over dit plaatje — en dan is doorlaten beter dan afkeuren, want dat
@@ -1617,7 +1644,7 @@ async function isReachableImage(absoluteUrl, refererUrl) {
   }
 }
 
-async function pickReachableImage(candidates, pageUrl) {
+async function pickReachableImage(candidates, pageUrl, deadline) {
   const absolute = [];
   for (const candidate of candidates) {
     try {
@@ -1632,7 +1659,10 @@ async function pickReachableImage(candidates, pageUrl) {
   if (absolute.length === 1) return absolute[0];
 
   for (const url of absolute.slice(0, MAX_IMAGE_CANDIDATES_CHECKED)) {
-    if (await isReachableImage(url, pageUrl.toString())) return url;
+    // Geen tijd meer om te controleren: dan maar de eerste kandidaat. Een
+    // plaatje dat misschien stuk is, is beter dan een pagina die blijft hangen.
+    if (resterendBudget(deadline) <= 0) break;
+    if (await isReachableImage(url, pageUrl.toString(), deadline)) return url;
   }
   return absolute[0];
 }
@@ -1658,13 +1688,23 @@ app.get('/api/recipe-image', async (req, res) => {
     return res.json({ imageUrl: cached.imageUrl });
   }
 
+  const deadline = Date.now() + RECIPE_IMAGE_BUDGET_MS;
+
   try {
-    const html = await fetchHtmlWithRetries(cacheKey);
+    const html = await fetchHtmlWithRetries(cacheKey, deadline);
     if (!html) {
+      // Niets binnen het budget. Kwam dat doordat de tijd op was, dan blokkeert
+      // deze site ons waarschijnlijk structureel: langer onthouden, anders
+      // betaalt straks weer een bezoeker de volle wachttijd.
+      const budgetOp = resterendBudget(deadline) <= 0;
+      recipeImageCache.set(cacheKey, {
+        imageUrl: null,
+        expiresAt: Date.now() + (budgetOp ? IMAGE_TIMEOUT_CACHE_TTL_MS : IMAGE_NEGATIVE_CACHE_TTL_MS)
+      });
       return res.json({ imageUrl: null });
     }
 
-    const imageUrl = await pickReachableImage(collectRecipeImageCandidates(html), pageUrl);
+    const imageUrl = await pickReachableImage(collectRecipeImageCandidates(html), pageUrl, deadline);
     const proxiedImageUrl = imageUrl
       ? `/api/image-proxy?url=${encodeURIComponent(imageUrl)}&ref=${encodeURIComponent(cacheKey)}`
       : null;
