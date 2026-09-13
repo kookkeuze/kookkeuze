@@ -197,18 +197,5 @@
       </nav>
     </div>
   </footer>
-
-  <!-- TIJDELIJK: umami opt-out linkje, later weer verwijderen -->
-  <p style="text-align:center; margin: 16px 0; font-size: 13px;">
-    <a href="#" id="umami-optout-link" style="color:#4a5750;">Voorkeuren</a>
-  </p>
-  <script>
-    document.getElementById('umami-optout-link').addEventListener('click', function (e) {
-      e.preventDefault();
-      localStorage.setItem('umami.disabled', 1);
-      this.textContent = 'Voorkeur opgeslagen ✓';
-    });
-  </script>
-  <!-- EINDE TIJDELIJK -->
 </body>
 </html>
