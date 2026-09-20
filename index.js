@@ -3833,6 +3833,20 @@ if (fetchInfoBtn) {
       const caloriesNew = document.getElementById('caloriesNew');
       if (!caloriesNew.value.trim() && data.calories != null) caloriesNew.value = data.calories;
 
+      // Een pin verwijst door naar de site waar het recept echt staat. Even
+      // zeggen welke dat was, anders lijkt de ingevulde titel uit de lucht
+      // te komen vallen.
+      let bronNotitie = '';
+      if (data.source_url) {
+        let domein = data.source_url;
+        try {
+          domein = new URL(data.source_url).hostname.replace(/^www\./, '');
+        } catch (_err) {
+          /* laat de hele url staan */
+        }
+        bronNotitie = `<p style="color:#4b5650;font-size:13px;">Recept gelezen van ${domein}.</p>`;
+      }
+
       if (data.missing && data.missing.length) {
         data.missing.forEach(fieldName => {
           const fieldId = fieldNameToId[fieldName];
@@ -3842,9 +3856,9 @@ if (fetchInfoBtn) {
             setMissingState(input, `${fieldName} is niet automatisch gevonden. Je kunt dit nu invullen, of later aanpassen.`);
           }
         });
-        addMessageDiv.innerHTML = '';
+        addMessageDiv.innerHTML = bronNotitie;
       } else {
-        addMessageDiv.innerHTML = `<p style="color:green;">Informatie opgehaald en ingevuld.</p>`;
+        addMessageDiv.innerHTML = `<p style="color:green;">Informatie opgehaald en ingevuld.</p>${bronNotitie}`;
       }
     } catch (err) {
       console.error(err);

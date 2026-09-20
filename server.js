@@ -1165,11 +1165,249 @@ async function buildInstagramPayload(url) {
 }
 /* ------------------------------------------------------------------ */
 
+/* -------------------- Pinterest pin -------------------- */
+// Een pin is bijna altijd een doorverwijzing: de foto staat op Pinterest, het
+// recept zelf staat op een blog of receptensite. De pin-pagina heeft geen
+// schema.org-gegevens — Pinterest bouwt die pagina volledig met JavaScript op —
+// dus langs de gewone weg valt er niets te halen. Wel geeft de widget-API die
+// Pinterest voor embeds gebruikt de pin als JSON terug, inclusief de link naar
+// de bron. Die bron lezen we daarna uit zoals elke andere receptpagina, zodat je
+// de echte ingrediënten en tijden krijgt in plaats van alleen een plaatje.
+
+const PINTEREST_PIN_API = 'https://widgets.pinterest.com/v3/pidgets/pins/info/?pin_ids=';
+
+function isPinterestUrl(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+    // pin.it is de deellink uit de app; verder pinterest.com, nl.pinterest.com,
+    // pinterest.nl, pinterest.co.uk en de rest van de landendomeinen.
+    return host === 'pin.it' || /(^|\.)pinterest\.[a-z]{2,6}(\.[a-z]{2})?$/.test(host);
+  } catch {
+    return false;
+  }
+}
+
+function extractPinterestPinId(url) {
+  try {
+    // /pin/1234567890/ en de oudere vorm /pin/een-slug--1234567890/
+    const match = new URL(url).pathname.match(/\/pin\/(?:[^/]*?--)?(\d{5,25})/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+// Een pin.it-link wijst door naar de echte pin. Meestal is dat een gewone
+// redirect; soms krijg je een tussenpagina die pas met JavaScript doorstuurt,
+// en dan staat de pin-id alsnog ergens in die HTML.
+async function resolvePinterestPinId(url) {
+  const direct = extractPinterestPinId(url);
+  if (direct) return direct;
+
+  try {
+    const response = await fetch(url, {
+      headers: DEFAULT_HTML_HEADERS,
+      redirect: 'follow',
+      signal: AbortSignal.timeout(12000)
+    });
+    const viaRedirect = extractPinterestPinId(response.url);
+    if (viaRedirect) return viaRedirect;
+
+    const html = await response.text();
+    const match = html.match(/\/pin\/(\d{5,25})/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchPinterestPin(pinId) {
+  try {
+    const response = await fetch(`${PINTEREST_PIN_API}${encodeURIComponent(pinId)}`, {
+      headers: {
+        'User-Agent': DEFAULT_HTML_HEADERS['User-Agent'],
+        'Accept': 'application/json',
+        'Accept-Language': 'nl-NL,nl;q=0.9,en;q=0.8'
+      },
+      signal: AbortSignal.timeout(14000)
+    });
+    if (!response.ok) return null;
+    const json = await response.json().catch(() => null);
+    const pin = json && Array.isArray(json.data) ? json.data[0] : null;
+    return pin && typeof pin === 'object' ? pin : null;
+  } catch {
+    return null;
+  }
+}
+
+// De pagina waar de pin naartoe wijst. Links terug naar Pinterest slaan we over:
+// die leveren geen recept op en zouden ons in een kringetje sturen.
+function pinterestSourceUrl(pin) {
+  const rich = (pin && pin.rich_metadata) || {};
+  const raw = decodeHtmlEntities((pin && pin.link) || rich.url || '').trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+    if (isPinterestUrl(raw)) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+// Titels van receptsites eindigen vaak op de sitenaam: "Ovenschotel met zalm -
+// Libelle Lekker". Die staart halen we eraf, maar alleen als hij ook echt de
+// naam van het domein is — anders sneuvelt "Pasta - Italiaanse klassieker".
+function stripSiteNameSuffix(title, domain) {
+  const text = String(title || '').trim();
+  const domeinnaam = String(domain || '')
+    .replace(/^www\./, '')
+    .replace(/\.[a-z.]+$/i, '')
+    .replace(/[^a-z0-9]+/gi, '')
+    .toLowerCase();
+  if (!text || domeinnaam.length < 3) return text;
+
+  const match = text.match(/^([\s\S]{6,})\s+[-–—|]\s+([^-–—|]{2,40})$/);
+  if (!match) return text;
+
+  const staart = match[2].toLowerCase().replace(/[^a-z0-9]+/g, '');
+  // "Libelle Lekker" hoort bij libelle-lekker.be, in welke richting dan ook.
+  if (staart && (staart.includes(domeinnaam) || domeinnaam.includes(staart))) {
+    return match[1].trim();
+  }
+  return text;
+}
+
+// Titels die een inlogscherm of blokkadepagina verraden. Zulke pagina's geven
+// wel HTML terug, maar de titel is dan het slot op de deur en niet het recept.
+const BLOKKADE_TITEL_RE = new RegExp(
+  '^(inloggen|log ?in|aanmelden|sign ?in|sign ?up|registreren|abonneren|facebook|instagram|' +
+  'pinterest|tiktok|youtube|attention required|just a moment|even geduld|one moment|' +
+  'access denied|forbidden|error|oops|pagina niet gevonden|page not found|not found|' +
+  'robot check|verificatie|cookie)\\b',
+  'i'
+);
+
+function looksLikeBlockedTitle(title) {
+  const text = String(title || '').trim();
+  return text.length < 4 || BLOKKADE_TITEL_RE.test(text);
+}
+
+// De beschrijving van de pin zelf. Pinners plakken daar geregeld het hele recept
+// in, dus we halen hem door dezelfde lezer als een Instagram-caption.
+function buildPinterestDescriptionPayload(pin) {
+  const rich = (pin && pin.rich_metadata) || {};
+  const description = decodeHtmlEntities((pin && pin.description) || rich.description || '').trim();
+  const richTitle = decodeHtmlEntities(rich.title || '').trim();
+  const domain = (pin && pin.domain) || '';
+
+  // Pinterest plakt zoekwoorden achter de titel ("Naam | woord, woord, woord");
+  // alleen het stuk voor de eerste streep is de echte naam. Is er geen
+  // rich-titel, dan is de eerste regel van de beschrijving meestal de
+  // paginatitel, inclusief de sitenaam erachter.
+  const kandidaat = richTitle
+    ? richTitle.split('|')[0]
+    : (description.split(/\r?\n/)[0] || '');
+  const title = cleanCaptionTitle(stripSiteNameSuffix(kandidaat, domain)) ||
+    (description ? parseTitleFromCaption(description, null) : null);
+
+  const text = `${title || ''} ${description}`.toLowerCase();
+  return {
+    title,
+    dish_type: mapDishType(text),
+    meal_category: mapMealCategory(text),
+    meal_type: mapMealType(text),
+    time_required: mapTimeRequired(parseDurationToMinutes(description)),
+    calories: description ? parseCaloriesFromCaption(description) : null,
+    ingredients: description ? parseIngredientsFromCaption(description) : []
+  };
+}
+
+// De bronpagina weet het altijd beter; de pin vult aan wat daar ontbreekt.
+function mergePinterestPayloads(fromSource, fromPin) {
+  const base = fromSource && !fromSource.error ? fromSource : {};
+
+  // Zat er een inlogscherm voor de bron, dan is de titel daarvan 'Inloggen' of
+  // 'Facebook'. Pinterest las de pagina uit toen de pin gemaakt werd, dus die
+  // heeft de echte naam meestal nog wel.
+  const bruikbareBrontitel = base.title && !looksLikeBlockedTitle(base.title) ? base.title : null;
+
+  const merged = {
+    title: bruikbareBrontitel || fromPin.title || base.title || null,
+    dish_type: base.dish_type || fromPin.dish_type || null,
+    meal_category: base.meal_category || fromPin.meal_category || null,
+    meal_type: base.meal_type || fromPin.meal_type || null,
+    time_required: base.time_required || fromPin.time_required || null,
+    calories: base.calories != null ? base.calories : fromPin.calories,
+    ingredients: (base.ingredients && base.ingredients.length) ? base.ingredients : fromPin.ingredients,
+    recipe_schema_count: base.recipe_schema_count || 0,
+    source: 'pinterest',
+    missing: []
+  };
+
+  if (!merged.title) merged.missing.push('Titel');
+  if (!merged.dish_type) merged.missing.push('Soort gerecht');
+  if (!merged.meal_category) merged.missing.push('Menugang');
+  if (!merged.meal_type) merged.missing.push('Doel gerecht');
+  if (!merged.time_required) merged.missing.push('Tijd');
+  if (merged.calories == null) merged.missing.push('Calorieën');
+  return merged;
+}
+
+async function buildPinterestPayload(url) {
+  const pinId = await resolvePinterestPinId(url);
+  if (!pinId) {
+    return { error: 'Dit lijkt geen link naar een losse pin. Open de pin op Pinterest en kopieer die link.' };
+  }
+
+  const pin = await fetchPinterestPin(pinId);
+  // Een onbekende pin levert wel een antwoord op, maar zonder link, beschrijving
+  // of brongegevens: dan valt er niets te halen.
+  if (!pin || (!pin.link && !pin.description && !pin.rich_metadata)) {
+    return { error: 'Kon deze pin niet ophalen. Hij is mogelijk verwijderd of staat op een geheim bord.' };
+  }
+
+  const sourceUrl = pinterestSourceUrl(pin);
+  let fromSource = null;
+  if (sourceUrl) {
+    try {
+      fromSource = await getRecipeInfoPayload(new URL(sourceUrl));
+    } catch (_err) {
+      // De bron deed niet mee; we redden ons met de pin zelf.
+    }
+  }
+
+  const payload = mergePinterestPayloads(fromSource, buildPinterestDescriptionPayload(pin));
+  if (sourceUrl) payload.source_url = sourceUrl;
+
+  // Niets bruikbaars gevonden: een duidelijke melding is dan eerlijker dan een
+  // formulier waarin alles leeg blijft.
+  if (!payload.title && !payload.ingredients.length) {
+    return {
+      error: sourceUrl
+        ? `Deze pin verwijst naar ${new URL(sourceUrl).hostname.replace(/^www\./, '')}, maar daar viel geen recept uit te lezen. Plak de link van de receptpagina zelf.`
+        : 'Deze pin heeft geen link naar een recept en geen beschrijving om uit te lezen.'
+    };
+  }
+  return payload;
+}
+/* ------------------------------------------------------------------ */
+
 async function getRecipeInfoPayload(targetUrl) {
   const cacheKey = targetUrl.toString();
   const cached = recipeInfoCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.payload;
+  }
+
+  // Pinterest-links: de pin opvragen en doorlopen naar de bron.
+  if (isPinterestUrl(cacheKey)) {
+    const pinPayload = await buildPinterestPayload(cacheKey);
+    if (!pinPayload.error) {
+      recipeInfoCache.set(cacheKey, { payload: pinPayload, expiresAt: Date.now() + RECIPE_INFO_TTL_MS });
+    }
+    return pinPayload;
   }
 
   // Instagram-links: caption uitlezen i.p.v. schema.org (dat ontbreekt daar).
@@ -4027,6 +4265,15 @@ if (require.main === module) {
 module.exports = {
   fetchHtmlWithRetries,
   isInstagramUrl,
+  isPinterestUrl,
+  extractPinterestPinId,
+  resolvePinterestPinId,
+  fetchPinterestPin,
+  pinterestSourceUrl,
+  stripSiteNameSuffix,
+  looksLikeBlockedTitle,
+  buildPinterestDescriptionPayload,
+  buildPinterestPayload,
   cleanInstagramCaption,
   parseIngredientsFromCaption,
   parseTitleFromCaption,
