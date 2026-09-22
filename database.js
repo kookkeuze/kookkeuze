@@ -1234,9 +1234,19 @@ function addGoogleUser(email, googleSub, callback) {
 }
 
 // Bestaand account koppelen aan Google (zelfde e-mailadres).
+// Was het account nog niet bevestigd, dan weten we niet wie het wachtwoord
+// heeft gekozen: iemand kan andermans adres hebben geregistreerd in de hoop
+// dat de echte eigenaar later met Google inlogt. Dat wachtwoord gooien we
+// dan weg; de eigenaar kan via 'Wachtwoord vergeten' een eigen instellen.
 function linkGoogleAccount(userId, googleSub, callback) {
   pool.query(
-    `UPDATE users SET google_sub = $2, is_verified = TRUE WHERE id = $1`,
+    `UPDATE users
+        SET google_sub = $2,
+            password_hash = CASE WHEN is_verified THEN password_hash ELSE NULL END,
+            verification_token = NULL,
+            token_expires = NULL,
+            is_verified = TRUE
+      WHERE id = $1`,
     [userId, googleSub],
     err => callback(err || null)
   );

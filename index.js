@@ -186,6 +186,14 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/`/g, '&#96;');
 }
 
+// Href voor een recept-link, al ge-escaped. Alleen http(s) en onze eigen
+// receptpagina's; al het andere (javascript:, data:) wordt een dode link.
+function safeRecipeHref(url) {
+  const value = String(url || '').trim();
+  if (/^https?:\/\//i.test(value) || /^\/recept\/\d+$/.test(value)) return escapeAttr(value);
+  return '#';
+}
+
 function normalizeRecipeNoteUrl(url) {
   return String(url || '').trim().replace(/\/+$/, '');
 }
@@ -675,31 +683,16 @@ function hydrateResultImages() {
   });
 }
 
-/* ========= Auto-login vanaf verify redirect =========
-   Server redirect: https://kookkeuze.nl/auth/callback?token=XYZ
-   Dit pakt de token op (op elke route), slaat 'm op, en schoont de URL. */
-(function autoLoginFromVerify() {
+/* ========= Token uit de verify-/resetlink =========
+   Het inline script bovenaan index.html haalt ?token / #token en ?resetToken /
+   #resetToken al uit de URL, nog vóór Umami en AdSense laden. De login-token
+   staat dan al in localStorage; de resettoken pakken we hier op. */
+(function pickUpResetToken() {
   try {
-    const params = new URLSearchParams(window.location.search);
-    const token  = params.get('token');
-    pendingResetToken = params.get('resetToken');
-    if (token) {
-      localStorage.setItem('token', token);
-      // URL opschonen (zonder ?token)
-      const cleanUrl =
-        window.location.origin +
-        (window.location.pathname.startsWith('/auth/callback') ? '/' : window.location.pathname);
-      window.history.replaceState({}, document.title, cleanUrl);
-      if (typeof showMsg === 'function') showMsg('Je bent ingelogd. Welkom terug!', true);
-      // UI meteen verversen
-      if (typeof updateAuthUI === 'function') updateAuthUI();
-      window.location.reload();
-    } else if (pendingResetToken) {
-      const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
-      window.history.replaceState({}, document.title, cleanUrl);
-    }
-  } catch (e) {
-    console.error('Auto-login parse error:', e);
+    // Blijft in sessionStorage tot de reset gelukt is, zodat herladen kan.
+    pendingResetToken = sessionStorage.getItem('pendingResetToken');
+  } catch (_err) {
+    pendingResetToken = null;
   }
 })();
 
@@ -803,7 +796,7 @@ function buildDatabaseOptionsMarkup(selectedId) {
     let label = db.database_name || 'Database';
     if (db.is_personal) label = `Persoonlijk (${db.owner_email})`;
     else if (db.owner_email) label = `${label} (${db.owner_email})`;
-    return `<option value="${db.owner_user_id}" ${Number(db.owner_user_id) === Number(selectedId) ? 'selected' : ''}>${label}</option>`;
+    return `<option value="${escapeAttr(db.owner_user_id)}" ${Number(db.owner_user_id) === Number(selectedId) ? 'selected' : ''}>${escapeHtml(label)}</option>`;
   }).join('');
 }
 
@@ -951,16 +944,16 @@ async function loadSharePanelData() {
   shareMembersList.innerHTML = members.length
     ? members.map(m => `
         <div class="share-item">
-          <span>${m.email}${m.role === 'admin' ? ' (beheerder)' : ''}</span>
-          ${m.role === 'admin' ? '' : `<button type="button" class="danger-btn share-remove-member-btn" data-member-id="${m.member_user_id}">Intrekken</button>`}
+          <span>${escapeHtml(m.email)}${m.role === 'admin' ? ' (beheerder)' : ''}</span>
+          ${m.role === 'admin' ? '' : `<button type="button" class="danger-btn share-remove-member-btn" data-member-id="${escapeAttr(m.member_user_id)}">Intrekken</button>`}
         </div>`).join('')
     : '<p class="share-empty">Nog geen gedeelde leden.</p>';
 
   shareInvitesList.innerHTML = invites.length
     ? invites.map(inv => `
         <div class="share-item">
-          <span>${inv.invite_email}</span>
-          <button type="button" class="danger-btn share-cancel-invite-btn" data-invite-id="${inv.id}">Intrekken</button>
+          <span>${escapeHtml(inv.invite_email)}</span>
+          <button type="button" class="danger-btn share-cancel-invite-btn" data-invite-id="${escapeAttr(inv.id)}">Intrekken</button>
         </div>`).join('')
     : '<p class="share-empty">Geen openstaande uitnodigingen.</p>';
 }
@@ -1813,7 +1806,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
   arr.forEach(r => {
     const recipeId = Number(r.id) > 0 ? Number(r.id) : '';
     const safeUrl = encodeURIComponent(r.url || '');
-    const safeHref = escapeAttr(r.url || '');
+    const safeHref = safeRecipeHref(r.url);
     const safeTitle = escapeAttr(r.title || 'Recept');
     const displayTitle = escapeHtml(r.title || 'Recept');
     const safeDishType = escapeAttr(r.dish_type || '');
@@ -1897,13 +1890,13 @@ function buildRecipeCardsHtml(arr, options = {}) {
             </div>
           </div>
           <div class="recipe-meta-row">
-            <span class="recipe-meta-pill"><img src="icons/tijd.svg" alt="" class="recipe-meta-icon" /> ${r.time_required || '-'}</span>
-            <span class="recipe-meta-pill"><img src="icons/kcal.svg" alt="" class="recipe-meta-icon" /> ${r.calories ?? '-'} kcal</span>
+            <span class="recipe-meta-pill"><img src="icons/tijd.svg" alt="" class="recipe-meta-icon" /> ${escapeHtml(r.time_required || '-')}</span>
+            <span class="recipe-meta-pill"><img src="icons/kcal.svg" alt="" class="recipe-meta-icon" /> ${escapeHtml(r.calories ?? '-')} kcal</span>
           </div>
           <ul>
-            <li><img src="icons/soort.svg" alt="" class="recipe-meta-icon" /> <strong>Soort:</strong> ${r.dish_type || '-'}</li>
-            <li><img src="icons/menugang.svg" alt="" class="recipe-meta-icon" /> <strong>Menugang:</strong> ${r.meal_category || '-'}</li>
-            <li><img src="icons/doel.svg" alt="" class="recipe-meta-icon" /> <strong>Doel gerecht:</strong> ${r.meal_type || '-'}</li>
+            <li><img src="icons/soort.svg" alt="" class="recipe-meta-icon" /> <strong>Soort:</strong> ${escapeHtml(r.dish_type || '-')}</li>
+            <li><img src="icons/menugang.svg" alt="" class="recipe-meta-icon" /> <strong>Menugang:</strong> ${escapeHtml(r.meal_category || '-')}</li>
+            <li><img src="icons/doel.svg" alt="" class="recipe-meta-icon" /> <strong>Doel gerecht:</strong> ${escapeHtml(r.meal_type || '-')}</li>
           </ul>
           <div class="recipe-shopping">
             <p class="recipe-shopping-label">Ingrediënten naar</p>
@@ -2984,7 +2977,7 @@ function renderWeekMenuGrid() {
       if (entry) {
         const entryRecipeId = Number(entry.recipe_id || entry.id || 0) > 0 ? Number(entry.recipe_id || entry.id || 0) : '';
         const safeUrl = escapeAttr(encodeURIComponent(entry.url || ''));
-        const safeHref = escapeAttr(entry.url || '#');
+        const safeHref = safeRecipeHref(entry.url);
         const safeTitle = escapeHtml(entry.title || 'Recept');
         const safeTitleAttr = escapeAttr(entry.title || 'Recept');
         const primaryFilledClass = mobileViewport && hasPlannedSlots && index === 0 ? ' weekmenu-slot-item-primary' : '';
@@ -3241,7 +3234,7 @@ function openWeekmenuPreviewModal(recipeId, fallbackRecipe = null) {
   const safeUrl = escapeAttr(encodeURIComponent(recipe.url || ''));
   const safeTitle = escapeAttr(recipe.title || 'Recept');
   const displayTitle = escapeHtml(recipe.title || 'Recept');
-  const safeHref = escapeAttr(recipe.url || '#');
+  const safeHref = safeRecipeHref(recipe.url);
   weekmenuPreviewBody.innerHTML = `
     <div class="recipe-cards-container search-results single-result weekmenu-preview-cards">
       <div class="recipe-card">
@@ -4419,38 +4412,41 @@ function renderOverviewPage() {
   pageRecipes.forEach(r => {
     const cals = r.calories ?? '';
     const safeUrl = encodeURIComponent(r.url || '');
-    const safeTitle = (r.title || 'Recept').replace(/"/g, '&quot;');
+    const safeTitle = escapeAttr(r.title || 'Recept');
+    const displayTitle = escapeHtml(r.title || '');
+    const displayUrl = escapeHtml(r.url || '');
+    const safeCals = escapeAttr(cals);
     if (guest) {
       // Read-only rij voor bezoekers: geen bewerkbare velden of knoppen.
       html += `
-        <tr data-id="${r.id}">
+        <tr data-id="${escapeAttr(r.id)}">
           <td class="overview-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
             <div class="recipe-thumb-skeleton"></div>
           </td>
-          <td>${r.title}</td>
-          <td><a href="${r.url}" target="_blank" rel="noopener noreferrer">${r.url}</a></td>
-          <td>${r.dish_type || '-'}</td>
-          <td>${r.meal_category || '-'}</td>
-          <td>${r.meal_type || '-'}</td>
-          <td>${r.time_required || '-'}</td>
-          <td>${cals === '' ? '-' : cals}</td>
+          <td>${displayTitle}</td>
+          <td><a href="${safeRecipeHref(r.url)}" target="_blank" rel="noopener noreferrer">${displayUrl}</a></td>
+          <td>${escapeHtml(r.dish_type || '-')}</td>
+          <td>${escapeHtml(r.meal_category || '-')}</td>
+          <td>${escapeHtml(r.meal_type || '-')}</td>
+          <td>${escapeHtml(r.time_required || '-')}</td>
+          <td>${cals === '' ? '-' : escapeHtml(cals)}</td>
           <td colspan="2" class="overview-guest-locked">Alleen voorbeeld</td>
         </tr>`;
     } else {
       html += `
-        <tr data-id="${r.id}">
+        <tr data-id="${escapeAttr(r.id)}">
           <td class="overview-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
             <div class="recipe-thumb-skeleton"></div>
           </td>
-          <td contenteditable>${r.title}</td>
+          <td contenteditable>${displayTitle}</td>
           ${isOwnRecipeUrl(r.url)
-            ? `<td class="overview-own-url"><a href="${r.url}">Eigen recept op Kookkeuze</a></td>`
-            : `<td contenteditable>${r.url}</td>`}
+            ? `<td class="overview-own-url"><a href="${safeRecipeHref(r.url)}">Eigen recept op Kookkeuze</a></td>`
+            : `<td contenteditable>${displayUrl}</td>`}
           <td>${dropdown(dishOpt,  r.dish_type, 'Soort')}</td>
           <td>${dropdown(catOpt,   r.meal_category, 'Menugang')}</td>
           <td>${dropdown(mealOpt,  r.meal_type, 'Doel gerecht')}</td>
           <td>${dropdown(timeOpt,  r.time_required, 'Tijd')}</td>
-          <td><input class="calories-field" type="number" value="${cals}" /></td>
+          <td><input class="calories-field" type="number" value="${safeCals}" /></td>
           <td><button class="green-btn edit-btn">Opslaan</button></td>
           <td><button class="danger-btn delete-btn">Verwijder</button></td>
         </tr>`;
@@ -4842,6 +4838,7 @@ document.getElementById('reset-form')?.addEventListener('submit', async e => {
     showMsg(data.error || data.message || 'Reset mislukt.', res.ok && !data.error);
     if (res.ok) {
       pendingResetToken = null;
+      try { sessionStorage.removeItem('pendingResetToken'); } catch (_err) { /* niets */ }
       setAuthPane(loginPane);
     }
   } catch (err) {

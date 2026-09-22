@@ -1563,7 +1563,8 @@ app.use((_req, res, next) => {
   res.setHeader('Strict-Transport-Security', 'max-age=31536000');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
+  // Andere sites zien alleen ons domein, niet het pad en de query.
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   next();
 });
@@ -1774,35 +1775,50 @@ app.get('/no-track', (req, res) => {
 // Het contactformulier op de Over Kookkeuze-pagina verstuurt de mail via de
 // server (Brevo) naar CONTACT_TO_EMAIL. De afzender is ons eigen geverifieerde
 // adres; de invuller staat in replyTo zodat 'Beantwoorden' bij hen uitkomt.
-const CONTACT_RATE_WINDOW_MS = 15 * 60 * 1000;
-const CONTACT_RATE_MAX = 5;
-const contactRateHits = new Map();
-
+// req.ip is door 'trust proxy' al het echte bezoekers-IP. Het eerste adres
+// uit X-Forwarded-For zelf lezen kan niet: dat vult de bezoeker zelf in.
 function getClientIp(req) {
-  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return forwarded || req.socket?.remoteAddress || 'onbekend';
+  return req.ip || req.socket?.remoteAddress || 'onbekend';
 }
 
-// Simpele in-memory limiter. Genoeg om formulier-spam af te remmen; bij een
-// herstart begint de teller opnieuw en bij meerdere instances telt elke
-// instance apart, wat voor dit doel prima is.
-function contactRateLimited(ip) {
-  const now = Date.now();
-  const hits = (contactRateHits.get(ip) || []).filter(t => now - t < CONTACT_RATE_WINDOW_MS);
-  if (hits.length >= CONTACT_RATE_MAX) {
-    contactRateHits.set(ip, hits);
-    return true;
-  }
-  hits.push(now);
-  contactRateHits.set(ip, hits);
-
-  if (contactRateHits.size > 500) {
-    for (const [key, times] of contactRateHits) {
-      if (!times.some(t => now - t < CONTACT_RATE_WINDOW_MS)) contactRateHits.delete(key);
+// Simpele in-memory limiter: max 'max' keer per 'windowMs' per sleutel. Bij
+// een herstart begint de teller opnieuw en bij meerdere instances telt elke
+// instance apart, wat voor het afremmen van spam en wachtwoord-raden prima is.
+// Geeft true terug als deze poging over de grens gaat.
+function createRateLimiter({ windowMs, max }) {
+  const hitsPerKey = new Map();
+  return function isRateLimited(key) {
+    const now = Date.now();
+    const hits = (hitsPerKey.get(key) || []).filter(t => now - t < windowMs);
+    if (hits.length >= max) {
+      hitsPerKey.set(key, hits);
+      return true;
     }
-  }
-  return false;
+    hits.push(now);
+    hitsPerKey.set(key, hits);
+
+    if (hitsPerKey.size > 5000) {
+      for (const [k, times] of hitsPerKey) {
+        if (!times.some(t => now - t < windowMs)) hitsPerKey.delete(k);
+      }
+    }
+    return false;
+  };
 }
+
+const MINUUT = 60 * 1000;
+const contactRateLimited = createRateLimiter({ windowMs: 15 * MINUUT, max: 5 });
+// Inloggen: per IP ruim (gedeelde wifi), per account krap tegen wachtwoord-raden.
+const loginIpRateLimited = createRateLimiter({ windowMs: 15 * MINUUT, max: 30 });
+const loginAccountRateLimited = createRateLimiter({ windowMs: 15 * MINUUT, max: 10 });
+const registerRateLimited = createRateLimiter({ windowMs: 60 * MINUUT, max: 5 });
+// Resetmails: per adres krap, anders kan iemand andermans inbox volspammen.
+const resetIpRateLimited = createRateLimiter({ windowMs: 60 * MINUUT, max: 10 });
+const resetEmailRateLimited = createRateLimiter({ windowMs: 60 * MINUUT, max: 3 });
+const resetConfirmRateLimited = createRateLimiter({ windowMs: 15 * MINUUT, max: 10 });
+const googleLoginRateLimited = createRateLimiter({ windowMs: 15 * MINUUT, max: 30 });
+
+const TE_VEEL_POGINGEN = 'Te veel pogingen. Wacht even en probeer het later opnieuw.';
 
 app.post('/api/contact', async (req, res) => {
   const name = String(req.body?.name || '').trim();
@@ -2242,9 +2258,22 @@ function passwordResetEmailHtml(resetUrl) {
 // ====================== AUTH ===============================================
 // 1. Registreren (met e-mailverificatie)
 app.post('/api/register', (req, res) => {
-  const { email, password } = req.body;
+  const email = String(req.body?.email || '').trim();
+  const password = String(req.body?.password || '');
   if (!email || !password) {
     return res.status(400).json({ error: 'E-mail en wachtwoord zijn verplicht.' });
+  }
+  if (email.length > 254 || !/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(email)) {
+    return res.status(400).json({ error: 'Vul een geldig e-mailadres in.' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Gebruik minimaal 8 tekens voor je wachtwoord.' });
+  }
+  if (password.length > 200) {
+    return res.status(400).json({ error: 'Dat wachtwoord is te lang.' });
+  }
+  if (registerRateLimited(getClientIp(req))) {
+    return res.status(429).json({ error: TE_VEEL_POGINGEN });
   }
 
   getUserByEmail(email, (err, existing) => {
@@ -2315,7 +2344,9 @@ app.get('/api/verify', async (req, res) => {
 
     // JWT aanmaken en redirect naar frontend voor auto-login
     const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    return res.redirect(`${FRONTEND_URL}/?token=${jwtToken}`);
+    // In het fragment (#) in plaats van de query: dat gaat niet mee naar
+    // serverlogs of in een Referer-header.
+    return res.redirect(`${FRONTEND_URL}/#token=${jwtToken}`);
   } catch (err) {
     console.error('❌ Verify error:', err);
     res.status(500).json({ error: 'Serverfout bij verifiëren.' });
@@ -2324,9 +2355,17 @@ app.get('/api/verify', async (req, res) => {
 
 // 2. Inloggen (blokkeer als niet geverifieerd)
 app.post('/api/login', (req, res) => {
-  const { email, password } = req.body;
+  const email = typeof req.body?.email === 'string' ? req.body.email : '';
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
   if (!email || !password) {
     return res.status(400).json({ error: 'E-mail en wachtwoord zijn verplicht.' });
+  }
+  // Beide tellers altijd ophogen (dus geen || in één uitdrukking): de
+  // accountteller moet ook doortellen voor pogingen vanaf wisselende IP's.
+  const ipLimited = loginIpRateLimited(getClientIp(req));
+  const accountLimited = loginAccountRateLimited(email.trim().toLowerCase());
+  if (ipLimited || accountLimited) {
+    return res.status(429).json({ error: TE_VEEL_POGINGEN });
   }
 
   getUserByEmail(email, (err, user) => {
@@ -2372,6 +2411,9 @@ app.post('/api/auth/google', async (req, res) => {
 
   const credential = String(req.body?.credential || '').trim();
   if (!credential) return res.status(400).json({ error: 'Google-token ontbreekt.' });
+  if (googleLoginRateLimited(getClientIp(req))) {
+    return res.status(429).json({ error: TE_VEEL_POGINGEN });
+  }
 
   let payload;
   try {
@@ -2437,6 +2479,15 @@ app.post('/api/password-reset/request', async (req, res) => {
 
   const genericMessage = 'Als dit e-mailadres bestaat, is er een resetlink verstuurd.';
 
+  const ipLimited = resetIpRateLimited(getClientIp(req));
+  const emailLimited = resetEmailRateLimited(email);
+  if (ipLimited) {
+    return res.status(429).json({ error: TE_VEEL_POGINGEN });
+  }
+  // Per adres stilletjes niets versturen, zodat dit niet verraadt of het
+  // adres bestaat; de echte eigenaar heeft de eerdere mails al.
+  if (emailLimited) return res.json({ message: genericMessage });
+
   try {
     const user = await new Promise((resolve, reject) => {
       getUserByEmail(email, (err, foundUser) => {
@@ -2454,7 +2505,7 @@ app.post('/api/password-reset/request', async (req, res) => {
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 uur
     await setPasswordResetToken(email, token, expires);
 
-    const resetUrl = `${FRONTEND_URL}/?resetToken=${token}`;
+    const resetUrl = `${FRONTEND_URL}/#resetToken=${token}`;
 
     await sendBrevoEmail({
       to: email,
@@ -2480,6 +2531,12 @@ app.post('/api/password-reset/confirm', async (req, res) => {
   }
   if (password.length < 8) {
     return res.status(400).json({ error: 'Gebruik minimaal 8 tekens voor je wachtwoord.' });
+  }
+  if (password.length > 200) {
+    return res.status(400).json({ error: 'Dat wachtwoord is te lang.' });
+  }
+  if (resetConfirmRateLimited(getClientIp(req))) {
+    return res.status(429).json({ error: TE_VEEL_POGINGEN });
   }
 
   try {
@@ -2531,6 +2588,24 @@ function normalizeRecipeField(raw) {
   const values = toArrayValue(raw, '');
   if (values.length === 0) return null;
   return values.join('||');
+}
+
+// Een recept-URL komt als link in de pagina van alle leden van een database.
+// Alleen http(s) of onze eigen receptpagina, anders kan iemand er een
+// javascript:-link van maken. Zonder schema ("www.site.nl/...") vullen we
+// https:// aan, zoals een browser dat ook zou doen.
+function normalizeRecipeUrl(raw) {
+  let value = String(raw ?? '').trim();
+  if (!value || value.length > 2048) return null;
+  if (/^\/recept\/\d+$/.test(value)) return value;
+  if (value.startsWith('/')) return null;
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(value)) value = `https://${value}`;
+  try {
+    const parsed = new URL(value);
+    return ['http:', 'https:'].includes(parsed.protocol) && parsed.hostname ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 function packRecipe(title, url, recipeMeta) {
@@ -3419,9 +3494,13 @@ app.post('/api/recipes', async (req, res) => {
     return res.status(401).json({ error: 'Je moet ingelogd zijn om recepten toe te voegen.' });
   }
 
-  const { title, url, dish_type, meal_category, meal_type, time_required, calories } = req.body;
-  if (!title || !url) {
+  const { title, dish_type, meal_category, meal_type, time_required, calories } = req.body;
+  if (!title || !req.body.url) {
     return res.status(400).json({ error: 'Titel en URL zijn verplicht.' });
+  }
+  const url = normalizeRecipeUrl(req.body.url);
+  if (!url) {
+    return res.status(400).json({ error: 'Vul een geldige link in (beginnend met https://).' });
   }
 
   const cleanDishType     = normalizeRecipeField(dish_type);
@@ -3664,9 +3743,13 @@ app.post('/api/recipes/import-external', async (req, res) => {
     return res.status(401).json({ error: 'Je moet ingelogd zijn om recepten toe te voegen.' });
   }
 
-  const { title, url, dish_type, meal_category, meal_type, time_required, calories } = req.body || {};
-  if (!title || !url) {
+  const { title, dish_type, meal_category, meal_type, time_required, calories } = req.body || {};
+  if (!title || !req.body?.url) {
     return res.status(400).json({ error: 'Titel en URL zijn verplicht.' });
+  }
+  const url = normalizeRecipeUrl(req.body.url);
+  if (!url) {
+    return res.status(400).json({ error: 'Vul een geldige link in (beginnend met https://).' });
   }
 
   try {
@@ -3707,10 +3790,14 @@ app.put('/api/recipes/:id', async (req, res) => {
   }
 
   const recipeId = req.params.id;
-  const { title, url, dish_type, meal_type, time_required, meal_category, calories } = req.body;
+  const { title, dish_type, meal_type, time_required, meal_category, calories } = req.body;
 
-  if (!title || !url) {
+  if (!title || !req.body.url) {
     return res.status(400).json({ error: 'Titel en URL zijn verplicht voor update.' });
+  }
+  const url = normalizeRecipeUrl(req.body.url);
+  if (!url) {
+    return res.status(400).json({ error: 'Vul een geldige link in (beginnend met https://).' });
   }
 
   try {

@@ -3,6 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>
+    // Login-token (na e-mailbevestiging) en resettoken komen via de URL binnen.
+    // Hier, vóór Umami en AdSense, halen we ze eruit: die scripts sturen de
+    // volledige pagina-URL door en zouden de token anders meekrijgen.
+    (function () {
+      try {
+        var url = new URL(window.location.href);
+        var hash = new URLSearchParams(url.hash.slice(1));
+        var token = hash.get('token') || url.searchParams.get('token');
+        var resetToken = hash.get('resetToken') || url.searchParams.get('resetToken');
+        if (!token && !resetToken) return;
+        if (token) localStorage.setItem('token', token);
+        if (resetToken) sessionStorage.setItem('pendingResetToken', resetToken);
+        url.searchParams.delete('token');
+        url.searchParams.delete('resetToken');
+        var rest = url.hash && !hash.has('token') && !hash.has('resetToken') ? url.hash : '';
+        history.replaceState(null, '', url.pathname + url.search + rest);
+      } catch (_err) {
+        // geen storage of oude browser: dan pakt index.js het niet op, verder niets aan de hand
+      }
+    })();
+  </script>
   <link rel="icon" type="image/png" href="Logo/favicon-kookkeuze.png" />
   <meta name="theme-color" content="#63D671" />
   <meta name="color-scheme" content="light" />
@@ -288,7 +310,7 @@
 
     <label for="register-password" class="auth-label">Wachtwoord</label>
     <div class="input-wrap">
-      <input type="password" id="register-password" placeholder="Kies een wachtwoord" required>
+      <input type="password" id="register-password" placeholder="Minimaal 8 tekens" minlength="8" required>
       <i class="fas fa-lock"></i>
     </div>
 
