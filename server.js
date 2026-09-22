@@ -166,6 +166,37 @@ function looksLikeUsableRecipeHtml(html) {
   return /"recipeIngredient"/i.test(html) || /itemprop=["']recipeIngredient["']/i.test(html);
 }
 
+// Blokkade- of challengepagina van een bot-filter (Akamai, Cloudflare e.d.).
+// Die komen soms met status 200 terug, of via de reader-proxy die zelf ook
+// geblokkeerd werd. Nooit als recept lezen: dan werd "Access Denied" de titel.
+function looksLikeBotBlockPage(html) {
+  const text = String(html || '');
+  return /<title>\s*(access denied|just a moment\.*|attention required![^<]{0,40}|pardon our interruption)\s*<\/title>/i.test(text)
+    || /sec-if-cpt-container|powered and protected by|\/akam\/\d+\/pixel_|cf-browser-verification|challenge-platform|captcha-delivery/i.test(text)
+    // r.jina.ai geeft de blokkade als tekst terug
+    || /^Title:\s*Access Denied/im.test(text);
+}
+
+// Titel afleiden uit de URL, voor als de pagina zelf niet te lezen is:
+// ".../R-R577366/makkelijke-noedels-met-kip" → "Makkelijke noedels met kip".
+function titleFromUrlSlug(url) {
+  try {
+    // Alleen een echte slug: kleine letters en cijfers met streepjes ertussen.
+    const segments = new URL(url).pathname.split('/').filter(Boolean).reverse()
+      .map(s => decodeURIComponent(s).replace(/\.html?$/i, ''));
+    const slug = segments.find(s => /^[a-z0-9à-ÿ]+(?:-[a-z0-9à-ÿ]+)+$/.test(s) && /[a-z]/.test(s));
+    if (!slug) return null;
+    const words = slug.split('-');
+    // Een id aan het eind ("pasta-pesto-999423") hoort niet bij de titel.
+    while (words.length && /^\d+$/.test(words[words.length - 1])) words.pop();
+    if (words.length < 2) return null;
+    const title = words.join(' ');
+    return title.charAt(0).toUpperCase() + title.slice(1);
+  } catch {
+    return null;
+  }
+}
+
 // Totaalbudget voor het ophalen van een receptafbeelding. Elke losse stap had
 // al een timeout, maar niets bewaakte de som: vijf pogingen van 14s, een
 // reader-proxy van 22s en vier plaatjescontroles van 8s tikken op tot ruim twee
@@ -265,7 +296,7 @@ async function fetchHtmlWithRetries(targetUrl, deadline) {
       const html = await response.text();
       if (!html || html.length <= 100) continue;
       if (looksLikeUsableRecipeHtml(html)) return html;
-      if (!fallbackHtml) fallbackHtml = html;
+      if (!fallbackHtml && !looksLikeBotBlockPage(html)) fallbackHtml = html;
     } catch (_err) {
       // probeer volgende poging
     }
@@ -273,7 +304,7 @@ async function fetchHtmlWithRetries(targetUrl, deadline) {
 
   // Niets bruikbaars via directe pogingen → probeer de reader-proxy.
   const proxied = await fetchViaReaderProxy(targetUrl, deadline);
-  if (proxied && (looksLikeUsableRecipeHtml(proxied) || !fallbackHtml)) {
+  if (proxied && !looksLikeBotBlockPage(proxied) && (looksLikeUsableRecipeHtml(proxied) || !fallbackHtml)) {
     return proxied;
   }
 
@@ -283,6 +314,7 @@ async function fetchHtmlWithRetries(targetUrl, deadline) {
 
 /* -------------------- Recipe info scrape -------------------- */
 const RECIPE_INFO_TTL_MS = 24 * 60 * 60 * 1000;
+const BLOCKED_INFO_TTL_MS = 60 * 60 * 1000;
 const recipeInfoCache = new Map();
 
 // Veel (Nederlandse) receptensites leveren technisch ongeldige JSON-LD:
@@ -1427,7 +1459,18 @@ async function getRecipeInfoPayload(targetUrl) {
 
   const html = await fetchHtmlWithRetries(cacheKey);
   if (!html) {
-    return { error: 'Kon de pagina niet ophalen. Deze site blokkeert waarschijnlijk automatisch uitlezen.' };
+    // Titel uit de URL, zodat de gebruiker niet alles zelf hoeft te typen.
+    // Een uur onthouden: sites als ah.nl blokkeren structureel, en anders
+    // wacht elke bezoeker opnieuw alle pogingen af.
+    const slugTitle = titleFromUrlSlug(cacheKey);
+    const blockedPayload = {
+      error: 'Deze site blokkeert het automatisch ophalen van recepten, dus foto en ingrediënten kunnen we niet uitlezen. Vul de gegevens zelf in'
+        + (slugTitle ? '; de titel hebben we alvast uit de link gehaald.' : '.'),
+      title: slugTitle,
+      blocked: true
+    };
+    recipeInfoCache.set(cacheKey, { payload: blockedPayload, expiresAt: Date.now() + BLOCKED_INFO_TTL_MS });
+    return blockedPayload;
   }
 
   const blocks = parseJsonLdBlocks(html);

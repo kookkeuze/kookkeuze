@@ -3796,7 +3796,12 @@ if (fetchInfoBtn) {
       const data = await res.json();
 
       if (data.error) {
-        addMessageDiv.innerHTML = `<p style="color:red;">${data.error}</p>`;
+        // Bij een geblokkeerde site geeft de server wel een titel uit de link mee.
+        const blockedTitleInput = document.getElementById('title');
+        if (data.title && blockedTitleInput && !blockedTitleInput.value.trim()) {
+          blockedTitleInput.value = data.title;
+        }
+        addMessageDiv.innerHTML = `<p style="color:red;">${escapeHtml(data.error)}</p>`;
         return;
       }
 
