@@ -2360,6 +2360,38 @@ select:focus {
   }
 }
 
+/* Knoppen en gegevens van kaarten naast elkaar op één lijn, ook als de ene
+   titel één regel is en de andere twee. Met subgrid delen alle kaarten in een
+   rij dezelfde rijhoogtes: foto, titel, knoppen, tijd/kcal, gegevens en
+   boodschappenblok. De titelrij is dan zo hoog als de langste titel in die
+   rij. Een kaart heeft daarvoor altijd precies deze 1 + 5 onderdelen (zie
+   buildRecipeCardsHtml). Op telefoon staat er één kaart per rij, dus daar is
+   het niet nodig. */
+@supports (grid-template-rows: subgrid) {
+  @media (min-width: 601px) {
+    .recipe-grid-cards {
+      /* Niet 1fr: dan zouden alle subrijen even hoog worden. */
+      grid-auto-rows: auto;
+      align-items: stretch;
+    }
+
+    .recipe-grid-cards .recipe-card {
+      display: grid;
+      grid-row: span 6;
+      grid-template-rows: subgrid;
+      row-gap: 0;
+      height: auto;
+    }
+
+    .recipe-grid-cards .recipe-card-content {
+      grid-row: span 5;
+      grid-template-rows: subgrid;
+      row-gap: 8px;
+      align-content: normal;
+    }
+  }
+}
+
 /* linear i.p.v. ease-in-out: dit loopt oneindig door, en ease-in-out remt af
    en versnelt weer bij elke herstart van de lus — dat oogt als een hapering
    in plaats van een doorlopende sweep. */
