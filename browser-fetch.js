@@ -13,9 +13,49 @@
    fetch-Response voor het deel dat wij gebruiken (ok, status, headers.get,
    text, arrayBuffer), zodat de aanroepende code er niet anders uitziet. */
 
+const dns = require('dns');
 const http = require('http');
 const https = require('https');
+const net = require('net');
 const zlib = require('zlib');
+
+// Adressen waar we nooit naartoe mogen. De URL's komen van bezoekers, en
+// zonder deze blokkade kan iemand de server laten praten met localhost of met
+// diensten in het interne Railway-netwerk (SSRF).
+const BLOCKED_NETWORKS = new net.BlockList();
+[
+  ['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8],
+  ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.0.0.0', 24], ['192.168.0.0', 16],
+  ['198.18.0.0', 15], ['224.0.0.0', 3]
+].forEach(([address, prefix]) => BLOCKED_NETWORKS.addSubnet(address, prefix, 'ipv4'));
+[
+  ['::', 128], ['::1', 128], ['fc00::', 7], ['fe80::', 10], ['ff00::', 8]
+].forEach(([address, prefix]) => BLOCKED_NETWORKS.addSubnet(address, prefix, 'ipv6'));
+
+function isBlockedAddress(address) {
+  const ip = String(address || '').replace(/^\[|\]$/g, '');
+  // IPv4 verpakt in IPv6 (::ffff:127.0.0.1) als het IPv4-adres beoordelen.
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(ip);
+  if (mapped) return BLOCKED_NETWORKS.check(mapped[1], 'ipv4');
+  const family = net.isIP(ip);
+  if (family === 4) return BLOCKED_NETWORKS.check(ip, 'ipv4');
+  if (family === 6) return BLOCKED_NETWORKS.check(ip, 'ipv6');
+  return true;
+}
+
+// DNS-lookup die intern adressen weigert. Zit op de verbinding zelf, zodat
+// ook een hostnaam die naar 127.0.0.1 wijst en elke redirect-stap gecontroleerd
+// worden, niet alleen de URL waarmee we begonnen.
+function safeLookup(hostname, options, callback) {
+  dns.lookup(hostname, { ...options, all: true }, (err, addresses) => {
+    if (err) return callback(err);
+    if (!addresses.length || addresses.some(a => isBlockedAddress(a.address))) {
+      return callback(new Error(`Geblokkeerd adres voor ${hostname}`));
+    }
+    if (options.all) return callback(null, addresses);
+    return callback(null, addresses[0].address, addresses[0].family);
+  });
+}
 
 // De cipher-volgorde zoals Chrome die aanbiedt. Alle moderne servers
 // ondersteunen hieruit iets, dus dit kost geen bereik — het is puur de
@@ -97,6 +137,15 @@ function requestOnce(targetUrl, { headers = {}, timeoutMs = DEFAULT_TIMEOUT_MS, 
       return reject(err);
     }
 
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return reject(new Error(`Protocol niet toegestaan: ${parsed.protocol}`));
+    }
+    // Een kaal IP-adres gaat niet langs de DNS-lookup, dus die hier controleren.
+    const literalIp = parsed.hostname.replace(/^\[|\]$/g, '');
+    if (net.isIP(literalIp) && isBlockedAddress(literalIp)) {
+      return reject(new Error(`Geblokkeerd adres: ${parsed.hostname}`));
+    }
+
     const isHttps = parsed.protocol === 'https:';
     const transport = isHttps ? https : http;
 
@@ -113,7 +162,8 @@ function requestOnce(targetUrl, { headers = {}, timeoutMs = DEFAULT_TIMEOUT_MS, 
         'Accept-Encoding': 'gzip, deflate, br',
         ...headers
       },
-      timeout: timeoutMs
+      timeout: timeoutMs,
+      lookup: safeLookup
     };
 
     if (isHttps) options.agent = httpsAgent;

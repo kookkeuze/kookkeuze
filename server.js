@@ -1700,14 +1700,42 @@ app.get('/recept/:id', (req, res) => {
   res.sendFile(path.join(__dirname, 'recept.html'));
 });
 
-// Statische bestanden serveren (zonder cache voor HTML)
-app.use(express.static(path.join(__dirname), {
+// Statische bestanden serveren (zonder cache voor HTML). De projectmap is ook
+// de map met servercode, node_modules en oude databasebestanden, dus alleen
+// wat op deze lijst staat gaat naar buiten. Nieuw publiek bestand in de root?
+// Dan hier toevoegen.
+const PUBLIC_ROOT_FILES = new Set([
+  '/', '/index.html', '/over-ons.html', '/privacy.html', '/voorwaarden.html',
+  '/recept.html', '/recept-zoeken.html',
+  '/index.js', '/recept.js', '/recept-zoeken.js', '/ingredient-picker.js',
+  '/info-header.js', '/sw.js',
+  '/styles.css', '/recept-zoeken.css',
+  '/manifest.webmanifest', '/robots.txt', '/ads.txt'
+]);
+const PUBLIC_ASSET_DIRS = ['/icons/', '/Logo/', '/fonts/', '/Fotos/', '/public/'];
+const PUBLIC_ASSET_EXT = /\.(png|svg|jpe?g|webp|gif|ico|ttf|woff2?)$/i;
+
+function isPublicStaticPath(rawPath) {
+  let pad;
+  try {
+    pad = decodeURIComponent(rawPath);
+  } catch {
+    return false;
+  }
+  if (pad.includes('..') || pad.includes('\\') || pad.includes('\0')) return false;
+  if (PUBLIC_ROOT_FILES.has(pad)) return true;
+  return PUBLIC_ASSET_DIRS.some(dir => pad.startsWith(dir)) && PUBLIC_ASSET_EXT.test(pad);
+}
+
+const serveStatic = express.static(path.join(__dirname), {
+  dotfiles: 'ignore',
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-store');
     }
   }
-}));
+});
+app.use((req, res, next) => (isPublicStaticPath(req.path) ? serveStatic(req, res, next) : next()));
 
 // Serve index.html for root route
 app.get('/', (req, res) => {
@@ -1959,6 +1987,21 @@ app.get('/api/recipe-image', async (req, res) => {
   }
 });
 
+// Welk soort afbeelding dit is, bepaald aan de eerste bytes. We vertrouwen het
+// content-type van de bron bewust niet: dan kon iemand via deze proxy een
+// HTML-pagina op ons eigen domein laten draaien en zo tokens uit localStorage
+// stelen. SVG laten we om dezelfde reden niet door (kan script bevatten).
+function sniffImageType(buffer) {
+  if (!buffer || buffer.length < 12) return null;
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg';
+  if (buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
+  const head = buffer.subarray(0, 12).toString('latin1');
+  if (head.startsWith('GIF87a') || head.startsWith('GIF89a')) return 'image/gif';
+  if (head.startsWith('RIFF') && head.slice(8, 12) === 'WEBP') return 'image/webp';
+  if (head.slice(4, 8) === 'ftyp' && /^avi[fs]$/.test(head.slice(8, 12))) return 'image/avif';
+  return null;
+}
+
 // Afbeelding proxy (vermindert hotlink/referrer problemen bij externe sites)
 app.get('/api/image-proxy', async (req, res) => {
   const { url, ref } = req.query;
@@ -1997,11 +2040,16 @@ app.get('/api/image-proxy', async (req, res) => {
       return res.status(404).send('Afbeelding niet beschikbaar');
     }
 
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    const arrBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrBuffer);
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const contentType = sniffImageType(buffer);
+    if (!contentType) {
+      return res.status(415).send('Geen afbeelding');
+    }
 
     res.setHeader('Content-Type', contentType);
+    // Vangnet: mocht er toch iets anders dan een plaatje doorheen komen, dan
+    // mag het in de browser niets uitvoeren.
+    res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
     res.setHeader('Cache-Control', 'public, max-age=86400');
     return res.send(buffer);
   } catch (err) {
