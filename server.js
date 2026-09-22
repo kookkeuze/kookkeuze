@@ -27,7 +27,14 @@ app.set('trust proxy', 1);
 // --- AUTH libs --------------------------------------------------------------
 const bcrypt     = require('bcryptjs');
 const jwt        = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme-in-prod';
+// Nooit terugvallen op een vaste waarde: die staat in de (openbare) broncode
+// en dan kan iedereen zelf geldige login-tokens maken. Zonder JWT_SECRET
+// maken we er bij elke start een willekeurige; dat is veilig, alleen wordt
+// iedereen dan bij elke herstart uitgelogd.
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  console.error('❌ JWT_SECRET ontbreekt! Tijdelijke willekeurige sleutel gebruikt; bij elke herstart wordt iedereen uitgelogd. Zet JWT_SECRET in Railway.');
+  return crypto.randomBytes(48).toString('hex');
+})();
 // ----------------------------------------------------------------------------
 
 /*
@@ -1515,6 +1522,7 @@ const {
   setPasswordResetToken,
   getUserByPasswordResetToken,
   updateUserPasswordById,
+  getUserSessionInfo,
   getMealPlanForWeek,
   upsertMealPlanEntry,
   deleteMealPlanEntry,
@@ -1569,6 +1577,53 @@ app.use((_req, res, next) => {
   next();
 });
 
+// Content-Security-Policy. Elk verzoek krijgt een eigen nonce, die in de
+// HTML op elke <script>-tag komt (zie sendHtmlPage). Met 'strict-dynamic'
+// mogen die scripts zelf weer scripts laden (AdSense, Umami, Google-login),
+// maar een script dat via een XSS-lek in de pagina belandt heeft de nonce
+// niet en draait dus niet. 'unsafe-inline' en https: zijn alleen voor oude
+// browsers; moderne negeren ze zodra er een nonce in staat.
+// Het script-deel draait eerst als Report-Only: overtredingen verschijnen dan
+// in de console zonder dat er iets breekt. Klopt alles, zet dit dan op true.
+const CSP_SCRIPTS_ENFORCED = false;
+const CSP_BASE = "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'";
+
+app.use((_req, res, next) => {
+  const nonce = crypto.randomBytes(16).toString('base64');
+  res.locals.cspNonce = nonce;
+  const scriptPolicy = `script-src 'nonce-${nonce}' 'strict-dynamic' https: 'unsafe-inline'`;
+  if (CSP_SCRIPTS_ENFORCED) {
+    res.setHeader('Content-Security-Policy', `${scriptPolicy}; ${CSP_BASE}`);
+  } else {
+    res.setHeader('Content-Security-Policy', CSP_BASE);
+    res.setHeader('Content-Security-Policy-Report-Only', `${scriptPolicy}; ${CSP_BASE}`);
+  }
+  next();
+});
+
+// HTML-pagina's gaan niet via sendFile maar via deze functie, zodat de nonce
+// van dit verzoek op de <script>-tags komt. De bestanden zelf houden we in
+// het geheugen zolang ze niet veranderen.
+const htmlFileCache = new Map();
+
+function withCspNonce(html, nonce) {
+  return String(html).replace(/<script(?=[\s>])/gi, `<script nonce="${nonce}"`);
+}
+
+function sendHtmlPage(res, fileName, status = 200) {
+  const fullPath = path.join(__dirname, fileName);
+  const mtime = fs.statSync(fullPath).mtimeMs;
+  let cached = htmlFileCache.get(fullPath);
+  if (!cached || cached.mtime !== mtime) {
+    cached = { mtime, html: fs.readFileSync(fullPath, 'utf8') };
+    htmlFileCache.set(fullPath, cached);
+  }
+  res.status(status);
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  return res.send(withCspNonce(cached.html, res.locals.cspNonce));
+}
+
 // Canonieke hostnaam: kookkeuze.nl stuurt door naar www.kookkeuze.nl, anders
 // indexeert Google dezelfde pagina's op twee hostnames. Staat vóór alle routes
 // en express.static, want die zouden de content anders gewoon serveren.
@@ -1589,15 +1644,15 @@ app.use(bodyParser.json({ limit: '8mb' }));
 // Schone URL's voor de statische pagina's (moeten vóór express.static staan,
 // anders serveert die de .html-bestanden direct op hun bestandsnaam)
 app.get('/privacy', (req, res) => {
-  res.sendFile(path.join(__dirname, 'privacy.html'));
+  sendHtmlPage(res, 'privacy.html');
 });
 
 app.get('/over-ons', (req, res) => {
-  res.sendFile(path.join(__dirname, 'over-ons.html'));
+  sendHtmlPage(res, 'over-ons.html');
 });
 
 app.get('/voorwaarden', (req, res) => {
-  res.sendFile(path.join(__dirname, 'voorwaarden.html'));
+  sendHtmlPage(res, 'voorwaarden.html');
 });
 
 // Oude .html-URL's permanent doorsturen naar de schone variant
@@ -1627,7 +1682,8 @@ registerSeoPages(app, {
   // De crawler-index vult de lijsten aan: de voorbeelddatabase heeft er tien,
   // de index bijna drieduizend. Zonder die aanvulling bleven de pagina's op
   // een handvol recepten steken.
-  fetchIndexRecipes: () => internetCrawlerIndexState?.recipes || []
+  fetchIndexRecipes: () => internetCrawlerIndexState?.recipes || [],
+  prepareHtml: (res, html) => withCspNonce(html, res.locals.cspNonce)
 });
 
 // Sitemap wordt gegenereerd in plaats van als bestand bijgehouden, zodat een
@@ -1695,10 +1751,10 @@ app.get('/sitemap.xml', (_req, res) => {
 // wie toegang heeft tot de database waar het recept in staat.
 app.get('/recept/:id', (req, res) => {
   if (!/^\d+$/.test(String(req.params.id || ''))) {
-    return res.status(404).sendFile(path.join(__dirname, 'index.html'));
+    return sendHtmlPage(res, 'index.html', 404);
   }
   res.setHeader('Cache-Control', 'no-store');
-  res.sendFile(path.join(__dirname, 'recept.html'));
+  sendHtmlPage(res, 'recept.html');
 });
 
 // Statische bestanden serveren (zonder cache voor HTML). De projectmap is ook
@@ -1716,31 +1772,33 @@ const PUBLIC_ROOT_FILES = new Set([
 const PUBLIC_ASSET_DIRS = ['/icons/', '/Logo/', '/fonts/', '/Fotos/', '/public/'];
 const PUBLIC_ASSET_EXT = /\.(png|svg|jpe?g|webp|gif|ico|ttf|woff2?)$/i;
 
-function isPublicStaticPath(rawPath) {
+// Geeft het gedecodeerde pad terug als het publiek is, anders null.
+function publicStaticPath(rawPath) {
   let pad;
   try {
     pad = decodeURIComponent(rawPath);
   } catch {
-    return false;
+    return null;
   }
-  if (pad.includes('..') || pad.includes('\\') || pad.includes('\0')) return false;
-  if (PUBLIC_ROOT_FILES.has(pad)) return true;
-  return PUBLIC_ASSET_DIRS.some(dir => pad.startsWith(dir)) && PUBLIC_ASSET_EXT.test(pad);
+  if (pad.includes('..') || pad.includes('\\') || pad.includes('\0')) return null;
+  if (PUBLIC_ROOT_FILES.has(pad)) return pad;
+  return PUBLIC_ASSET_DIRS.some(dir => pad.startsWith(dir)) && PUBLIC_ASSET_EXT.test(pad) ? pad : null;
 }
 
-const serveStatic = express.static(path.join(__dirname), {
-  dotfiles: 'ignore',
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-store');
-    }
+const serveStatic = express.static(path.join(__dirname), { dotfiles: 'ignore' });
+app.use((req, res, next) => {
+  const pad = publicStaticPath(req.path);
+  if (!pad) return next();
+  // HTML via sendHtmlPage, zodat de CSP-nonce erop komt.
+  if ((req.method === 'GET' || req.method === 'HEAD') && (pad === '/' || pad.endsWith('.html'))) {
+    return sendHtmlPage(res, pad === '/' ? 'index.html' : pad.slice(1));
   }
+  return serveStatic(req, res, next);
 });
-app.use((req, res, next) => (isPublicStaticPath(req.path) ? serveStatic(req, res, next) : next()));
 
 // Serve index.html for root route
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  sendHtmlPage(res, 'index.html');
 });
 
 app.get('/health', (_req, res) => {
@@ -1763,7 +1821,7 @@ app.get('/no-track', (req, res) => {
     </head>
     <body>
       <p>Tracking uitgeschakeld op dit apparaat.</p>
-      <script>
+      <script nonce="${res.locals.cspNonce}">
         localStorage.setItem('umami.disabled', 1);
       </script>
     </body>
@@ -2549,6 +2607,8 @@ app.post('/api/password-reset/confirm', async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
     await updateUserPasswordById(user.id, hash);
+    // Oude sessies meteen ongeldig, niet pas als de cache verloopt.
+    sessionInfoCache.delete(user.id);
     return res.json({ message: 'Je wachtwoord is bijgewerkt. Je kunt nu inloggen.' });
   } catch (err) {
     console.error('❌ Password reset confirm error:', err);
@@ -2557,16 +2617,50 @@ app.post('/api/password-reset/confirm', async (req, res) => {
 });
 
 // 3. Middleware – zet gedecodeerde token in req.user
-function authenticate(req, _res, next) {
-  const auth = req.headers.authorization; // verwacht: "Bearer <token>"
-  if (auth) {
-    const [, token] = auth.split(' ');
-    try {
-      req.user = jwt.verify(token, JWT_SECRET);
-    } catch (_err) {
-      /* ongeldige token -> ga anoniem verder */
+// Een token is 7 dagen geldig, maar na een wachtwoordreset moeten oude
+// sessies (bijv. van iemand die het wachtwoord had geraden) meteen ophouden.
+// Daarom checken we of de token van ná de laatste wachtwoordwijziging is.
+// Een minuut cachen scheelt een query per verzoek.
+const SESSION_INFO_TTL_MS = 60 * 1000;
+const sessionInfoCache = new Map();
+
+async function loadSessionInfo(userId) {
+  const cached = sessionInfoCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) return cached.info;
+  const info = await getUserSessionInfo(userId);
+  sessionInfoCache.set(userId, { info, expiresAt: Date.now() + SESSION_INFO_TTL_MS });
+  if (sessionInfoCache.size > 5000) {
+    const now = Date.now();
+    for (const [key, entry] of sessionInfoCache) {
+      if (entry.expiresAt <= now) sessionInfoCache.delete(key);
     }
   }
+  return info;
+}
+
+async function authenticate(req, _res, next) {
+  const auth = req.headers.authorization; // verwacht: "Bearer <token>"
+  if (!auth) return next();
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.split(' ')[1], JWT_SECRET);
+  } catch (_err) {
+    return next(); // ongeldige token -> ga anoniem verder
+  }
+
+  try {
+    const info = await loadSessionInfo(payload.id);
+    if (!info) return next(); // account bestaat niet meer
+    const changedAt = info.password_changed_at ? new Date(info.password_changed_at).getTime() : 0;
+    if (changedAt && Number(payload.iat || 0) < Math.floor(changedAt / 1000)) return next();
+  } catch (err) {
+    // Database even onbereikbaar: token op zijn handtekening vertrouwen,
+    // zoals vóór deze controle. De route zelf faalt dan toch al.
+    console.warn('⚠️ Sessiecontrole overgeslagen:', err.message);
+  }
+
+  req.user = payload;
   next();
 }
 app.use(authenticate);

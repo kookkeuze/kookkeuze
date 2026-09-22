@@ -466,7 +466,9 @@ ${renderFooterRecipeLinks(page.path)}
 
 /* -------------------- ROUTES -------------------- */
 
-function registerSeoPages(app, { fetchDemoRecipes, fetchIndexRecipes = () => [] }) {
+// prepareHtml(res, html): laatste bewerking vóór versturen; de server zet er
+// de CSP-nonce van dit verzoek mee op de <script>-tags.
+function registerSeoPages(app, { fetchDemoRecipes, fetchIndexRecipes = () => [], prepareHtml = (_res, html) => html }) {
   const cache = new Map();
 
   async function loadRecipes(page) {
@@ -532,7 +534,7 @@ function registerSeoPages(app, { fetchDemoRecipes, fetchIndexRecipes = () => [] 
         console.warn(`⚠️ Kon receptenlijst voor ${page.path} niet laden:`, err.message);
       }
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.send(renderPage(page, recipes));
+      res.send(prepareHtml(res, renderPage(page, recipes)));
     });
   });
 }

@@ -43,7 +43,8 @@ async function initializeDatabase() {
         ADD COLUMN IF NOT EXISTS reset_token TEXT,
         ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP,
         ADD COLUMN IF NOT EXISTS recipe_pack_onboarding_seen BOOLEAN DEFAULT FALSE,
-        ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255)
+        ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ
     `);
     // Wie via Google inlogt heeft geen wachtwoord, dus password_hash mag leeg.
     await pool.query(`ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`);
@@ -1584,12 +1585,23 @@ async function updateUserPasswordById(userId, passwordHash) {
     UPDATE users
        SET password_hash = $1,
            reset_token = NULL,
-           reset_token_expires = NULL
+           reset_token_expires = NULL,
+           password_changed_at = NOW()
      WHERE id = $2
      RETURNING id
   `;
   const res = await pool.query(q, [passwordHash, userId]);
   return res.rows[0];
+}
+
+// Voor de login-controle: bestaat het account nog, en sinds wanneer geldt
+// het huidige wachtwoord? Tokens van daarvoor tellen niet meer.
+async function getUserSessionInfo(userId) {
+  const res = await pool.query(
+    'SELECT id, password_changed_at FROM users WHERE id = $1 LIMIT 1',
+    [userId]
+  );
+  return res.rows[0] || null;
 }
 
 function listAccessibleDatabases(userId, callback) {
@@ -1889,6 +1901,7 @@ module.exports = {
   setPasswordResetToken,
   getUserByPasswordResetToken,
   updateUserPasswordById,
+  getUserSessionInfo,
   getMealPlanForWeek,
   upsertMealPlanEntry,
   deleteMealPlanEntry,
