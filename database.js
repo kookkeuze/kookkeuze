@@ -56,6 +56,11 @@ async function initializeDatabase() {
       CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub
       ON users (google_sub) WHERE google_sub IS NOT NULL
     `);
+    // getUserByEmail zoekt op LOWER(email).
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_users_email_lower
+      ON users (LOWER(email))
+    `);
     console.log('✅ Email verification columns/index ensured');
 
     // Recipes tabel
@@ -473,14 +478,11 @@ function getRecipes(filters, callback) {
   const params = [];
   let paramIndex = 1;
 
-  console.log('getRecipes called with filters:', filters);
-
   // Alleen recepten van de ingelogde gebruiker
   if (filters.user_id) {
     query += ` AND database_id = $${paramIndex}`;
     params.push(filters.user_id);
     paramIndex++;
-    console.log('Added database_id filter:', filters.user_id);
   } else {
     console.log('⚠️ No database_id provided in filters!');
   }
@@ -545,17 +547,10 @@ function getRecipes(filters, callback) {
     }
   }
 
-  console.log('Final query:', query);
-  console.log('Query params:', params);
-  
   pool.query(query, params, (err, result) => {
     if (err) {
       console.error('Fout in getRecipes:', err);
       return callback(err);
-    }
-    console.log('Found rows:', result.rows.length);
-    if (result.rows.length > 0) {
-      console.log('Sample row:', result.rows[0]);
     }
     const formattedRows = result.rows.map(row => ({
       ...row,
@@ -591,24 +586,18 @@ function addRecipe(recipe, callback) {
     database_id
   } = recipe;
 
-  console.log('addRecipe called with:', recipe);
-
   const query = `
     INSERT INTO recipes (title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING id
   `;
-  
-  console.log('Insert query:', query);
-  console.log('Insert params:', [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id]);
-  
+
   pool.query(query, [title, url, dish_type, meal_type, time_required, meal_category, calories, user_id, database_id],
     (err, result) => {
       if (err) {
         console.error('Fout bij invoegen recept:', err);
         return callback(err);
       }
-      console.log('Recipe inserted with ID:', result.rows[0].id);
       callback(null, { id: result.rows[0].id });
     }
   );
@@ -1298,9 +1287,16 @@ function createPersonalDatabase(userId, callback) {
   });
 }
 
-// Gebruiker ophalen op basis van email
+// Gebruiker ophalen op basis van email. Hoofdletters tellen niet mee: oudere
+// accounts zijn soms met hoofdletters opgeslagen. Staat hetzelfde adres er
+// toch in twee varianten in, dan wint de exacte match en daarna de oudste.
 function getUserByEmail(email, callback) {
-  const query = 'SELECT * FROM users WHERE email = $1';
+  const query = `
+    SELECT * FROM users
+     WHERE LOWER(email) = LOWER($1)
+     ORDER BY (email = $1) DESC, id ASC
+     LIMIT 1
+  `;
   pool.query(query, [email], (err, result) => {
     if (err) {
       console.error('❌ Fout bij ophalen gebruiker:', err);
@@ -1520,27 +1516,43 @@ async function getDemoDatabaseId(email) {
 }
 
 // ----- Email verification helpers -----
-async function setVerificationToken(email, token, expires) {
+// Verificatie- en resettokens slaan we alleen gehasht op (zie hashToken in
+// server.js): wie de database inziet, kan er dan geen accounts mee openen.
+// Opzoeken gebeurt ook op de ongehashte waarde, voor links die nog van vóór
+// het hashen zijn verstuurd; die verlopen vanzelf binnen een dag.
+async function setVerificationToken(userId, tokenHash, expires) {
   const q = `
     UPDATE users
        SET verification_token = $1,
-           token_expires      = $2,
-           is_verified        = FALSE
-     WHERE email = $3
+           token_expires      = $2
+     WHERE id = $3
+       AND is_verified = FALSE
      RETURNING id
   `;
-  const res = await pool.query(q, [token, expires, email]);
+  const res = await pool.query(q, [tokenHash, expires, userId]);
   return res.rows[0];
 }
 
-async function getUserByVerificationToken(token) {
+async function getUserByVerificationToken(tokenHash, rawToken) {
   const q = `
     SELECT id, email, token_expires, is_verified
       FROM users
-     WHERE verification_token = $1
+     WHERE verification_token IN ($1, $2)
      LIMIT 1
   `;
-  const res = await pool.query(q, [token]);
+  const res = await pool.query(q, [tokenHash, rawToken]);
+  return res.rows[0];
+}
+
+// Opnieuw registreren op een adres dat nog niet bevestigd is: het nieuwe
+// wachtwoord vervangt het oude. Zo kan iemand die andermans adres heeft
+// geregistreerd het account niet houden als de echte eigenaar zich aanmeldt
+// en de bevestigingslink aanklikt.
+async function replaceUnverifiedPassword(userId, passwordHash) {
+  const res = await pool.query(
+    `UPDATE users SET password_hash = $2 WHERE id = $1 AND is_verified = FALSE RETURNING id`,
+    [userId, passwordHash]
+  );
   return res.rows[0];
 }
 
@@ -1557,26 +1569,26 @@ async function verifyUserById(userId) {
   return res.rows[0];
 }
 
-async function setPasswordResetToken(email, token, expires) {
+async function setPasswordResetToken(userId, tokenHash, expires) {
   const q = `
     UPDATE users
        SET reset_token = $1,
            reset_token_expires = $2
-     WHERE email = $3
+     WHERE id = $3
      RETURNING id
   `;
-  const res = await pool.query(q, [token, expires, email]);
+  const res = await pool.query(q, [tokenHash, expires, userId]);
   return res.rows[0];
 }
 
-async function getUserByPasswordResetToken(token) {
+async function getUserByPasswordResetToken(tokenHash, rawToken) {
   const q = `
     SELECT id, email, reset_token_expires
       FROM users
-     WHERE reset_token = $1
+     WHERE reset_token IN ($1, $2)
      LIMIT 1
   `;
-  const res = await pool.query(q, [token]);
+  const res = await pool.query(q, [tokenHash, rawToken]);
   return res.rows[0];
 }
 
@@ -1902,6 +1914,7 @@ module.exports = {
   getUserByPasswordResetToken,
   updateUserPasswordById,
   getUserSessionInfo,
+  replaceUnverifiedPassword,
   getMealPlanForWeek,
   upsertMealPlanEntry,
   deleteMealPlanEntry,

@@ -10,8 +10,7 @@ const {
   crawlInternetRecipeIndex,
   loadInternetRecipeIndexSync,
   getEmptyCrawlerIndex,
-  looksLikeRecipeRoundup,
-  INDEX_FILE: INTERNET_CRAWLER_INDEX_FILE
+  looksLikeRecipeRoundup
 } = require('./internet-crawler');
 const { registerSeoPages, getSeoPageUrls } = require('./seo-pages');
 const { browserFetch } = require('./browser-fetch');
@@ -1523,6 +1522,7 @@ const {
   getUserByPasswordResetToken,
   updateUserPasswordById,
   getUserSessionInfo,
+  replaceUnverifiedPassword,
   getMealPlanForWeek,
   upsertMealPlanEntry,
   deleteMealPlanEntry,
@@ -1637,9 +1637,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// 8 MB in plaats van de standaard 100 kB: een eigen recept stuurt zijn foto
-// als data-URL mee. De client verkleint hem eerst, dus dit is ruim voldoende.
-app.use(bodyParser.json({ limit: '8mb' }));
+// 8 MB alleen voor eigen recepten: die sturen hun foto als data-URL mee (de
+// client verkleint hem eerst). De rest, ook alles zonder login, krijgt 1 MB;
+// dat is ruim voor bijv. 200 boodschappen tegelijk. Wat de eerste parser al
+// gelezen heeft, slaat de tweede over.
+app.use('/api/recipes/own', bodyParser.json({ limit: '8mb' }));
+app.use(bodyParser.json({ limit: '1mb' }));
 
 // Schone URL's voor de statische pagina's (moeten vóór express.static staan,
 // anders serveert die de .html-bestanden direct op hun bestandsnaam)
@@ -2311,12 +2314,47 @@ function passwordResetEmailHtml(resetUrl) {
   </html>
   `;
 }
+// Voor wie zich registreert op een adres dat al een account heeft.
+function existingAccountEmailHtml(loginUrl) {
+  const PRIMARY = '#4dca5b';
+  return `<!doctype html>
+<html lang="nl">
+<head><meta charset="utf-8"><meta name="color-scheme" content="light only"><title>Je hebt al een account</title></head>
+<body style="margin:0;background:#f2f4f3;padding:32px 12px;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+         style="max-width:580px;margin:0 auto;background:#ffffff;border-radius:16px;">
+    <tr><td style="padding:28px 24px;">
+      <img src="${FRONTEND_URL}/Logo/Kookkeuze-logo.png" alt="Kookkeuze" style="height:32px;display:block;margin-bottom:20px;">
+      <h1 style="margin:0 0 12px;font-size:24px;color:#1a1a1a;">Je hebt al een Kookkeuze-account</h1>
+      <p style="margin:0 0 20px;font-size:16px;line-height:1.6;color:#4b5c53;">
+        Iemand (hopelijk jij) probeerde een account aan te maken met dit e-mailadres,
+        maar dat account bestaat al. Log gewoon in. Weet je je wachtwoord niet meer?
+        Kies dan bij het inloggen voor "Wachtwoord vergeten".
+      </p>
+      <a href="${loginUrl}" style="display:inline-block;background:${PRIMARY};color:#fff;text-decoration:none;padding:14px 22px;border-radius:10px;font-weight:bold;">Naar Kookkeuze</a>
+      <p style="margin:24px 0 0;font-size:13px;color:#8a9e94;">Was jij dit niet? Dan kun je deze e-mail negeren.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
 /* ------------------------------------------------------- */
+
+// Verificatie- en resettokens gaan als ruwe waarde in de mail, maar staan
+// alleen als SHA-256-hash in de database.
+function hashToken(token) {
+  return crypto.createHash('sha256').update(String(token)).digest('hex');
+}
+
+// Voor inlogpogingen op een onbekend adres: vergelijken tegen deze hash kost
+// even lang als tegen een echte, zodat de responstijd niets verraadt.
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 10);
+const LOGIN_FAILED_MESSAGE = 'E-mailadres of wachtwoord klopt niet. Aangemeld met Google? Gebruik dan de Google-knop.';
 
 // ====================== AUTH ===============================================
 // 1. Registreren (met e-mailverificatie)
 app.post('/api/register', (req, res) => {
-  const email = String(req.body?.email || '').trim();
+  const email = String(req.body?.email || '').trim().toLowerCase();
   const password = String(req.body?.password || '');
   if (!email || !password) {
     return res.status(400).json({ error: 'E-mail en wachtwoord zijn verplicht.' });
@@ -2334,58 +2372,66 @@ app.post('/api/register', (req, res) => {
     return res.status(429).json({ error: TE_VEEL_POGINGEN });
   }
 
-  getUserByEmail(email, (err, existing) => {
-    if (err)        return res.status(500).json({ error: 'DB-fout.' });
-    if (existing)   return res.status(409).json({ error: 'Gebruiker bestaat al.' });
+  if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
+    return res.status(500).json({ error: 'Mailconfig ontbreekt. Neem contact op met de beheerder.' });
+  }
 
-    bcrypt.hash(password, 10, async (err, hash) => {
-      if (err) return res.status(500).json({ error: 'Hash-fout.' });
-
-      addUser(email, hash, async (err) => {
-        if (err) return res.status(500).json({ error: 'Opslaan mislukt.' });
-
-        try {
-          // Genereer token + expiry (24u)
-          const token   = crypto.randomBytes(32).toString('hex');
-          const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-          await setVerificationToken(email, token, expires);
-
-          const verifyUrl = `${APP_BASE_URL}/api/verify?token=${token}`;
-
-          if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
-            return res.status(500).json({ error: 'Mailconfig ontbreekt. Neem contact op met de beheerder.' });
-          }
-
-          const mailInfo = await sendBrevoEmail({
-            to: email,
-            subject: 'Bevestig je e-mailadres',
-            html: verificationEmailHtml(verifyUrl),
-            text: `Welkom bij Kookkeuze! Bevestig je e-mail via: ${verifyUrl}`
-          });
-
-          console.log('📧 Verificatiemail verstuurd:', {
-            to: email,
-            messageId: mailInfo.messageId || null
-          });
-
-          res.json({ message: 'Registratie gelukt! Check je e-mail om te bevestigen.' });
-        } catch (e) {
-          console.error('❌ Verificatietoken/mail fout:', e);
-          res.status(500).json({ error: 'Kon verificatie-e-mail niet versturen.' });
-        }
-      });
+  // Altijd hetzelfde antwoord, of het adres nu al een account heeft of niet:
+  // anders kan iedereen via dit formulier nagaan wie Kookkeuze gebruikt. Wie
+  // al een account heeft, hoort dat via de mail, en die leest alleen de
+  // eigenaar van het adres.
+  (async () => {
+    const existing = await new Promise((resolve, reject) => {
+      getUserByEmail(email, (err, user) => (err ? reject(err) : resolve(user || null)));
     });
-  });
+    // Ook bij een bestaand account hashen, zodat de responstijd niets verraadt.
+    const hash = await bcrypt.hash(password, 10);
+
+    if (existing && existing.is_verified) {
+      await sendBrevoEmail({
+        to: existing.email,
+        subject: 'Je hebt al een Kookkeuze-account',
+        html: existingAccountEmailHtml(FRONTEND_URL),
+        text: `Iemand (hopelijk jij) probeerde een Kookkeuze-account aan te maken met dit e-mailadres, maar dat account bestaat al. Log in via ${FRONTEND_URL} of kies daar "Wachtwoord vergeten". Was jij dit niet? Dan kun je deze mail negeren.`
+      });
+      return;
+    }
+
+    let userId;
+    if (existing) {
+      await replaceUnverifiedPassword(existing.id, hash);
+      userId = existing.id;
+    } else {
+      userId = (await dbCall(addUser, email, hash)).id;
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await setVerificationToken(userId, hashToken(token), expires);
+
+    const verifyUrl = `${APP_BASE_URL}/api/verify?token=${token}`;
+    await sendBrevoEmail({
+      to: existing?.email || email,
+      subject: 'Bevestig je e-mailadres',
+      html: verificationEmailHtml(verifyUrl),
+      text: `Welkom bij Kookkeuze! Bevestig je e-mail via: ${verifyUrl}`
+    });
+  })().then(
+    () => res.json({ message: 'Registratie gelukt! Check je e-mail om te bevestigen.' }),
+    err => {
+      console.error('❌ Registratie mislukt:', err.message);
+      res.status(500).json({ error: 'Registreren lukt nu even niet. Probeer het later opnieuw.' });
+    }
+  );
 });
 
 // 1b. Verify-endpoint (zet verified en redirect met JWT naar frontend)
 app.get('/api/verify', async (req, res) => {
   try {
-    const { token } = req.query;
+    const token = typeof req.query.token === 'string' ? req.query.token : '';
     if (!token) return res.status(400).json({ error: 'Token ontbreekt.' });
 
-    const user = await getUserByVerificationToken(token);
+    const user = await getUserByVerificationToken(hashToken(token), token);
     if (!user)  return res.status(400).json({ error: 'Ongeldige of gebruikte token.' });
 
     if (user.token_expires && new Date(user.token_expires) < new Date()) {
@@ -2426,24 +2472,21 @@ app.post('/api/login', (req, res) => {
     return res.status(429).json({ error: TE_VEEL_POGINGEN });
   }
 
-  getUserByEmail(email, (err, user) => {
+  getUserByEmail(email.trim(), (err, user) => {
     if (err)    return res.status(500).json({ error: 'DB-fout.' });
-    if (!user)  return res.status(401).json({ error: 'Onbekend account.' });
 
-    if (!user.is_verified) {
-      return res.status(403).json({ error: 'Verifieer eerst je e-mailadres (check je inbox).' });
-    }
-
-    // Account is via Google aangemaakt en heeft (nog) geen wachtwoord.
-    if (!user.password_hash) {
-      return res.status(401).json({
-        error: 'Dit account gebruikt Inloggen met Google. Gebruik die knop, of stel via "Wachtwoord vergeten" een wachtwoord in.'
-      });
-    }
-
-    bcrypt.compare(password, user.password_hash, (err, same) => {
-      if (err || !same) {
-        return res.status(401).json({ error: 'Combinatie klopt niet.' });
+    // Onbekend adres, Google-account zonder wachtwoord en verkeerd wachtwoord
+    // krijgen dezelfde melding én dezelfde rekentijd (bcrypt tegen een
+    // dummy-hash), zodat je niet kunt nagaan welke adressen een account hebben.
+    const hashToCheck = user?.password_hash || DUMMY_PASSWORD_HASH;
+    bcrypt.compare(password, hashToCheck, (cmpErr, same) => {
+      if (cmpErr || !same || !user?.password_hash) {
+        return res.status(401).json({ error: LOGIN_FAILED_MESSAGE });
+      }
+      // Pas na het juiste wachtwoord: wie dat weet, mag horen dat het adres
+      // nog bevestigd moet worden.
+      if (!user.is_verified) {
+        return res.status(403).json({ error: 'Verifieer eerst je e-mailadres (check je inbox).' });
       }
       acceptPendingInvitesForUser(user.id, user.email, () => {});
       const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
@@ -2546,6 +2589,11 @@ app.post('/api/password-reset/request', async (req, res) => {
   // adres bestaat; de echte eigenaar heeft de eerdere mails al.
   if (emailLimited) return res.json({ message: genericMessage });
 
+  // Vóór het opzoeken, anders verraadt deze fout alsnog welke adressen bestaan.
+  if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
+    return res.status(500).json({ error: 'Mailconfig ontbreekt. Neem contact op met de beheerder.' });
+  }
+
   try {
     const user = await new Promise((resolve, reject) => {
       getUserByEmail(email, (err, foundUser) => {
@@ -2555,22 +2603,21 @@ app.post('/api/password-reset/request', async (req, res) => {
     });
 
     if (!user) return res.json({ message: genericMessage });
-    if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
-      return res.status(500).json({ error: 'Mailconfig ontbreekt. Neem contact op met de beheerder.' });
-    }
 
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 uur
-    await setPasswordResetToken(email, token, expires);
+    await setPasswordResetToken(user.id, hashToken(token), expires);
 
     const resetUrl = `${FRONTEND_URL}/#resetToken=${token}`;
 
-    await sendBrevoEmail({
-      to: email,
+    // Niet op de mail wachten: een bestaand adres zou anders merkbaar trager
+    // antwoorden dan een onbekend adres.
+    sendBrevoEmail({
+      to: user.email,
       subject: 'Wachtwoord opnieuw instellen',
       html: passwordResetEmailHtml(resetUrl),
       text: `Stel je wachtwoord opnieuw in via: ${resetUrl}`
-    });
+    }).catch(mailErr => console.error('❌ Resetmail versturen mislukt:', mailErr.message));
 
     return res.json({ message: genericMessage });
   } catch (err) {
@@ -2598,7 +2645,7 @@ app.post('/api/password-reset/confirm', async (req, res) => {
   }
 
   try {
-    const user = await getUserByPasswordResetToken(token);
+    const user = await getUserByPasswordResetToken(hashToken(token), token);
     if (!user) return res.status(400).json({ error: 'Resetlink is ongeldig of al gebruikt.' });
 
     if (!user.reset_token_expires || new Date(user.reset_token_expires) < new Date()) {
@@ -3390,7 +3437,6 @@ app.get('/api/internet-crawl/status', (_req, res) => {
     ready: Array.isArray(safeState.recipes) && safeState.recipes.length > 0,
     generatedAt: safeState.generatedAt || null,
     totalRecipes: Array.isArray(safeState.recipes) ? safeState.recipes.length : 0,
-    indexFile: INTERNET_CRAWLER_INDEX_FILE,
     sites: Array.isArray(safeState.sites) ? safeState.sites : []
   });
 });
@@ -3420,6 +3466,17 @@ app.get('/api/internet-recipe-random', async (req, res) => {
     return res.status(500).json({ error: 'Kon geen random internetrecept ophalen.' });
   }
 });
+
+// Eigen fouten uit database.js ('Recept niet gevonden…') zijn voor de
+// gebruiker bedoeld. Fouten van Postgres of het netwerk hebben een .code en
+// kunnen tabel-, kolomnamen of waarden bevatten: die niet doorgeven.
+function clientErrorMessage(err, fallback) {
+  if (!err || err.code || !err.message) {
+    if (err) console.error('❌', fallback, err);
+    return fallback;
+  }
+  return err.message;
+}
 
 function dbCall(fn, ...args) {
   return new Promise((resolve, reject) => {
@@ -4032,7 +4089,7 @@ app.put('/api/meal-plan', async (req, res) => {
     return res.json({ message: 'Weekmenu bijgewerkt.' });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    return res.status(400).json({ error: err.message || 'Opslaan van weekmenu mislukt.' });
+    return res.status(400).json({ error: clientErrorMessage(err, 'Opslaan van weekmenu mislukt.') });
   }
 });
 
@@ -4115,7 +4172,7 @@ app.put('/api/recipe-notes', async (req, res) => {
     return res.json(saved || { success: true });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    return res.status(400).json({ error: err.message || 'Opslaan van notitie mislukt.' });
+    return res.status(400).json({ error: clientErrorMessage(err, 'Opslaan van notitie mislukt.') });
   }
 });
 
@@ -4138,7 +4195,7 @@ app.delete('/api/recipe-notes', async (req, res) => {
     return res.json({ message: 'Notitie verwijderd.' });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    return res.status(400).json({ error: err.message || 'Verwijderen van notitie mislukt.' });
+    return res.status(400).json({ error: clientErrorMessage(err, 'Verwijderen van notitie mislukt.') });
   }
 });
 
@@ -4186,7 +4243,7 @@ app.post('/api/shopping-list', async (req, res) => {
     return res.json({ added: result?.added || 0, items });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    return res.status(400).json({ error: err.message || 'Toevoegen aan boodschappenlijst mislukt.' });
+    return res.status(400).json({ error: clientErrorMessage(err, 'Toevoegen aan boodschappenlijst mislukt.') });
   }
 });
 
@@ -4214,7 +4271,7 @@ app.patch('/api/shopping-list/:id', async (req, res) => {
     return res.json(updated);
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    return res.status(400).json({ error: err.message || 'Bijwerken van product mislukt.' });
+    return res.status(400).json({ error: clientErrorMessage(err, 'Bijwerken van product mislukt.') });
   }
 });
 
@@ -4234,7 +4291,7 @@ app.delete('/api/shopping-list/:id', async (req, res) => {
     return res.json({ message: 'Product verwijderd.' });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    return res.status(400).json({ error: err.message || 'Verwijderen van product mislukt.' });
+    return res.status(400).json({ error: clientErrorMessage(err, 'Verwijderen van product mislukt.') });
   }
 });
 
@@ -4254,7 +4311,7 @@ app.post('/api/shopping-list/clear', async (req, res) => {
     return res.json({ deleted: result?.deleted || 0 });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    return res.status(400).json({ error: err.message || 'Legen van de boodschappenlijst mislukt.' });
+    return res.status(400).json({ error: clientErrorMessage(err, 'Legen van de boodschappenlijst mislukt.') });
   }
 });
 
@@ -4305,7 +4362,7 @@ app.post('/api/databases/invite', async (req, res) => {
       result
     });
   } catch (err) {
-    return res.status(400).json({ error: err.message || 'Uitnodigen mislukt.' });
+    return res.status(400).json({ error: clientErrorMessage(err, 'Uitnodigen mislukt.') });
   }
 });
 
