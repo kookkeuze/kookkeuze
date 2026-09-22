@@ -1353,30 +1353,77 @@ select:focus {
   display: block;
 }
 
+/* Paginanummering (zie buildPaginationHtml): ‹ 1 … 6 [7] 8 … 20 ›.
+   40px knoppen: op een telefoon goed te raken, en de telefoonvariant
+   (‹ 1 … 7 … 20 ›) past dan nog ruim op 320px. */
 .overview-pagination {
-  margin-top: 16px;
+  margin-top: 20px;
   display: flex;
   justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 
 .overview-page-btn {
-  min-width: 36px;
-  height: 36px;
+  min-width: 40px;
+  height: 40px;
   border-radius: var(--btn-radius);
   border: 1px solid #d3e1d7;
   background: #fff;
   color: #2f3a35;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.overview-page-btn:hover:not(:disabled):not(.active) {
+  border-color: var(--green-soft);
+  background: #eef9f0;
+}
+
+.overview-page-btn:focus-visible {
+  outline: 2px solid var(--green-deep);
+  outline-offset: 2px;
 }
 
 .overview-page-btn.active {
   background: var(--green-deep);
   border-color: var(--green-deep);
   color: #fff;
+  cursor: default;
+}
+
+/* Pijlen iets van de nummers af, zodat ze als navigatie lezen. */
+.overview-page-arrow {
+  color: var(--green-deep);
+  font-size: 13px;
+}
+
+.overview-page-arrow:first-child {
+  margin-right: 4px;
+}
+
+.overview-page-arrow:last-child {
+  margin-left: 4px;
+}
+
+.overview-page-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Even breed als een knop: dan is de rij in elke stand precies even lang. */
+.overview-page-gap {
+  min-width: 40px;
+  text-align: center;
+  color: #8a9e94;
+  font-weight: 700;
+  user-select: none;
 }
 
 /* Basis tabel styling */

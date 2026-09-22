@@ -3214,12 +3214,7 @@ function renderPlannerSearchResults() {
     if (totalPages <= 1) {
       weekmenuSearchPagination.innerHTML = '';
     } else {
-      let paginationHtml = '';
-      for (let i = 1; i <= totalPages; i++) {
-        const activeClass = i === plannerSearchCurrentPage ? ' active' : '';
-        paginationHtml += `<button type="button" class="overview-page-btn${activeClass}" data-page="${i}">${i}</button>`;
-      }
-      weekmenuSearchPagination.innerHTML = paginationHtml;
+      weekmenuSearchPagination.innerHTML = buildPaginationHtml(plannerSearchCurrentPage, totalPages);
     }
   }
 }
@@ -3432,9 +3427,9 @@ function bindWeekPlannerUi() {
     if (previewBtn) openWeekmenuPreviewModal(previewBtn.dataset.recipeId);
   });
   weekmenuSearchPagination?.addEventListener('click', e => {
-    const btn = e.target.closest('.overview-page-btn');
+    const btn = e.target.closest('.overview-page-btn[data-page]');
     if (!btn) return;
-    plannerSearchCurrentPage = Number(btn.dataset.page || '1');
+    plannerSearchCurrentPage = Number(btn.dataset.page);
     renderPlannerSearchResults();
     weekmenuSearchModal?.querySelector('.modal-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   });
@@ -4353,6 +4348,44 @@ function applyOverviewViewMode() {
   if (overviewGridContainer) overviewGridContainer.classList.toggle('active', !isList);
 }
 
+// Paginanummering: vorige/volgende-pijlen, de eerste en laatste pagina, en
+// rond de huidige pagina een paar buren; de rest wordt '…'. Altijd hetzelfde
+// aantal plekken, zodat de rij niet verspringt terwijl je doorklikt:
+//   desktop (7):  ‹ 1 2 3 4 5 … 23 ›   ‹ 1 … 6 [7] 8 … 23 ›   ‹ 1 … 19 20 21 22 23 ›
+//   telefoon (5): ‹ 1 2 3 … 23 ›       ‹ 1 … [7] … 23 ›       ‹ 1 … 21 22 23 ›
+function paginationItems(currentPage, totalPages, siblings) {
+  const slots = 2 * siblings + 5;
+  const range = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
+  if (totalPages <= slots) return range(1, totalPages);
+  if (currentPage <= siblings + 3) return [...range(1, slots - 2), '…', totalPages];
+  if (currentPage >= totalPages - siblings - 2) return [1, '…', ...range(totalPages - slots + 3, totalPages)];
+  return [1, '…', ...range(currentPage - siblings, currentPage + siblings), '…', totalPages];
+}
+
+function buildPaginationHtml(currentPage, totalPages) {
+  const siblings = window.matchMedia('(max-width: 600px)').matches ? 0 : 1;
+  const items = paginationItems(currentPage, totalPages, siblings);
+
+  const pageButton = p => p === currentPage
+    ? `<button type="button" class="overview-page-btn active" data-page="${p}" aria-current="page" aria-label="Pagina ${p}, huidige pagina">${p}</button>`
+    : `<button type="button" class="overview-page-btn" data-page="${p}" aria-label="Pagina ${p}">${p}</button>`;
+  const arrowButton = (p, dir) => {
+    const label = dir === 'prev' ? 'Vorige pagina' : 'Volgende pagina';
+    const icon = dir === 'prev' ? 'fa-chevron-left' : 'fa-chevron-right';
+    const disabled = p < 1 || p > totalPages;
+    return `<button type="button" class="overview-page-btn overview-page-arrow" ${disabled ? 'disabled' : `data-page="${p}"`} aria-label="${label}"><i class="fas ${icon}" aria-hidden="true"></i></button>`;
+  };
+
+  let html = arrowButton(currentPage - 1, 'prev');
+  items.forEach(item => {
+    html += item === '…'
+      ? '<span class="overview-page-gap" aria-hidden="true">…</span>'
+      : pageButton(item);
+  });
+  html += arrowButton(currentPage + 1, 'next');
+  return html;
+}
+
 function renderOverviewPagination(totalItems) {
   if (!overviewPagination) return;
   const totalPages = Math.max(1, Math.ceil(totalItems / OVERVIEW_PAGE_SIZE));
@@ -4361,19 +4394,28 @@ function renderOverviewPagination(totalItems) {
     return;
   }
 
-  let html = '';
-  for (let i = 1; i <= totalPages; i++) {
-    const activeClass = i === overviewCurrentPage ? ' active' : '';
-    html += `<button type="button" class="overview-page-btn${activeClass}" data-page="${i}">${i}</button>`;
-  }
-  overviewPagination.innerHTML = html;
-  overviewPagination.querySelectorAll('.overview-page-btn').forEach(btn => {
+  overviewPagination.innerHTML = buildPaginationHtml(overviewCurrentPage, totalPages);
+  overviewPagination.querySelectorAll('.overview-page-btn[data-page]').forEach(btn => {
     btn.addEventListener('click', () => {
       overviewCurrentPage = Number(btn.dataset.page);
       renderOverviewPage();
+      // De knoppen staan onder de recepten: terug naar boven, anders kijk je
+      // na het klikken naar het einde van de nieuwe pagina.
+      const top = overviewPagination.parentElement?.getBoundingClientRect().top;
+      if (top !== undefined && top < 0) {
+        window.scrollTo({ top: window.scrollY + top - 90, behavior: 'smooth' });
+      }
     });
   });
 }
+
+// Telefoon gekanteld over de 600px-grens: de nummering heeft dan meer of
+// minder buren nodig. Alleen de knoppen opnieuw, niet de hele pagina.
+window.matchMedia('(max-width: 600px)').addEventListener('change', () => {
+  if (overviewPagination?.childElementCount) {
+    renderOverviewPagination(getOverviewFilteredRecipes().length);
+  }
+});
 
 function renderOverviewPage() {
   allRecipesDiv.innerHTML = '';
