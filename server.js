@@ -1583,9 +1583,9 @@ app.use((_req, res, next) => {
 // maar een script dat via een XSS-lek in de pagina belandt heeft de nonce
 // niet en draait dus niet. 'unsafe-inline' en https: zijn alleen voor oude
 // browsers; moderne negeren ze zodra er een nonce in staat.
-// Het script-deel draait eerst als Report-Only: overtredingen verschijnen dan
-// in de console zonder dat er iets breekt. Klopt alles, zet dit dan op true.
-const CSP_SCRIPTS_ENFORCED = false;
+// Staat dit op false, dan draait het script-deel als Report-Only: overtredingen
+// verschijnen dan alleen in de console. Handig bij het toevoegen van nieuwe scripts.
+const CSP_SCRIPTS_ENFORCED = true;
 const CSP_BASE = "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'";
 
 app.use((_req, res, next) => {
