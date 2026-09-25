@@ -100,7 +100,12 @@ const recipeImageCache = new Map();
 function extractMetaContent(tag) {
   if (!tag) return null;
   const match = tag.match(/content=["']([^"']+)["']/i);
-  return match ? match[1] : null;
+  if (!match) return null;
+  // HTML escapet "&" in attributen als "&amp;". Bij een og:image-URL met
+  // meerdere query-parameters (zoals Instagrams gesigneerde CDN-links) blijft
+  // dat anders letterlijk in de URL staan, waardoor de query-string uit elkaar
+  // valt en de afbeelding niet meer op te halen is.
+  return decodeHtmlEntities(match[1]).trim() || null;
 }
 
 // Haalt de plaatjes uit een JSON-LD-waarde: die is soms een string, soms een
@@ -132,8 +137,33 @@ function extractRecipeImagesFromJsonLd(html) {
   return found;
 }
 
+// Instagram levert bij reels vaak geen bruikbare og:image aan onze
+// bot-user-agents (die staat er soms simpelweg niet in), maar de HTML bevat
+// dan nog wel een <img> die rechtstreeks naar Instagrams eigen CDN wijst
+// (fbcdn.net / cdninstagram.com) — de videothumbnail. Die gebruiken we als
+// laatste redmiddel, na de gewone og:image/twitter:image/JSON-LD-kandidaten.
+const INSTAGRAM_CDN_HOST_RE = /(^|\.)(fbcdn\.net|cdninstagram\.com)$/i;
+
+function extractInstagramCdnImagesFromHtml(html) {
+  const found = [];
+  for (const tag of String(html || '').match(/<img\b[^>]*>/gi) || []) {
+    const srcMatch = tag.match(/\bsrc=["']([^"']+)["']/i);
+    if (!srcMatch) continue;
+    const src = decodeHtmlEntities(srcMatch[1]).trim();
+    if (!src) continue;
+    try {
+      const host = new URL(src).hostname;
+      if (INSTAGRAM_CDN_HOST_RE.test(host) && !found.includes(src)) found.push(src);
+    } catch {
+      // ongeldige src, overslaan
+    }
+  }
+  return found;
+}
+
 // Alle plaatjes die de pagina aandraagt, op volgorde van betrouwbaarheid:
-// eerst de social-meta tags, daarna wat er in de JSON-LD van het recept staat.
+// eerst de social-meta tags, daarna wat er in de JSON-LD van het recept staat,
+// en als laatste een Instagram-CDN-<img> (zie hierboven).
 function collectRecipeImageCandidates(html) {
   const metaPatterns = [
     /<meta[^>]+property=["']og:image:secure_url["'][^>]*>/gi,
@@ -151,6 +181,9 @@ function collectRecipeImageCandidates(html) {
     }
   }
   extractRecipeImagesFromJsonLd(html).forEach(item => {
+    if (!candidates.includes(item)) candidates.push(item);
+  });
+  extractInstagramCdnImagesFromHtml(html).forEach(item => {
     if (!candidates.includes(item)) candidates.push(item);
   });
   return candidates;
