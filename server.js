@@ -12,7 +12,7 @@ const {
   getEmptyCrawlerIndex,
   looksLikeRecipeRoundup
 } = require('./internet-crawler');
-const { registerSeoPages, getSeoPageUrls } = require('./seo-pages');
+const { registerSeoPages, getSeoPageUrls, renderFooterRecipeLinks } = require('./seo-pages');
 const { browserFetch } = require('./browser-fetch');
 
 const app  = express();
@@ -1686,12 +1686,19 @@ function withCspNonce(html, nonce) {
   return String(html).replace(/<script(?=[\s>])/gi, `<script nonce="${nonce}"`);
 }
 
+// De footer-navigatie naar de landingspagina's staat in de HTML-bestanden als
+// placeholder en komt uit seo-pages.js, zodat een nieuwe pagina daar meteen
+// op elke pagina van de site in de footer staat.
+const FOOTER_RECIPE_LINKS_PLACEHOLDER = '<!-- footer-recipe-links -->';
+
 function sendHtmlPage(res, fileName, status = 200) {
   const fullPath = path.join(__dirname, fileName);
   const mtime = fs.statSync(fullPath).mtimeMs;
   let cached = htmlFileCache.get(fullPath);
   if (!cached || cached.mtime !== mtime) {
-    cached = { mtime, html: fs.readFileSync(fullPath, 'utf8') };
+    const html = fs.readFileSync(fullPath, 'utf8')
+      .replace(FOOTER_RECIPE_LINKS_PLACEHOLDER, () => renderFooterRecipeLinks());
+    cached = { mtime, html };
     htmlFileCache.set(fullPath, cached);
   }
   res.status(status);
