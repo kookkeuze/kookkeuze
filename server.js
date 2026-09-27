@@ -1851,7 +1851,7 @@ const PUBLIC_ROOT_FILES = new Set([
   '/', '/index.html', '/over-ons.html', '/privacy.html', '/voorwaarden.html',
   '/recept.html', '/recept-zoeken.html',
   '/index.js', '/recept.js', '/recept-zoeken.js', '/ingredient-picker.js',
-  '/info-header.js', '/sw.js',
+  '/info-header.js', '/footer-tree.js', '/sw.js',
   '/styles.css', '/recept-zoeken.css',
   '/manifest.webmanifest', '/robots.txt', '/ads.txt'
 ]);

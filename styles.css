@@ -7912,10 +7912,32 @@ h1, h2, h3,
   text-align: left;
 }
 
+/* Geen verticale padding op de <ul>: in het animatieraster hieronder telt
+   padding mee als minimale hoogte, dan klapt een menu nooit helemaal dicht.
+   De ademruimte onder een open menu zit daarom op het laatste item. */
 .footer-tree ul {
   list-style: none;
   margin: 0;
-  padding: 0 0 4px 14px;
+  padding: 0 0 0 14px;
+}
+
+.footer-tree-panel > ul > li:last-child {
+  padding-bottom: 4px;
+}
+
+/* Kritisch gedempte veer (Apple: damping 1.0, response 0.35 s), als curve
+   uitgeschreven: x(t) = 1 − (1 + ωt)·e^(−ωt) met ω = 2π / 0.35. Geen
+   overshoot — een menu is niet gegooid, dus het hoort niet na te veren. De
+   beweging is na zo'n 250 ms vrijwel klaar; de 500 ms is de uitloop. */
+:root {
+  --footer-spring: cubic-bezier(0.25, 1, 0.5, 1);
+  --footer-spring-ms: 500ms;
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --footer-spring: linear(0, 0.0547, 0.1726, 0.309, 0.4408, 0.5577, 0.656, 0.7361, 0.7997, 0.8493, 0.8874, 0.9164, 0.9383, 0.9547, 0.9668, 0.9758, 0.9824, 0.9872, 0.9908, 0.9934, 0.9952, 0.9966, 0.9975, 0.9982, 1);
+  }
 }
 
 .footer-tree summary {
@@ -7929,11 +7951,26 @@ h1, h2, h3,
   font-weight: 500;
   line-height: 1.3;
   color: #8a938c;
-  transition: color .15s ease;
+  /* Eigen indrukreactie hieronder, dus geen grijs vlak van de browser. */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Indrukken schaalt vanaf de linkerkant, waar het pijltje en de tekst
+     beginnen, niet vanuit het midden van een halflege rij. */
+  transform-origin: left center;
+  transition: color .15s ease, transform .2s var(--footer-spring);
 }
 
 .footer-tree summary::-webkit-details-marker {
   display: none;
+}
+
+/* Reactie op het indrukken zelf, niet pas bij loslaten: dan voelt de rij
+   direct aangeraakt. Openklappen gebeurt bij loslaten, zoals bij elke knop. */
+.footer-tree summary:active {
+  transform: scale(0.97);
+  color: #262b26;
+  transition-duration: .1s;
 }
 
 .footer-tree summary::before {
@@ -7945,22 +7982,65 @@ h1, h2, h3,
   border-right: 1.5px solid currentColor;
   border-bottom: 1.5px solid currentColor;
   transform: rotate(-45deg);
-  transition: transform .15s ease;
+  transition: transform var(--footer-spring-ms) var(--footer-spring);
 }
 
-.footer-tree details[open] > summary::before {
+/* Zonder script volgt het pijltje [open]; met script de klasse, die meteen
+   bij de tik wisselt — [open] blijft tijdens het dichtgaan nog even staan. */
+.footer-tree:not(.is-enhanced) details[open] > summary::before,
+.footer-tree.is-enhanced .footer-tree-node.is-open > summary::before {
   transform: rotate(45deg);
 }
 
-.footer-tree summary:hover,
-.footer-tree details[open] > summary {
+.footer-tree:not(.is-enhanced) details[open] > summary,
+.footer-tree.is-enhanced .footer-tree-node.is-open > summary {
   color: #262b26;
 }
 
+/* Hover alleen waar een muis is; op een telefoon blijft hover na een tik
+   hangen en lijkt een dichtgeklapt menu dan nog actief. */
+@media (hover: hover) {
+  .footer-tree summary:hover {
+    color: #262b26;
+  }
+}
+
+/* Binnen de rij, want de randen van een uitklappend menu knippen alles
+   erbuiten af. */
 .footer-tree summary:focus-visible {
   outline: 2px solid var(--green-deep);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+/* Het uitklappen (footer-tree.js zet .is-enhanced en .is-open). De hoogte
+   loopt via grid-template-rows van 0fr naar 1fr: dat animeert naar de echte
+   inhoudshoogte zonder die te meten, en een onderbroken transitie keert om
+   vanaf de huidige stand. De inhoud zakt een paar pixels uit het kopje naar
+   beneden en gaat langs dezelfde weg terug. */
+.footer-tree.is-enhanced .footer-tree-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--footer-spring-ms) var(--footer-spring);
+}
+
+.footer-tree.is-enhanced .footer-tree-node.is-open > .footer-tree-panel {
+  grid-template-rows: 1fr;
+}
+
+.footer-tree.is-enhanced .footer-tree-panel > ul {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity .2s ease-out,
+    transform var(--footer-spring-ms) var(--footer-spring);
+}
+
+.footer-tree.is-enhanced .footer-tree-node.is-open > .footer-tree-panel > ul {
+  opacity: 1;
+  transform: none;
 }
 
 /* Losse links staan waar bij een menu de tekst begint, niet onder het pijltje. */
@@ -7968,6 +8048,11 @@ h1, h2, h3,
 .footer-tree li > .footer-current {
   padding-left: 14px;
   line-height: 1.3;
+}
+
+.site-footer .footer-tree li > a {
+  transform-origin: left center;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .site-footer .footer-tree .footer-current {
@@ -7985,9 +8070,23 @@ h1, h2, h3,
   }
 }
 
+/* Verminder beweging: niets schuift of draait, het menu verschijnt meteen op
+   volle hoogte en de inhoud komt er met een korte cross-fade in — zodat je
+   nog wel ziet dát er iets openging. */
 @media (prefers-reduced-motion: reduce) {
-  .footer-tree summary::before {
+  .footer-tree summary,
+  .footer-tree summary::before,
+  .footer-tree.is-enhanced .footer-tree-panel {
     transition: none;
+  }
+
+  .footer-tree summary:active {
+    transform: none;
+  }
+
+  .footer-tree.is-enhanced .footer-tree-panel > ul {
+    transform: none;
+    transition: opacity .15s ease;
   }
 }
 

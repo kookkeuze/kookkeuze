@@ -887,7 +887,9 @@ function renderFooterNode(page, currentPath, depth) {
     `<li>${link(page.footerOverviewLabel || page.footerLabel, page)}</li>`,
     ...children.map(child => renderFooterNode(child, currentPath, depth + 1))
   ].join('');
-  return `<li><details class="footer-tree-node"${attrs}><summary>${escapeHtml(page.footerLabel)}</summary><ul>${items}</ul></details></li>`;
+  // De panel-div is er voor de open/dicht-animatie (footer-tree.js); de <ul>
+  // zelf kan dat niet, want zijn eigen marges tellen mee in de hoogte.
+  return `<li><details class="footer-tree-node"${attrs}><summary>${escapeHtml(page.footerLabel)}</summary><div class="footer-tree-panel"><ul>${items}</ul></div></details></li>`;
 }
 
 function renderFooterRecipeLinks(currentPath = null) {
@@ -899,7 +901,8 @@ function renderFooterRecipeLinks(currentPath = null) {
       <ul class="footer-tree">
         ${items}
       </ul>
-    </nav>`;
+    </nav>
+    <script src="/footer-tree.js" defer></script>`;
 }
 
 function buildJsonLd(page, recipes) {
