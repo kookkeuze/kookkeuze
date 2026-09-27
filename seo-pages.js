@@ -64,6 +64,8 @@ function toToolFilters(filters) {
   const tool = {};
   Object.entries(filters).forEach(([key, value]) => {
     if (key === 'calories_max') tool.calorieRange = `Onder ${value}`;
+    // Het zoekveld van de kiezer neemt één zoekterm.
+    else if (key === 'search') tool.search = Array.isArray(value) ? value[0] : value;
     else tool[key] = value;
   });
   return tool;
@@ -76,7 +78,7 @@ function toToolFilters(filters) {
 function recipeToolLink(page, recipe) {
   const sets = [...page.filterSets, ...(page.indexFilterSets || [])];
   const matched = sets.find(filters => matchesFilters(recipe, filters));
-  const filters = matched ? toToolFilters(matched) : page.ctaFilters;
+  const filters = page.recipeLinkFilters || (matched ? toToolFilters(matched) : page.ctaFilters);
   return toolLink({ ...filters, source: 'internet', recipe: recipe.url });
 }
 
@@ -101,6 +103,19 @@ function ctaToolLink(page) {
    De eerste alinea van intro beantwoordt steeds direct de zoekvraag waar de
    pagina op mikt: die alinea citeren Google en AI-zoekmachines het vaakst. */
 
+// Lunch "zonder brood": alle soorten gerecht behalve brood, wraps en zoet
+// gebak. Een uitsluitfilter kent de kiezer niet, dus zo.
+const LUNCH_ZONDER_BROOD = [
+  'Kip', 'Vis', 'Rund', 'Varken', 'Vegetarisch', 'Pasta', 'Rijst', 'Soep',
+  'Ovenschotel', 'Hartig', 'Hartige taart'
+];
+
+/* Subpagina's mikken elk op één specifieke long-tail zoekterm (keyphrase),
+   gekozen uit Google Autocomplete (wat mensen in Nederland echt intypen) en
+   alleen als de index er genoeg recepten voor heeft. Die term staat in de
+   URL, de titel, de H1, de eerste zin en de meta-description. Breed zoeken
+   ("gezonde pasta") wint een nieuwe site niet; "pasta onder 500 kcal" wel.
+   redirectFrom: de URL van een eerdere versie van de pagina (301). */
 const PAGES = [
   {
     path: '/wat-eten-we-vandaag',
@@ -147,63 +162,66 @@ const PAGES = [
     sitemapPriority: '0.7'
   },
   {
-    path: '/recepten/snel-klaar/pasta',
+    path: '/recepten/snel-klaar/pasta-met-kip',
+    redirectFrom: '/recepten/snel-klaar/pasta',
     parent: '/recepten/snel-klaar',
-    footerLabel: 'Snelle pasta',
-    title: 'Snelle pasta recepten: binnen 30 minuten klaar – Kookkeuze',
+    keyphrase: 'snelle pasta recepten met kip',
+    footerLabel: 'Snelle pasta met kip',
+    title: 'Snelle pasta recepten met kip (binnen 30 min) – Kookkeuze',
     description:
-      'Snelle pasta recepten die binnen 30 minuten op tafel staan, verzameld van Nederlandse kooksites. Kies er zelf één of laat Kookkeuze willekeurig kiezen.',
-    h1: 'Snelle pasta recepten — binnen 30 minuten klaar',
-    breadcrumb: 'Snelle pasta',
+      'Snelle pasta recepten met kip die binnen 30 minuten op tafel staan, van Nederlandse kooksites. Kies er zelf één of laat Kookkeuze voor je kiezen.',
+    h1: 'Snelle pasta recepten met kip',
+    breadcrumb: 'Snelle pasta met kip',
     intro: [
-      'Snelle pasta recepten zijn pastagerechten die je in een halfuur of minder op tafel zet: terwijl de pasta kookt, maak je de saus. Hieronder staan pastarecepten van Nederlandse kooksites die in Kookkeuze als "onder de 30 minuten" te boek staan.',
-      'Pasta is het klassieke doordeweekse gerecht omdat het vergevingsgezind is: een pot pesto, wat groente die op moet, een stuk kip of een blik tonijn en je hebt een maaltijd. Het lastige is niet het koken maar het kiezen. Daarom zet de knop hieronder de receptkiezer meteen op pasta én op onder de 30 minuten.',
-      'Vind je een recept dat je vaker wilt maken? Met een gratis account sla je het op in je eigen receptendatabase, zet je het in je weekmenu en stuur je de ingrediënten door naar je boodschappenlijst.'
+      'Snelle pasta recepten met kip zijn pastagerechten die je binnen 30 minuten op tafel zet, met kipfilet, kippendij of kipgehakt als basis. Hieronder staan zulke recepten van Nederlandse kooksites, allemaal in de categorie "onder de 30 minuten".',
+      'Kip en pasta zijn een doordeweekse klassieker omdat ze tegelijk klaar zijn: terwijl de pasta kookt, bak je de kip en maak je de saus in dezelfde pan. Of het nu een romige saus wordt, pesto of tomaat — met de kip in reepjes of blokjes ben je snel klaar.',
+      'Vind je een recept dat je vaker wilt maken? Met een gratis account zet je het in je eigen receptendatabase, plan je het in je weekmenu en stuur je de ingrediënten naar je boodschappenlijst.'
     ],
-    ctaLabel: 'Toon snelle pastarecepten',
-    ctaFilters: { dish_type: 'Pasta', time_required: 'Onder de 30 minuten' },
-    listHeading: 'Pasta binnen 30 minuten',
-    listIntro: 'Klik op een recept om het in de receptkiezer te openen, met de andere snelle pastarecepten eronder.',
-    filterSets: [{ dish_type: ['Pasta'], time_required: ['Onder de 30 minuten'] }],
+    ctaLabel: 'Toon snelle pasta met kip',
+    ctaFilters: { dish_type: 'Pasta', time_required: 'Onder de 30 minuten', search: 'kip' },
+    listHeading: 'Snelle pasta met kip, binnen 30 minuten',
+    listIntro: 'Klik op een recept om het in de receptkiezer te openen, met de andere snelle pastarecepten met kip eronder.',
+    filterSets: [{ dish_type: ['Pasta'], time_required: ['Onder de 30 minuten'], search: 'kip' }],
     faq: [
       {
-        q: 'Welke pasta is het snelst klaar?',
-        a: 'Verse pasta en dunne pastasoorten. Verse tagliatelle is in een paar minuten gaar, capellini en spaghettini ook. Penne en fusilli hebben tien tot twaalf minuten nodig — genoeg tijd om de saus te maken, dus ook die halen de 30 minuten makkelijk.'
+        q: 'Hoe snijd je kip voor een snelle pasta?',
+        a: 'Snijd kipfilet in dunne reepjes of blokjes van ongeveer twee centimeter. Dan is de kip op middelhoog vuur in vijf tot zeven minuten gaar, ongeveer net zo lang als de pasta nodig heeft. Kipgehakt is nog sneller en hoeft niet gesneden te worden.'
       },
       {
-        q: 'Hoe maak je pasta sneller klaar?',
-        a: 'Zet het water op vóórdat je gaat snijden, doe een deksel op de pan en maak de saus terwijl de pasta kookt. Kies een saus die niet hoeft te sudderen, zoals pesto, een roomsaus of cherrytomaatjes die je in de pan laat openbarsten.'
+        q: 'Welke saus past bij pasta met kip?',
+        a: 'De snelste zijn pesto, een roomsaus met kookroom of roomkaas, en tomatensaus uit blik met knoflook. Wil je het lichter, roer dan magere kwark of Griekse yoghurt door de pasta nadat je de pan van het vuur hebt gehaald.'
       }
     ],
     sitemapPriority: '0.6'
   },
   {
-    path: '/recepten/snel-klaar/lunch',
+    path: '/recepten/snel-klaar/lunch-zonder-brood',
+    redirectFrom: '/recepten/snel-klaar/lunch',
     parent: '/recepten/snel-klaar',
-    footerLabel: 'Snelle lunch',
-    title: 'Snelle lunch: lunchrecepten binnen 30 minuten – Kookkeuze',
+    keyphrase: 'snelle lunch zonder brood',
+    footerLabel: 'Snelle lunch zonder brood',
+    title: 'Snelle lunch zonder brood: recepten in 30 min – Kookkeuze',
     description:
-      'Snelle lunchrecepten die binnen 30 minuten klaar zijn: wraps, broodjes, soep en salades voor thuis of om mee te nemen. Filter en kies in één klik.',
-    h1: 'Snelle lunch — recepten binnen 30 minuten',
-    breadcrumb: 'Snelle lunch',
+      'Snelle lunch zonder brood: soep, salades en rijst- of pastagerechten die binnen 30 minuten klaar zijn. Voor thuis of om mee te nemen naar je werk.',
+    h1: 'Snelle lunch zonder brood',
+    breadcrumb: 'Lunch zonder brood',
     intro: [
-      'Een snelle lunch is een lunchrecept dat binnen een halfuur klaar is, zodat je tussen de middag niet je hele pauze in de keuken staat. Op deze pagina staan lunchrecepten van Nederlandse kooksites die onder de 30 minuten blijven: wraps, broodjes, soepen en salades.',
-      'Wie thuiswerkt kent het: om half één trek je voor de derde keer die dag de koelkast open en eindigt het toch weer bij een boterham met kaas. Niets mis mee, maar met een paar vaste lunchrecepten achter de hand eet je gevarieerder zonder dat het meer moeite kost.',
-      'De knop hieronder opent de receptkiezer op lunch én op onder de 30 minuten. Wil je het eiwitrijker, zet dan het doel erbij op "Sporten".'
+      'Een snelle lunch zonder brood is een lunchgerecht dat binnen 30 minuten klaar is en niet op een boterham, broodje of wrap draait: denk aan soep, een salade, of een kom rijst of pasta. Hieronder staan zulke lunchrecepten van Nederlandse kooksites.',
+      'Wie elke dag brood eet, zoekt vaak afwisseling — of wil tussen de middag wat minder koolhydraten. Veel van deze gerechten kun je bovendien de avond ervoor maken en in een bakje meenemen naar je werk.'
     ],
-    ctaLabel: 'Toon snelle lunchrecepten',
-    ctaFilters: { meal_category: 'Lunch', time_required: 'Onder de 30 minuten' },
-    listHeading: 'Lunch binnen 30 minuten',
-    listIntro: 'Klik op een recept om het in de receptkiezer te openen, met de andere snelle lunchrecepten eronder.',
-    filterSets: [{ meal_category: ['Lunch'], time_required: ['Onder de 30 minuten'] }],
+    ctaLabel: 'Toon lunch zonder brood',
+    ctaFilters: { meal_category: 'Lunch', time_required: 'Onder de 30 minuten', dish_type: LUNCH_ZONDER_BROOD },
+    listHeading: 'Lunch zonder brood, binnen 30 minuten',
+    listIntro: 'Klik op een recept om het in de receptkiezer te openen, met de andere lunchrecepten eronder.',
+    filterSets: [{ meal_category: ['Lunch'], time_required: ['Onder de 30 minuten'], dish_type: LUNCH_ZONDER_BROOD }],
     faq: [
       {
-        q: 'Wat is een gezonde snelle lunch?',
-        a: 'Een lunch met volkoren brood of een volkoren wrap, een eiwitbron zoals ei, kip, hummus of kwark, en groente. Een maaltijdsalade of een kom soep met brood telt ook. In de receptkiezer combineer je "Lunch" met het doel "Sporten" of met een calorieëngrens.'
+        q: 'Wat kun je als lunch eten in plaats van brood?',
+        a: 'Soep, een maaltijdsalade, een omelet, een kom rijst of noedels met groente, of een restje pasta van de avond ervoor. Met een eiwitbron erin — ei, kip, vis, bonen of kwark — houd je het tot het avondeten vol.'
       },
       {
-        q: 'Kun je een lunch de avond ervoor maken?',
-        a: 'Soepen, pastasalades en gevulde wraps kun je prima een dag van tevoren maken; ze blijven in de koelkast goed. Broodjes en salades met blad maak je liever op de dag zelf, anders worden ze slap.'
+        q: 'Welke lunch zonder brood kun je meenemen?',
+        a: 'Pasta- en couscoussalades, soep in een thermosbeker en rijstgerechten blijven goed in een afsluitbaar bakje. Doe de dressing apart en voeg blad en avocado pas vlak voor het eten toe.'
       }
     ],
     sitemapPriority: '0.6'
@@ -249,73 +267,78 @@ const PAGES = [
     sitemapPriority: '0.8'
   },
   {
-    path: '/recepten/avondeten/makkelijk/gezond',
+    path: '/recepten/avondeten/makkelijk/gezond-met-kip',
+    redirectFrom: '/recepten/avondeten/makkelijk/gezond',
     parent: '/recepten/avondeten/makkelijk',
-    footerLabel: 'Makkelijk en gezond',
-    title: 'Makkelijk en gezond avondeten: snelle recepten – Kookkeuze',
+    keyphrase: 'makkelijk en gezond avondeten met kip',
+    footerLabel: 'Makkelijk en gezond met kip',
+    title: 'Makkelijk en gezond avondeten met kip – Kookkeuze',
     description:
-      'Recepten voor avondeten dat makkelijk én gezond is: eiwitrijke hoofdgerechten die binnen 45 minuten klaar zijn. Kies zelf of laat Kookkeuze kiezen.',
-    h1: 'Makkelijk en gezond avondeten',
-    breadcrumb: 'Makkelijk en gezond',
+      'Makkelijk en gezond avondeten met kip: eiwitrijke hoofdgerechten met kip die binnen 45 minuten klaar zijn. Kies zelf of laat Kookkeuze kiezen.',
+    h1: 'Makkelijk en gezond avondeten met kip',
+    breadcrumb: 'Makkelijk en gezond met kip',
     intro: [
-      'Makkelijk en gezond avondeten zijn hoofdgerechten die weinig tijd kosten en toch voedzaam zijn: veel groente, een goede eiwitbron en binnen 45 minuten op tafel. Op deze pagina staan zulke recepten van Nederlandse kooksites, verzameld door Kookkeuze.',
-      'Gezond eten en makkelijk koken lijken soms elkaars tegenpolen: gezond betekent snijden, wegen en plannen, makkelijk betekent iets uit de vriezer. Deze recepten zitten ertussenin. Denk aan een traybake uit de oven, een roerbakgerecht met kip of een pasta met veel groente in de saus.',
-      'De knop hieronder zet de receptkiezer op hoofdgerechten met het doel "Sporten" die hooguit 45 minuten duren. Zit er niets bij dat je aanspreekt, druk dan op Random.'
+      'Makkelijk en gezond avondeten met kip is een hoofdgerecht met kip als eiwitbron, veel groente en een bereidingstijd van hooguit 45 minuten. Op deze pagina staan zulke recepten van Nederlandse kooksites: sportief gemarkeerd of onder de 500 kcal per portie.',
+      'Kip is de makkelijkste weg naar een gezond avondeten: mager, snel gaar en het past bij bijna elke groente. Denk aan een traybake met kip en groenten uit de oven, een roerbakgerecht met kipreepjes of een kom rijst met kip en broccoli.'
     ],
-    ctaLabel: 'Kies makkelijk en gezond',
+    ctaLabel: 'Toon makkelijk en gezond met kip',
     ctaFilters: {
       meal_category: 'Hoofdgerecht',
       meal_type: 'Sporten',
-      time_required: ['Onder de 30 minuten', '30 - 45 minuten']
+      time_required: ['Onder de 30 minuten', '30 - 45 minuten'],
+      search: 'kip'
     },
-    listHeading: 'Makkelijke, gezonde hoofdgerechten',
-    listIntro: 'Eiwitrijke hoofdgerechten die hooguit 45 minuten kosten.',
+    listHeading: 'Makkelijke, gezonde hoofdgerechten met kip',
+    listIntro: 'Hoofdgerechten met kip die hooguit 45 minuten kosten.',
     filterSets: [
-      {
-        meal_category: ['Hoofdgerecht'],
-        meal_type: ['Sporten'],
-        time_required: ['Onder de 30 minuten', '30 - 45 minuten']
-      }
+      { meal_category: ['Hoofdgerecht'], meal_type: ['Sporten'], time_required: ['Onder de 30 minuten', '30 - 45 minuten'], search: 'kip' }
+    ],
+    indexFilterSets: [
+      { meal_category: ['Hoofdgerecht'], meal_type: ['Sporten'], time_required: ['Onder de 30 minuten', '30 - 45 minuten'], dish_type: ['Kip'] },
+      { meal_category: ['Hoofdgerecht'], meal_type: ['Sporten'], time_required: ['Onder de 30 minuten', '30 - 45 minuten'], search: 'kip' },
+      { meal_category: ['Hoofdgerecht'], calories_max: 500, time_required: ['Onder de 30 minuten', '30 - 45 minuten'], dish_type: ['Kip'] },
+      { meal_category: ['Hoofdgerecht'], calories_max: 500, time_required: ['Onder de 30 minuten', '30 - 45 minuten'], search: 'kip' }
     ],
     faq: [
       {
-        q: 'Wat is een makkelijk en gezond avondeten?',
-        a: 'Een hoofdgerecht met weinig stappen en weinig afwas dat toch groente en eiwit bevat. Ovenschotels, roerbakgerechten en maaltijdsalades zijn de bekendste voorbeelden: je snijdt alles in één keer en de pan of oven doet de rest.'
+        q: 'Wat is een makkelijk en gezond avondeten met kip?',
+        a: 'Een hoofdgerecht met weinig stappen waarin kip de eiwitbron is en groente de hoofdrol speelt. Traybakes, roerbakgerechten en kip met rijst en groente zijn de bekendste voorbeelden: je snijdt alles in één keer en de pan of oven doet de rest.'
       },
       {
-        q: 'Hoe houd je gezond eten doordeweeks vol?',
-        a: 'Door de keuze niet elke dag opnieuw te maken. Plan in het weekend drie of vier avonden vooruit in de weekmenuplanner, stuur de ingrediënten naar je boodschappenlijst en haal alles in één keer in huis.'
+        q: 'Kipfilet of kippendij: wat is gezonder?',
+        a: 'Kipfilet is het magerst. Kippendijfilet bevat iets meer vet, maar blijft sappiger en droogt minder snel uit. Beide passen in een gezond avondeten; met dij is een makkelijk recept net iets vergevingsgezinder.'
       }
     ],
     sitemapPriority: '0.7'
   },
   {
-    path: '/recepten/avondeten/makkelijk/ovenschotels',
+    path: '/recepten/avondeten/makkelijk/ovenschotel-met-kip',
+    redirectFrom: '/recepten/avondeten/makkelijk/ovenschotels',
     parent: '/recepten/avondeten/makkelijk',
-    footerLabel: 'Ovenschotels',
-    title: 'Makkelijke ovenschotels: recepten uit de oven – Kookkeuze',
+    keyphrase: 'makkelijke ovenschotel met kip',
+    footerLabel: 'Ovenschotel met kip',
+    title: 'Makkelijke ovenschotel met kip: recepten – Kookkeuze',
     description:
-      'Makkelijke ovenschotel recepten voor het avondeten: even snijden, de oven in en de rest gaat vanzelf. Kies er één of laat Kookkeuze voor je kiezen.',
-    h1: 'Makkelijke ovenschotels voor het avondeten',
-    breadcrumb: 'Ovenschotels',
+      'Makkelijke ovenschotel met kip voor het avondeten: met aardappel, rijst, pasta of groenten. Even snijden, de oven in en klaar. Kies er één in één klik.',
+    h1: 'Makkelijke ovenschotel met kip',
+    breadcrumb: 'Ovenschotel met kip',
     intro: [
-      'Een ovenschotel is een gerecht dat je in een ovenschaal opbouwt en in de oven gaar laat worden: aardappel, pasta of rijst met groente, vlees of vis, vaak met een laagje kaas erover. Het is het ultieme makkelijke avondeten, want terwijl de oven werkt heb jij je handen vrij.',
-      'Op deze pagina staan ovenschotels die als hoofdgerecht bedoeld zijn, van Nederlandse kooksites. Veel ervan zijn ook handig om vooruit te maken: je zet ze \'s middags in elkaar en schuift ze om zes uur de oven in.',
-      'Zoek je iets dat sneller gaat? Zet in de receptkiezer de tijd erbij op "30 - 45 minuten" en je houdt alleen de ovenschotels over die doordeweeks haalbaar zijn.'
+      'Een makkelijke ovenschotel met kip is een gerecht waarbij je kip, groente en een basis als aardappel, rijst of pasta in een ovenschaal legt en de oven de rest laat doen. Hieronder staan ovenschotels met kip van Nederlandse kooksites, bedoeld als hoofdgerecht.',
+      'Het voordeel: terwijl de schotel in de oven staat, heb je je handen vrij. Veel van deze recepten kun je \'s middags al in elkaar zetten en om zes uur alleen nog de oven in schuiven.'
     ],
-    ctaLabel: 'Toon ovenschotels',
-    ctaFilters: { dish_type: 'Ovenschotel', meal_category: 'Hoofdgerecht' },
-    listHeading: 'Ovenschotels als hoofdgerecht',
-    listIntro: 'Klik op een recept om het in de receptkiezer te openen, met de andere ovenschotels eronder.',
-    filterSets: [{ dish_type: ['Ovenschotel'], meal_category: ['Hoofdgerecht'] }],
+    ctaLabel: 'Toon ovenschotels met kip',
+    ctaFilters: { dish_type: 'Ovenschotel', meal_category: 'Hoofdgerecht', search: 'kip' },
+    listHeading: 'Ovenschotels met kip als hoofdgerecht',
+    listIntro: 'Klik op een recept om het in de receptkiezer te openen, met de andere ovenschotels met kip eronder.',
+    filterSets: [{ dish_type: ['Ovenschotel'], meal_category: ['Hoofdgerecht'], search: 'kip' }],
     faq: [
       {
-        q: 'Kun je een ovenschotel van tevoren maken?',
-        a: 'Ja. De meeste ovenschotels kun je een dag van tevoren opbouwen, afgedekt in de koelkast bewaren en pas bij het eten in de oven zetten. Reken dan op tien tot vijftien minuten extra oventijd, omdat de schaal koud de oven in gaat.'
+        q: 'Hoe lang moet kip in de oven bij een ovenschotel?',
+        a: 'Blokjes kipfilet zijn in een ovenschotel op 200 °C in 20 tot 25 minuten gaar; hele kipfilets of kippendijen hebben 30 tot 35 minuten nodig. De kip is gaar als hij vanbinnen niet meer roze is en het vocht helder is, of als een thermometer in de kern 75 °C aangeeft.'
       },
       {
-        q: 'Kun je een ovenschotel invriezen?',
-        a: 'Schotels met gehakt, pasta of rijst vriezen goed in. Met aardappel en veel room kan de structuur korrelig worden. Laat een ingevroren schotel een nacht in de koelkast ontdooien voordat hij de oven in gaat.'
+        q: 'Moet je kip voorbakken voor een ovenschotel?',
+        a: 'Het hoeft niet, maar kort aanbakken geeft een bruin korstje en meer smaak. Rauwe blokjes kip kun je ook direct in de schaal leggen; reken dan op de volle oventijd.'
       }
     ],
     sitemapPriority: '0.6'
@@ -352,29 +375,31 @@ const PAGES = [
       },
       {
         q: 'Kan gezond avondeten ook makkelijk zijn?',
-        a: 'Zeker. Ovenschotels, traybakes en roerbakgerechten zijn gezond te maken met weinig werk. Op de pagina <a href="/recepten/avondeten/makkelijk/gezond">makkelijk en gezond avondeten</a> staan hoofdgerechten die hooguit 45 minuten kosten.'
+        a: 'Zeker. Ovenschotels, traybakes en roerbakgerechten zijn gezond te maken met weinig werk. Op de pagina <a href="/recepten/avondeten/makkelijk/gezond-met-kip">makkelijk en gezond avondeten met kip</a> staan hoofdgerechten die hooguit 45 minuten kosten.'
       }
     ],
     sitemapPriority: '0.8'
   },
   {
-    path: '/recepten/avondeten/gezond/hoofdgerechten',
+    path: '/recepten/avondeten/gezond/hoofdgerechten-afvallen',
+    redirectFrom: '/recepten/avondeten/gezond/hoofdgerechten',
     parent: '/recepten/avondeten/gezond',
-    footerLabel: 'Gezonde hoofdgerechten',
-    footerOverviewLabel: 'Alle gezonde hoofdgerechten',
-    title: 'Gezonde hoofdgerechten: recepten voor het diner – Kookkeuze',
+    keyphrase: 'gezonde hoofdgerechten om af te vallen',
+    footerLabel: 'Hoofdgerechten om af te vallen',
+    footerOverviewLabel: 'Alle hoofdgerechten om af te vallen',
+    title: 'Gezonde hoofdgerechten om af te vallen – Kookkeuze',
     description:
-      'Gezonde hoofdgerechten voor het avondeten: eiwitrijke recepten en maaltijden onder de 500 kcal, met pasta, kip, vis of rijst. Filter en kies in één klik.',
-    h1: 'Gezonde hoofdgerechten',
-    breadcrumb: 'Gezonde hoofdgerechten',
+      'Gezonde hoofdgerechten om af te vallen: eiwitrijke recepten en avondeten onder de 500 kcal, met pasta, kip, zalm of rijst. Filter en kies in één klik.',
+    h1: 'Gezonde hoofdgerechten om af te vallen',
+    breadcrumb: 'Hoofdgerechten om af te vallen',
     intro: [
-      'Gezonde hoofdgerechten zijn avondmaaltijden die voedzaam zijn zonder zwaar te zijn: genoeg eiwit, veel groente en niet meer calorieën dan nodig. Op deze pagina staan hoofdgerechten met het doel "Sporten" of met minder dan 500 kcal per portie, van Nederlandse kooksites.',
-      'Het zijn gewone gerechten — pasta, rijst, ovenschotels, wraps — alleen net anders opgebouwd: meer groente in de saus, magere kip of vis in plaats van worst, volkoren waar het kan. Daardoor passen ze ook in een week waarin je op je eten let.',
-      'Weet je al waar je zin in hebt? Kies hieronder een gezond gerecht met pasta, kip of vis, of open de receptkiezer en zet zelf je filters.'
+      'Gezonde hoofdgerechten om af te vallen zijn avondmaaltijden met veel groente en eiwit en niet meer dan zo\'n 500 kcal per portie, zodat je vol zit zonder dat de calorieën oplopen. Op deze pagina staan zulke hoofdgerechten van Nederlandse kooksites, sportief gemarkeerd of onder de 500 kcal.',
+      'Het zijn gewone gerechten — pasta, rijst, ovenschotels, wraps — alleen anders opgebouwd: meer groente in de saus, magere kip of vis in plaats van worst, en een kleinere portie pasta of rijst. Zo blijft afvallen vol te houden, ook doordeweeks.',
+      'Weet je al waar je zin in hebt? Kies hieronder <a href="/recepten/avondeten/gezond/pasta-onder-500-kcal">pasta onder 500 kcal</a>, <a href="/recepten/avondeten/gezond/kip-en-rijst">een gezond recept met kip en rijst</a> of <a href="/recepten/avondeten/gezond/zalm">gezonde recepten met zalm</a>.'
     ],
-    ctaLabel: 'Toon gezonde hoofdgerechten',
-    ctaFilters: { meal_category: 'Hoofdgerecht', meal_type: 'Sporten' },
-    listHeading: 'Gezonde hoofdgerechten voor het diner',
+    ctaLabel: 'Toon hoofdgerechten onder 500 kcal',
+    ctaFilters: { meal_category: 'Hoofdgerecht', calorieRange: 'Onder 500' },
+    listHeading: 'Gezonde hoofdgerechten om af te vallen',
     listIntro: 'Eiwitrijke hoofdgerechten en hoofdgerechten onder de 500 kcal.',
     filterSets: [{ meal_category: ['Hoofdgerecht'], meal_type: ['Sporten'] }],
     indexFilterSets: [
@@ -383,147 +408,157 @@ const PAGES = [
     ],
     faq: [
       {
-        q: 'Wat maakt een hoofdgerecht gezond?',
-        a: 'Een gezond hoofdgerecht heeft veel groente, een eiwitbron als kip, vis, peulvruchten of ei, en een verzadigende volkoren basis zoals volkoren pasta, zilvervliesrijst of aardappel. Saus en vet houd je bescheiden, zodat het bord vult zonder zwaar te worden.'
+        q: 'Wat is een goed hoofdgerecht om af te vallen?',
+        a: 'Een hoofdgerecht met een half bord groente, een magere eiwitbron (kip, vis, ei of peulvruchten) en een kleine portie volkoren pasta, rijst of aardappel. Die combinatie verzadigt goed voor relatief weinig calorieën.'
       },
       {
-        q: 'Hoeveel calorieën heeft een gezond hoofdgerecht?',
-        a: 'Dat hangt af van je dag en je lichaam. Een veelgebruikte vuistregel is 500 tot 700 kcal voor een avondmaaltijd; wie wil afvallen houdt vaak onder de 500 kcal aan. In de receptkiezer filter je direct op een calorieëngrens.'
+        q: 'Hoeveel calorieën mag een hoofdgerecht hebben als je wilt afvallen?',
+        a: 'Veel afvalschema\'s houden 400 tot 600 kcal aan voor de avondmaaltijd. Het gaat uiteindelijk om het totaal over de dag; twijfel je over wat bij jou past, overleg dan met een diëtist.'
       }
     ],
     sitemapPriority: '0.7'
   },
   {
-    path: '/recepten/avondeten/gezond/pasta',
-    parent: '/recepten/avondeten/gezond/hoofdgerechten',
-    footerLabel: 'Gezonde pasta',
-    title: 'Gezonde pasta recepten voor het avondeten – Kookkeuze',
+    path: '/recepten/avondeten/gezond/pasta-onder-500-kcal',
+    redirectFrom: '/recepten/avondeten/gezond/pasta',
+    parent: '/recepten/avondeten/gezond/hoofdgerechten-afvallen',
+    keyphrase: 'pasta onder 500 kcal',
+    footerLabel: 'Pasta onder 500 kcal',
+    title: 'Pasta onder 500 kcal: lichte pastarecepten – Kookkeuze',
     description:
-      'Gezonde pasta recepten: eiwitrijke pastagerechten en pasta onder de 500 kcal, met veel groente. Kies er één of laat Kookkeuze kiezen wat je eet.',
-    h1: 'Gezonde pasta recepten',
-    breadcrumb: 'Gezonde pasta',
+      'Pasta onder 500 kcal per portie: lichte pastarecepten met veel groente, van Nederlandse kooksites. Handig als je wilt afvallen. Kies in één klik.',
+    h1: 'Pasta onder 500 kcal',
+    breadcrumb: 'Pasta onder 500 kcal',
     intro: [
-      'Gezonde pasta recepten zijn pastagerechten met veel groente, een magere eiwitbron en een lichte saus, zodat een bord pasta gewoon in een gezond eetpatroon past. Hier staan pastarecepten die als sportief gemarkeerd zijn of onder de 500 kcal per portie blijven.',
-      'Pasta heeft een slechtere naam dan nodig. Het probleem zit zelden in de pasta zelf, maar in de hoeveelheid en in wat eroverheen gaat. Met volkoren pasta of pasta van peulvruchten, een saus op basis van tomaat of kwark en een stevige portie groente eet je een volwaardige maaltijd die niet zwaar valt.',
-      'Klik op een recept om het te openen in de receptkiezer, met de andere gezonde pastarecepten eronder.'
+      'Pasta onder 500 kcal is een pastagerecht dat per portie minder dan 500 kilocalorieën telt, doordat de portie pasta bescheiden is en de rest van het bord uit groente en een magere eiwitbron bestaat. Hieronder staan zulke pastarecepten van Nederlandse kooksites; het aantal calorieën komt van de receptsite zelf.',
+      'Pasta en afvallen gaan prima samen. Het verschil zit in de verhoudingen: zo\'n 75 gram droge pasta per persoon in plaats van 125, een saus op basis van tomaat of groente in plaats van room, en genoeg groente om het bord te vullen.'
     ],
-    ctaLabel: 'Toon gezonde pastarecepten',
-    ctaFilters: { dish_type: 'Pasta', meal_type: 'Sporten' },
-    listHeading: 'Gezonde pastagerechten',
-    listIntro: 'Eiwitrijke pasta en pasta onder de 500 kcal.',
-    filterSets: [{ dish_type: ['Pasta'], meal_type: ['Sporten'] }],
-    indexFilterSets: [
-      { dish_type: ['Pasta'], meal_type: ['Sporten'] },
-      { dish_type: ['Pasta'], calories_max: 500 }
-    ],
+    ctaLabel: 'Toon pasta onder 500 kcal',
+    ctaFilters: { dish_type: 'Pasta', calorieRange: 'Onder 500' },
+    listHeading: 'Pastarecepten onder 500 kcal',
+    listIntro: 'Recepten waarvan de receptsite zelf minder dan 500 kcal per portie opgeeft.',
+    // Geen calorieën in de voorbeelddatabase, zie /gezonde-recepten-afvallen.
+    filterSets: [],
+    indexFilterSets: [{ dish_type: ['Pasta'], calories_max: 500 }],
     faq: [
       {
-        q: 'Is pasta gezond?',
-        a: 'Pasta kan prima deel uitmaken van een gezond avondeten. Kies bij voorkeur volkoren pasta — die staat in de Schijf van Vijf van het Voedingscentrum — houd de portie rond de 75 tot 100 gram ongekookt per persoon en vul de rest van het bord met groente.'
+        q: 'Hoeveel calorieën heeft een bord pasta?',
+        a: '100 gram droge pasta bevat ongeveer 350 kcal. Met saus, kaas en olie komt een gemiddeld bord pasta al snel op 700 tot 900 kcal. Met een kleinere portie pasta en veel groente blijf je onder de 500.'
       },
       {
-        q: 'Hoe maak je pasta gezonder?',
-        a: 'Gebruik volkoren pasta of pasta van linzen of kikkererwten, maak de saus met tomaat, groente of magere kwark in plaats van room, en voeg kip, vis of peulvruchten toe voor extra eiwit.'
+        q: 'Hoe maak je pasta caloriearmer?',
+        a: 'Gebruik minder pasta en meer groente, vervang room door magere kwark of passata, weeg de olie af in plaats van te schenken, en strooi de kaas er pas aan tafel over. Volkoren pasta verzadigt bovendien langer.'
       }
     ],
     sitemapPriority: '0.6'
   },
   {
-    path: '/recepten/avondeten/gezond/kip',
-    parent: '/recepten/avondeten/gezond/hoofdgerechten',
-    footerLabel: 'Gezond met kip',
-    title: 'Gezonde recepten met kip voor het avondeten – Kookkeuze',
+    path: '/recepten/avondeten/gezond/kip-en-rijst',
+    redirectFrom: '/recepten/avondeten/gezond/kip',
+    parent: '/recepten/avondeten/gezond/hoofdgerechten-afvallen',
+    keyphrase: 'gezond recept met kip en rijst',
+    footerLabel: 'Gezond met kip en rijst',
+    title: 'Gezond recept met kip en rijst: recepten – Kookkeuze',
     description:
-      'Gezonde kip recepten voor het avondeten: eiwitrijke gerechten met kipfilet en maaltijden onder de 500 kcal. Kies er één of laat Kookkeuze kiezen.',
-    h1: 'Gezonde recepten met kip',
-    breadcrumb: 'Gezond met kip',
+      'Gezond recept met kip en rijst nodig? Eiwitrijke gerechten met kipfilet en rijst, en maaltijden onder de 500 kcal. Kies er één of laat Kookkeuze kiezen.',
+    h1: 'Gezond recept met kip en rijst',
+    breadcrumb: 'Gezond met kip en rijst',
     intro: [
-      'Gezonde recepten met kip zijn gerechten waarin mager kippenvlees de eiwitbron is, gecombineerd met groente en een lichte basis zoals rijst, wraps of salade. Op deze pagina staan kiprecepten die als sportief gemarkeerd zijn of onder de 500 kcal per portie blijven.',
-      'Kipfilet is voor veel mensen de basis van een gezond avondeten: het is mager, eiwitrijk en neemt elke smaak aan. Juist daardoor wordt het ook snel saai. Met een lijst gerechten om uit te kiezen — van roerbak tot traybake en van wrap tot curry — voorkom je dat het elke week dezelfde kip met rijst wordt.'
+      'Een gezond recept met kip en rijst combineert magere kip met een flinke portie groente en een gewone portie rijst, het liefst zilvervliesrijst. Op deze pagina staan zulke recepten met kip en rijst van Nederlandse kooksites, sportief gemarkeerd of onder de 500 kcal per portie.',
+      'Van kip teriyaki en kip kerrie tot een roerbakgerecht met broccoli: kip met rijst is misschien wel het bekendste gezonde avondeten, en niet voor niets. Het is voedzaam, goedkoop en makkelijk in een grotere portie te maken voor de lunch van morgen.'
     ],
-    ctaLabel: 'Toon gezonde kiprecepten',
-    ctaFilters: { dish_type: 'Kip', meal_type: 'Sporten' },
-    listHeading: 'Gezonde gerechten met kip',
-    listIntro: 'Eiwitrijke kipgerechten en kip onder de 500 kcal.',
-    filterSets: [{ dish_type: ['Kip'], meal_type: ['Sporten'] }],
+    ctaLabel: 'Toon gezonde recepten met kip en rijst',
+    ctaFilters: { dish_type: 'Rijst', meal_type: 'Sporten', search: 'kip' },
+    listHeading: 'Gezonde recepten met kip en rijst',
+    listIntro: 'Eiwitrijke rijstgerechten met kip en rijstgerechten met kip onder de 500 kcal.',
+    filterSets: [{ dish_type: ['Rijst'], meal_type: ['Sporten'], search: 'kip' }],
     indexFilterSets: [
-      { dish_type: ['Kip'], meal_type: ['Sporten'] },
-      { dish_type: ['Kip'], calories_max: 500 },
-      { search: 'kip', meal_type: ['Sporten'] },
-      { search: 'kip', calories_max: 500 }
+      { dish_type: ['Rijst'], meal_type: ['Sporten'], search: 'kip' },
+      { dish_type: ['Rijst'], calories_max: 500, search: 'kip' }
     ],
     faq: [
       {
-        q: 'Hoeveel eiwit zit er in kipfilet?',
-        a: 'Rauwe kipfilet bevat ongeveer 22 tot 24 gram eiwit per 100 gram, bij heel weinig vet. Daarom is kip zo\'n vaste waarde in eiwitrijke recepten.'
+        q: 'Is kip met rijst gezond?',
+        a: 'Ja, als het bord in balans is: 100 tot 150 gram magere kip, 60 tot 75 gram droge rijst per persoon en minstens de helft van het bord groente. Zilvervliesrijst bevat meer vezels dan witte rijst en staat in de Schijf van Vijf van het Voedingscentrum.'
       },
       {
-        q: 'Hoe voorkom je droge kipfilet?',
-        a: 'Snijd de filet in gelijke stukken of plet hem tot een gelijke dikte, bak hem op hoog vuur gaar maar niet langer dan nodig, en laat hem daarna even rusten. Kipdijfilet is sappiger en past ook in de meeste gezonde recepten.'
+        q: 'Kun je kip met rijst van tevoren maken?',
+        a: 'Ja, maar laat gekookte rijst snel afkoelen en zet hem binnen een uur in de koelkast. Eet hem binnen een à twee dagen op en warm hem goed door. Rijst die lang lauw blijft staan, kan bacteriën bevatten waar je ziek van wordt.'
       }
     ],
     sitemapPriority: '0.6'
   },
   {
-    path: '/recepten/avondeten/gezond/vis',
-    parent: '/recepten/avondeten/gezond/hoofdgerechten',
-    footerLabel: 'Gezonde vis',
-    title: 'Gezonde vis recepten voor het avondeten – Kookkeuze',
+    path: '/recepten/avondeten/gezond/zalm',
+    redirectFrom: '/recepten/avondeten/gezond/vis',
+    parent: '/recepten/avondeten/gezond/hoofdgerechten-afvallen',
+    keyphrase: 'gezonde recepten met zalm',
+    footerLabel: 'Gezonde recepten met zalm',
+    title: 'Gezonde recepten met zalm voor het avondeten – Kookkeuze',
     description:
-      'Gezonde visrecepten voor het avondeten: zalm, witvis en garnalen in eiwitrijke gerechten en maaltijden onder de 500 kcal. Kies in één klik.',
-    h1: 'Gezonde vis recepten',
-    breadcrumb: 'Gezonde vis',
+      'Gezonde recepten met zalm: eiwitrijke gerechten met zalmfilet en avondeten onder de 500 kcal, uit de oven, de pan of in een salade. Kies in één klik.',
+    h1: 'Gezonde recepten met zalm',
+    breadcrumb: 'Gezonde recepten met zalm',
     intro: [
-      'Gezonde vis recepten zijn avondmaaltijden met vis in de hoofdrol — zalm, witvis, tonijn of garnalen — gecombineerd met groente en een lichte basis. Hier staan visgerechten die als sportief gemarkeerd zijn of onder de 500 kcal per portie blijven.',
-      'Het Voedingscentrum adviseert één keer per week vis te eten, bij voorkeur vette vis zoals zalm, makreel of haring. In de praktijk schiet dat er vaak bij in, omdat vis minder vanzelfsprekend is dan kip of gehakt. Een paar vaste visrecepten helpen om het er echt in te houden.'
+      'Gezonde recepten met zalm zijn gerechten met zalmfilet of gerookte zalm als eiwitbron, gecombineerd met groente en een lichte basis. Hier staan zalmrecepten van Nederlandse kooksites die sportief gemarkeerd zijn of onder de 500 kcal per portie blijven.',
+      'Zalm is een vette vis, en die raadt het Voedingscentrum aan: eet één keer per week vis, bij voorkeur vette vis. Een paar vaste zalmrecepten helpen om dat echt vol te houden — uit de oven met groenten, in een pasta of op een maaltijdsalade.'
     ],
-    ctaLabel: 'Toon gezonde visrecepten',
-    ctaFilters: { dish_type: 'Vis', meal_type: 'Sporten' },
-    listHeading: 'Gezonde visgerechten',
-    listIntro: 'Eiwitrijke visgerechten en vis onder de 500 kcal.',
-    filterSets: [{ dish_type: ['Vis'], meal_type: ['Sporten'] }],
+    ctaLabel: 'Toon gezonde recepten met zalm',
+    ctaFilters: { meal_type: 'Sporten', search: 'zalm' },
+    listHeading: 'Gezonde gerechten met zalm',
+    listIntro: 'Eiwitrijke zalmgerechten en zalmgerechten onder de 500 kcal.',
+    filterSets: [{ meal_type: ['Sporten'], search: 'zalm' }],
     indexFilterSets: [
-      { dish_type: ['Vis'], meal_type: ['Sporten'] },
-      { dish_type: ['Vis'], calories_max: 500 }
+      { meal_type: ['Sporten'], search: 'zalm' },
+      { calories_max: 500, search: 'zalm' }
     ],
     faq: [
       {
-        q: 'Welke vis is het gezondst?',
-        a: 'Vette vis zoals zalm, makreel, haring en sardines bevat de meeste omega-3-vetzuren; het Voedingscentrum raadt vooral die aan. Witvis als kabeljauw en koolvis is magerder en eiwitrijk. Beide passen in een gezond avondeten.'
+        q: 'Hoe lang moet zalm in de oven?',
+        a: 'Een zalmfilet van ongeveer twee centimeter dik is op 200 °C in 12 tot 15 minuten gaar. De zalm is klaar als hij net ondoorzichtig is en makkelijk uit elkaar valt in lamellen.'
       },
       {
-        q: 'Hoe weet je wanneer vis gaar is?',
-        a: 'Vis is gaar als het vlees ondoorzichtig is geworden en makkelijk uit elkaar valt in lamellen. Een moot zalm of kabeljauw van twee centimeter dik heeft in de pan of oven meestal acht tot twaalf minuten nodig.'
+        q: 'Is zalm gezond?',
+        a: 'Zalm bevat veel eiwit en omega-3-vetzuren. Het Voedingscentrum adviseert één keer per week vis te eten, bij voorkeur vette vis zoals zalm, makreel of haring.'
       }
     ],
     sitemapPriority: '0.6'
   },
   {
-    path: '/recepten/avondeten/gezond/maaltijdsalades',
+    path: '/recepten/avondeten/gezond/maaltijdsalade-met-kip',
+    redirectFrom: '/recepten/avondeten/gezond/maaltijdsalades',
     parent: '/recepten/avondeten/gezond',
-    footerLabel: 'Maaltijdsalades',
-    title: 'Maaltijdsalades: gezonde salades als avondeten – Kookkeuze',
+    keyphrase: 'maaltijdsalade met kip',
+    footerLabel: 'Maaltijdsalade met kip',
+    title: 'Maaltijdsalade met kip: recepten voor avondeten – Kookkeuze',
     description:
-      'Maaltijdsalade recepten die als volwaardig avondeten of lunch dienen: met kip, vis, pasta of peulvruchten. Kies een salade of laat Kookkeuze kiezen.',
-    h1: 'Maaltijdsalades als gezond avondeten',
-    breadcrumb: 'Maaltijdsalades',
+      'Maaltijdsalade met kip als avondeten of lunch: volwaardige salades met kip, groente en een verzadigende basis. Van Nederlandse kooksites, gekozen in één klik.',
+    h1: 'Maaltijdsalade met kip',
+    breadcrumb: 'Maaltijdsalade met kip',
     intro: [
-      'Een maaltijdsalade is een salade die een complete maaltijd vormt: naast blad en groente zit er een eiwitbron in, zoals kip, vis, ei of peulvruchten, en een verzadigende basis als pasta, couscous, quinoa of aardappel. Op deze pagina staan saladerecepten van Nederlandse kooksites.',
-      'Een maaltijdsalade is ideaal op warme dagen en op avonden dat je geen zin hebt om lang achter het fornuis te staan. Veel salades kun je bovendien in een grotere portie maken en de volgende dag als lunch meenemen.'
+      'Een maaltijdsalade met kip is een salade die een complete maaltijd vormt: blad en groente, kip als eiwitbron en een verzadigende basis zoals pasta, couscous, krieltjes of avocado. Hieronder staan salades met kip van Nederlandse kooksites.',
+      'Een maaltijdsalade met kip is ideaal op warme dagen en als lunch om mee te nemen. Gebruik gegrilde of gebakken kipfilet, gerookte kip of een restje kip van gisteren.'
     ],
-    ctaLabel: 'Toon maaltijdsalades',
-    ctaFilters: { meal_category: 'Salade' },
-    listHeading: 'Salades voor avondeten en lunch',
-    listIntro: 'Klik op een salade om hem in de receptkiezer te openen, met de andere salades eronder.',
-    filterSets: [{ meal_category: ['Salade'] }],
+    ctaLabel: 'Toon maaltijdsalades met kip',
+    ctaFilters: { meal_category: 'Salade', search: 'kip' },
+    // In de kiezer vangt meal_category=Salade ook elk recept met 'salade' in
+    // de titel (hij zoekt in de hele omschrijving), dus één link dekt beide sets.
+    recipeLinkFilters: { meal_category: 'Salade', search: 'kip' },
+    listHeading: 'Salades met kip voor avondeten en lunch',
+    listIntro: 'Klik op een salade om hem in de receptkiezer te openen, met de andere salades met kip eronder.',
+    filterSets: [{ meal_category: ['Salade'], search: 'kip' }],
+    indexFilterSets: [
+      { meal_category: ['Salade'], search: 'kip' },
+      { search: ['salade', 'kip'] }
+    ],
     faq: [
       {
-        q: 'Hoe maak je een salade verzadigend?',
-        a: 'Zorg voor drie dingen: eiwit (kip, vis, ei, feta of bonen), een koolhydraatbron (volkoren pasta, couscous, quinoa of aardappel) en iets met vet of crunch, zoals noten, avocado of een dressing met olijfolie. Met alleen blad en groente heb je na een uur weer honger.'
+        q: 'Hoe maak je een maaltijdsalade met kip verzadigend?',
+        a: 'Combineer de kip met een koolhydraatbron (volkoren pasta, couscous, krieltjes of quinoa) en iets met gezond vet, zoals avocado, noten of een dressing met olijfolie. Met alleen sla en kip heb je na een uur weer honger.'
       },
       {
-        q: 'Kun je een maaltijdsalade van tevoren maken?',
-        a: 'Ja, als je de dressing apart houdt. Pasta-, couscous- en linzensalades blijven een dag goed in de koelkast; blad en avocado voeg je pas vlak voor het eten toe.'
+        q: 'Welke kip gebruik je voor een salade?',
+        a: 'Gegrilde of gebakken kipfilet in reepjes wordt het meest gebruikt. Gerookte kip scheelt bakken, en een restje gebraden kip is ideaal voor een salade de volgende dag.'
       }
     ],
     sitemapPriority: '0.6'
@@ -551,61 +586,65 @@ const PAGES = [
     sitemapPriority: '0.7'
   },
   {
-    path: '/recepten/avondeten/lekker/maaltijdsoep',
+    path: '/recepten/avondeten/lekker/maaltijdsoep-met-kip',
+    redirectFrom: '/recepten/avondeten/lekker/maaltijdsoep',
     parent: '/recepten/avondeten/lekker',
-    footerLabel: 'Maaltijdsoepen',
-    title: 'Maaltijdsoep recepten: soep als avondeten – Kookkeuze',
+    keyphrase: 'maaltijdsoep met kip',
+    footerLabel: 'Maaltijdsoep met kip',
+    title: 'Maaltijdsoep met kip: vullende soeprecepten – Kookkeuze',
     description:
-      'Maaltijdsoep recepten die als volwaardig avondeten dienen: vullende soepen met groente, peulvruchten, kip of gehakt. Kies een soep of laat Kookkeuze kiezen.',
-    h1: 'Maaltijdsoepen: soep als avondeten',
-    breadcrumb: 'Maaltijdsoepen',
+      'Maaltijdsoep met kip als avondeten: vullende soepen met kip en groente, noedels, rijst of bonen. Recepten van Nederlandse kooksites, gekozen in één klik.',
+    h1: 'Maaltijdsoep met kip',
+    breadcrumb: 'Maaltijdsoep met kip',
     intro: [
-      'Een maaltijdsoep is een soep die stevig genoeg is om als hoofdgerecht te eten: met groente, peulvruchten, pasta, aardappel of vlees erin, en vaak met brood erbij. Op deze pagina staan soeprecepten die als hoofdgerecht bedoeld zijn, van Nederlandse kooksites.',
-      'Soep als avondeten is goedkoop, makkelijk in grote hoeveelheden te maken en de volgende dag vaak nog lekkerder. Denk aan erwtensoep, een pittige linzensoep, Thaise kippensoep of tomatensoep met balletjes.'
+      'Een maaltijdsoep met kip is een soep die stevig genoeg is om als avondeten te dienen: met stukken kip, veel groente en vaak noedels, rijst, pasta of bonen erin. Hieronder staan soeprecepten met kip van Nederlandse kooksites.',
+      'Van Thaise kippensoep met kokosmelk tot een Italiaanse soep met kip en witte bonen: kippensoep als hoofdgerecht is goedkoop, makkelijk in een grote pan te maken en de volgende dag vaak nog lekkerder.'
     ],
-    ctaLabel: 'Toon maaltijdsoepen',
-    ctaFilters: { dish_type: 'Soep', meal_category: 'Hoofdgerecht' },
-    listHeading: 'Soepen als hoofdgerecht',
-    listIntro: 'Klik op een soep om hem in de receptkiezer te openen, met de andere maaltijdsoepen eronder.',
-    filterSets: [{ dish_type: ['Soep'], meal_category: ['Hoofdgerecht'] }],
+    ctaLabel: 'Toon maaltijdsoepen met kip',
+    ctaFilters: { dish_type: 'Soep', search: 'kip' },
+    listHeading: 'Soepen met kip als maaltijd',
+    listIntro: 'Klik op een soep om hem in de receptkiezer te openen, met de andere soepen met kip eronder.',
+    filterSets: [{ dish_type: ['Soep'], search: 'kip' }],
     faq: [
       {
-        q: 'Hoe maak je soep vullender?',
-        a: 'Voeg peulvruchten (linzen, kikkererwten, bonen), aardappel, pasta of rijst toe, of een eiwitbron als kip, gehaktballetjes of ei. Met volkorenbrood erbij is een soep een complete maaltijd.'
+        q: 'Hoe maak je kippensoep vullend genoeg als avondeten?',
+        a: 'Doe er een koolhydraatbron in — noedels, rijst, pasta, aardappel of bonen — en royaal kip en groente. Met volkorenbrood erbij heb je een complete maaltijd.'
       },
       {
-        q: 'Kun je maaltijdsoep invriezen?',
-        a: 'De meeste soepen vriezen uitstekend in. Soepen met pasta of aardappel kunnen na het ontdooien wat papperig worden; vries die liever zonder pasta in en kook de pasta vers bij het opwarmen.'
+        q: 'Kun je maaltijdsoep met kip invriezen?',
+        a: 'Ja, kippensoep vriest goed in. Vries hem liefst zonder noedels of pasta in, want die worden na het ontdooien papperig; kook ze vers bij het opwarmen. Verwarm de soep tot hij kookt.'
       }
     ],
     sitemapPriority: '0.6'
   },
   {
-    path: '/recepten/avondeten/lekker/wraps',
+    path: '/recepten/avondeten/lekker/wraps-met-kip',
+    redirectFrom: '/recepten/avondeten/lekker/wraps',
     parent: '/recepten/avondeten/lekker',
-    footerLabel: 'Wraps',
-    title: 'Wraps recepten: lekkere wraps als avondeten – Kookkeuze',
+    keyphrase: 'wraps met kip',
+    footerLabel: 'Wraps met kip',
+    title: 'Wraps met kip: recepten voor het avondeten – Kookkeuze',
     description:
-      'Wraps recepten voor het avondeten: met kip, gehakt, vis of vegetarisch, uit de pan of de oven. Kies een wrap of laat Kookkeuze voor je kiezen.',
-    h1: 'Wraps als avondeten',
-    breadcrumb: 'Wraps',
+      'Wraps met kip als avondeten: uit de pan of uit de oven, met groente, saus en kaas. Recepten van Nederlandse kooksites, gekozen in één klik.',
+    h1: 'Wraps met kip',
+    breadcrumb: 'Wraps met kip',
     intro: [
-      'Wraps als avondeten zijn tortilla\'s die je vult met een warme vulling — kip, gehakt, vis of groente — en afmaakt met saus, sla en kaas. Je rolt ze aan tafel zelf op, of je maakt er een ovenschotel van. Op deze pagina staan wrapsrecepten die als hoofdgerecht bedoeld zijn.',
-      'Wraps zijn populair bij gezinnen omdat iedereen zijn eigen wrap vult: wie geen paprika lust, laat hem gewoon weg. En ze zijn snel — veel vullingen staan in een kwartier in de pan.'
+      'Wraps met kip zijn tortilla\'s gevuld met gekruide kip, groente en saus, die je aan tafel zelf oprolt of als ovenschotel afbakt. Op deze pagina staan wrapsrecepten met kip van Nederlandse kooksites.',
+      'Wraps met kip zijn populair bij gezinnen omdat iedereen zijn eigen wrap vult: wie geen paprika lust, laat hem gewoon weg. En ze zijn snel — kipreepjes met paprika en ui staan in een kwartier in de pan.'
     ],
-    ctaLabel: 'Toon wrapsrecepten',
-    ctaFilters: { dish_type: 'Wraps', meal_category: 'Hoofdgerecht' },
-    listHeading: 'Wraps als hoofdgerecht',
-    listIntro: 'Klik op een recept om het in de receptkiezer te openen, met de andere wraps eronder.',
-    filterSets: [{ dish_type: ['Wraps'], meal_category: ['Hoofdgerecht'] }],
+    ctaLabel: 'Toon wraps met kip',
+    ctaFilters: { dish_type: 'Wraps', search: 'kip' },
+    listHeading: 'Wraps met kip als avondeten',
+    listIntro: 'Klik op een recept om het in de receptkiezer te openen, met de andere wraps met kip eronder.',
+    filterSets: [{ dish_type: ['Wraps'], search: 'kip' }],
     faq: [
       {
-        q: 'Hoe houd je wraps warm en soepel?',
-        a: 'Verwarm de wraps kort in een droge koekenpan of een paar seconden in de magnetron, en leg ze onder een schone theedoek. Koude wraps scheuren sneller bij het oprollen.'
+        q: 'Welke kruiden gebruik je voor kip in een wrap?',
+        a: 'Paprikapoeder, komijn, knoflook en een beetje chilipoeder of cayennepeper geven de bekende fajita-smaak. Kant-en-klare kruidenmixen voor fajita of taco werken ook, maar bevatten vaak veel zout.'
       },
       {
-        q: 'Welke vulling is lekker in een wrap?',
-        a: 'Klassiekers zijn kip met paprika en ui, gekruid gehakt met bonen en mais, en gebakken vis met koolsla. Maak het af met iets fris, zoals salsa, zure room, avocado of komkommer.'
+        q: 'Kun je wraps met kip in de oven maken?',
+        a: 'Ja. Vul de wraps met kip die al gaar is, rol ze op, leg ze naast elkaar in een ovenschaal, bestrooi ze met kaas en bak ze 15 tot 20 minuten op 200 °C tot de kaas gesmolten en goudbruin is.'
       }
     ],
     sitemapPriority: '0.6'
@@ -672,17 +711,19 @@ const PAGES = [
     sitemapPriority: '0.7'
   },
   {
-    path: '/gezonde-recepten-afvallen/caloriearm-avondeten',
+    path: '/gezonde-recepten-afvallen/avondeten-onder-400-kcal',
+    redirectFrom: '/gezonde-recepten-afvallen/caloriearm-avondeten',
     parent: '/gezonde-recepten-afvallen',
-    footerLabel: 'Caloriearm avondeten',
-    title: 'Caloriearm avondeten: recepten onder 400 kcal – Kookkeuze',
+    keyphrase: 'avondeten onder 400 kcal',
+    footerLabel: 'Avondeten onder 400 kcal',
+    title: 'Avondeten onder 400 kcal: caloriearme recepten – Kookkeuze',
     description:
-      'Caloriearm avondeten: hoofdgerechten onder de 400 kcal per portie, van Nederlandse kooksites. Handig als je wilt afvallen. Kies in één klik.',
-    h1: 'Caloriearm avondeten: recepten onder 400 kcal',
-    breadcrumb: 'Caloriearm avondeten',
+      'Avondeten onder 400 kcal: caloriearme hoofdgerechten die toch vullen, van Nederlandse kooksites. Het aantal calorieën komt van de receptsite zelf.',
+    h1: 'Avondeten onder 400 kcal',
+    breadcrumb: 'Avondeten onder 400 kcal',
     intro: [
-      'Caloriearm avondeten is een hoofdgerecht met minder dan zo\'n 400 kcal per portie dat je toch vult, doordat het veel groente en eiwit bevat. Op deze pagina staan zulke hoofdgerechten van Nederlandse kooksites; het aantal calorieën komt van de receptsite zelf.',
-      'Wie wil afvallen, hoeft niet op een half leeg bord te leven. Het verschil zit vooral in de verhoudingen: meer groente, minder saus en vet, en een magere eiwitbron. Daardoor eet je een vol bord voor aanzienlijk minder calorieën.'
+      'Avondeten onder 400 kcal is een hoofdgerecht dat per portie minder dan 400 kilocalorieën telt en toch vult, doordat het veel groente en eiwit bevat. Op deze pagina staan zulke hoofdgerechten van Nederlandse kooksites; het aantal calorieën komt van de receptsite zelf.',
+      'Wie wil afvallen, hoeft niet op een half leeg bord te leven. Het verschil zit in de verhoudingen: meer groente, minder saus en vet, en een magere eiwitbron. Daardoor eet je een vol bord voor aanzienlijk minder calorieën.'
     ],
     ctaLabel: 'Toon avondeten onder 400 kcal',
     ctaFilters: { meal_category: 'Hoofdgerecht', calorieRange: 'Onder 400' },
@@ -693,8 +734,8 @@ const PAGES = [
     indexFilterSets: [{ meal_category: ['Hoofdgerecht'], calories_max: 400 }],
     faq: [
       {
-        q: 'Waarom vult een caloriearm recept toch?',
-        a: 'Groente en eiwit geven volume en verzadiging voor relatief weinig calorieën. Een bord met veel groente, kip of vis en een kleine portie rijst of aardappel voelt daardoor als een volle maaltijd.'
+        q: 'Is 400 kcal genoeg voor een avondmaaltijd?',
+        a: 'Voor wie wil afvallen kan dat prima, zeker als je de rest van de dag genoeg eet. Het gaat om het totaal over de dag, niet om één maaltijd. Twijfel je over wat bij jou past, overleg dan met een diëtist.'
       },
       {
         q: 'Hoe maak je een gerecht caloriearmer?',
@@ -704,21 +745,23 @@ const PAGES = [
     sitemapPriority: '0.6'
   },
   {
-    path: '/gezonde-recepten-afvallen/eiwitrijk-ontbijt',
+    path: '/gezonde-recepten-afvallen/eiwitrijk-ontbijt-afvallen',
+    redirectFrom: '/gezonde-recepten-afvallen/eiwitrijk-ontbijt',
     parent: '/gezonde-recepten-afvallen',
-    footerLabel: 'Eiwitrijk ontbijt',
-    title: 'Eiwitrijk ontbijt: gezonde ontbijtrecepten – Kookkeuze',
+    keyphrase: 'eiwitrijk ontbijt om af te vallen',
+    footerLabel: 'Eiwitrijk ontbijt om af te vallen',
+    title: 'Eiwitrijk ontbijt om af te vallen: recepten – Kookkeuze',
     description:
-      'Eiwitrijk ontbijt recepten: overnight oats, kwark, eieren en meer. Gezonde ontbijtrecepten die lang verzadigen, handig bij sporten en afvallen.',
-    h1: 'Eiwitrijk ontbijt',
+      'Eiwitrijk ontbijt om af te vallen: overnight oats, kwark, eieren en meer. Ontbijtrecepten die lang verzadigen, zodat je minder snel trek krijgt.',
+    h1: 'Eiwitrijk ontbijt om af te vallen',
     breadcrumb: 'Eiwitrijk ontbijt',
     intro: [
-      'Een eiwitrijk ontbijt is een ontbijt met een flinke portie eiwit, bijvoorbeeld uit kwark, Griekse yoghurt, eieren of eiwitpoeder. Eiwit verzadigt goed, waardoor je minder snel trek krijgt voor de lunch. Op deze pagina staan ontbijtrecepten met het doel "Sporten", van Nederlandse kooksites.',
-      'Van overnight oats die je de avond ervoor klaarzet tot een omelet in vijf minuten: een eiwitrijk ontbijt hoeft niet meer tijd te kosten dan een boterham. Handig als je sport, maar net zo goed als je wilt afvallen.'
+      'Een eiwitrijk ontbijt om af te vallen is een ontbijt met zo\'n 20 tot 30 gram eiwit, bijvoorbeeld uit kwark, Griekse yoghurt, eieren of eiwitpoeder. Eiwit verzadigt goed, waardoor je minder snel trek krijgt voor de lunch. Op deze pagina staan ontbijtrecepten met het doel "Sporten" van Nederlandse kooksites.',
+      'Van overnight oats die je de avond ervoor klaarzet tot een omelet in vijf minuten: een eiwitrijk ontbijt hoeft niet meer tijd te kosten dan een boterham.'
     ],
     ctaLabel: 'Toon eiwitrijke ontbijtrecepten',
     ctaFilters: { meal_category: 'Ontbijt', meal_type: 'Sporten' },
-    listHeading: 'Eiwitrijke ontbijtrecepten',
+    listHeading: 'Eiwitrijke ontbijtrecepten om af te vallen',
     listIntro: 'Klik op een recept om het in de receptkiezer te openen, met de andere eiwitrijke ontbijtjes eronder.',
     filterSets: [{ meal_category: ['Ontbijt'], meal_type: ['Sporten'] }],
     faq: [
@@ -778,7 +821,10 @@ function matchesFilters(recipe, filters) {
       return Number.isFinite(kcal) && kcal > 0 && kcal < Number(waarde);
     }
     if (sleutel === 'search') {
-      return new RegExp(`(^|[^a-zà-ÿ])${waarde}`, 'i').test(String(recipe?.title || ''));
+      // Een lijst betekent hier: álle woorden moeten erin staan.
+      const titel = String(recipe?.title || '');
+      return (Array.isArray(waarde) ? waarde : [waarde])
+        .every(woord => new RegExp(`(^|[^a-zà-ÿ])${woord}`, 'i').test(titel));
     }
     const opties = Array.isArray(waarde) ? waarde : [waarde];
     return opties.includes(recipe?.[sleutel]);
@@ -1137,6 +1183,9 @@ function registerSeoPages(app, { fetchDemoRecipes, fetchIndexRecipes = () => [],
   }
 
   PAGES.forEach(page => {
+    if (page.redirectFrom) {
+      app.get(page.redirectFrom, (_req, res) => res.redirect(301, page.path));
+    }
     app.get(page.path, async (_req, res) => {
       let recipes = [];
       try {
