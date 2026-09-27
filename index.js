@@ -1792,9 +1792,57 @@ function showRecipes(arr, options = {}) {
     }
     return;
   }
-  resultDiv.innerHTML = buildRecipeCardsHtml(arr, options);
-  hydrateResultImages();
+  searchResults = { recipes: arr, options };
+  searchCurrentPage = 1;
+  renderSearchResultsPage();
 }
+
+// Zoekresultaten van 'Kies een recept' per pagina, net als het receptoverzicht
+// (zelfde paginagrootte en nummering, zie buildPaginationHtml).
+const SEARCH_PAGE_SIZE = 9;
+let searchResults = { recipes: [], options: {} };
+let searchCurrentPage = 1;
+
+function renderSearchResultsPage() {
+  const { recipes, options } = searchResults;
+  const totalPages = Math.max(1, Math.ceil(recipes.length / SEARCH_PAGE_SIZE));
+  searchCurrentPage = Math.min(Math.max(searchCurrentPage, 1), totalPages);
+
+  if (totalPages <= 1) {
+    resultDiv.innerHTML = buildRecipeCardsHtml(recipes, options);
+    hydrateResultImages();
+    return;
+  }
+
+  const startIdx = (searchCurrentPage - 1) * SEARCH_PAGE_SIZE;
+  const pageRecipes = recipes.slice(startIdx, startIdx + SEARCH_PAGE_SIZE);
+  resultDiv.innerHTML = buildRecipeCardsHtml(pageRecipes, { ...options, forceGrid: true })
+    + '<nav class="overview-pagination search-pagination" aria-label="Paginanummering zoekresultaten"></nav>';
+  hydrateResultImages();
+  renderSearchPagination(totalPages);
+}
+
+function renderSearchPagination(totalPages) {
+  const nav = resultDiv.querySelector('.search-pagination');
+  if (!nav) return;
+  nav.innerHTML = buildPaginationHtml(searchCurrentPage, totalPages);
+  nav.querySelectorAll('.overview-page-btn[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      searchCurrentPage = Number(btn.dataset.page);
+      renderSearchResultsPage();
+      // De knoppen staan onder de recepten: terug naar het begin van de lijst.
+      const top = resultDiv.getBoundingClientRect().top;
+      if (top < 0) {
+        window.scrollTo({ top: window.scrollY + top - 90, behavior: 'smooth' });
+      }
+    });
+  });
+}
+
+// Over de 600px-grens gekanteld: de nummering heeft dan meer of minder buren.
+window.matchMedia('(max-width: 600px)').addEventListener('change', () => {
+  renderSearchPagination(Math.ceil(searchResults.recipes.length / SEARCH_PAGE_SIZE));
+});
 
 function buildRecipeCardsHtml(arr, options = {}) {
   const isInternetMode = options.mode === 'internet';
@@ -1802,7 +1850,9 @@ function buildRecipeCardsHtml(arr, options = {}) {
   // (2 of 3 per rij), net als het receptoverzicht. Bij één resultaat — Random
   // of het weekmenu-voorbeeld — blijft de brede kaart met de grote foto staan.
   const containerClasses = ['recipe-cards-container', 'search-results'];
-  containerClasses.push(arr.length === 1 ? 'single-result' : 'recipe-grid-cards');
+  // Een doorgebladerde zoeklijst houdt ook op een laatste pagina met één
+  // recept het raster (forceGrid), anders springt die ene kaart naar breed.
+  containerClasses.push(arr.length === 1 && !options.forceGrid ? 'single-result' : 'recipe-grid-cards');
   if (options.extraClass) containerClasses.push(options.extraClass);
   // Het overzicht vraagt datzelfde raster expliciet aan; die staat er dan al in.
   const containerClass = [...new Set(containerClasses)].join(' ');
