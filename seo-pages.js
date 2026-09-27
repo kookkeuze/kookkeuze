@@ -54,6 +54,28 @@ function toolLink(filters) {
   return '/' + (query ? '?' + query : '') + '#kiesRecept';
 }
 
+// Zet een filterset van een pagina om naar de parameters van de receptkiezer.
+// Alleen calorieën verschillen: hier een getal, in de kiezer een keuzelijst.
+function toToolFilters(filters) {
+  const tool = {};
+  Object.entries(filters).forEach(([key, value]) => {
+    if (key === 'calories_max') tool.calorieRange = `Onder ${value}`;
+    else tool[key] = value;
+  });
+  return tool;
+}
+
+// Een recept in de lijst linkt niet naar de externe site maar naar de
+// receptkiezer, met de filters waarmee het op deze pagina kwam. De kiezer
+// zoekt dan "Van het internet" — de voorbeelddatabase heeft maar een handvol
+// recepten — en zet het aangeklikte recept bovenaan (zie applyFiltersFromUrl).
+function recipeToolLink(page, recipe) {
+  const sets = [...page.filterSets, ...(page.indexFilterSets || [])];
+  const matched = sets.find(filters => matchesFilters(recipe, filters));
+  const filters = matched ? toToolFilters(matched) : page.ctaFilters;
+  return toolLink({ ...filters, source: 'internet', recipe: recipe.url });
+}
+
 /* -------------------- PAGINA-DEFINITIES -------------------- */
 /* filterSets is een lijst: de filters bínnen één set worden gecombineerd (EN),
    de sets onderling worden samengevoegd (OF). 'Gezond' is bijvoorbeeld alles
@@ -244,7 +266,7 @@ function matchesFilters(recipe, filters) {
   });
 }
 
-function renderRecipeList(recipes) {
+function renderRecipeList(page, recipes) {
   if (!recipes.length) return '';
   const items = recipes
     .map(recipe => {
@@ -253,7 +275,7 @@ function renderRecipeList(recipes) {
         .join(' · ');
       return `
         <li class="seo-recipe-item">
-          <a class="seo-recipe-title" href="${escapeHtml(recipe.url)}" target="_blank" rel="noopener">${escapeHtml(recipe.title)}</a>
+          <a class="seo-recipe-title" href="${escapeHtml(recipeToolLink(page, recipe))}">${escapeHtml(recipe.title)}</a>
           ${meta ? `<p class="seo-recipe-meta">${escapeHtml(meta)}</p>` : ''}
         </li>`;
     })
@@ -340,7 +362,7 @@ function buildJsonLd(page, recipes) {
 function renderPage(page, recipes) {
   const canonical = SITE_URL + page.path;
   const intro = page.intro.map(paragraph => `      <p>${paragraph}</p>`).join('\n');
-  const list = renderRecipeList(recipes);
+  const list = renderRecipeList(page, recipes);
   const listBlock = list
     ? `      <h2>${escapeHtml(page.listHeading)}</h2>
       ${page.listIntro ? `<p>${escapeHtml(page.listIntro)}</p>` : ''}

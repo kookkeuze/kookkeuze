@@ -1303,6 +1303,9 @@ const recipeFinderSubtitle = document.getElementById('recipeFinderSubtitle');
 const recipeSourceSwitch  = document.querySelector('.recipe-source-switch');
 const recipeSourceSwitchButtons = Array.from(document.querySelectorAll('[data-recipe-source-mode]'));
 let recipeSourceMode = 'database';
+// Recept dat bij de eerstvolgende internetzoekopdracht bovenaan moet staan:
+// het recept dat iemand op een SEO-pagina aanklikte (zie applyFiltersFromUrl).
+let pinnedInternetRecipeUrl = null;
 const recipeFinderSubtitles = {
   database: 'Laat de tool iets lekkers uit je eigen recepten kiezen, zonder lang te hoeven twijfelen.',
   internet: 'Laat de tool iets lekkers van bekende receptenwebsites kiezen, zonder lang te hoeven twijfelen.'
@@ -1647,6 +1650,10 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
   if (recipeSourceMode === 'internet') {
     if (getValidToken()) await ensureRecipeNotesLoaded();
     const params = buildRecipeToolParams({ includeSearch: true, includeDatabase: false });
+    if (pinnedInternetRecipeUrl) {
+      params.append('pin', pinnedInternetRecipeUrl);
+      pinnedInternetRecipeUrl = null;
+    }
     const qs = params.toString();
     fetch(`${API_BASE}/api/internet-recipes?` + qs, {
       cache: 'no-store'
@@ -1712,8 +1719,10 @@ document.getElementById('randomBtn').addEventListener('click', () => drawRandomR
    filters die bij die pagina horen in de query, bijvoorbeeld
    /?time_required=Onder+de+30+minuten#kiesRecept. Dan staat de kiezer meteen
    goed en zoekt hij ook meteen, zodat de bezoeker niet op een leeg scherm
-   belandt. Draait ná het aanmaken van de multi-selects en de zoekknop, want
-   het gebruikt allebei. */
+   belandt. Een aangeklikt recept uit de lijst op zo'n pagina komt binnen met
+   source=internet en recipe=<url>: dan zoekt de kiezer "Van het internet" en
+   staat dat recept bovenaan. Draait ná het aanmaken van de multi-selects en
+   de zoekknop, want het gebruikt allebei. */
 (function applyFiltersFromUrl() {
   const FILTER_PARAMS = [
     ['dish_type', 'dishType'],
@@ -1742,6 +1751,12 @@ document.getElementById('randomBtn').addEventListener('click', () => drawRandomR
   if (searchTerm) {
     const searchInput = document.getElementById('searchTerm');
     if (searchInput) searchInput.value = searchTerm;
+    applied = true;
+  }
+
+  if (params.get('source') === 'internet') {
+    setRecipeSourceMode('internet');
+    pinnedInternetRecipeUrl = (params.get('recipe') || '').trim() || null;
     applied = true;
   }
 

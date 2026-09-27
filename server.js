@@ -3517,11 +3517,28 @@ app.get('/api/internet-crawl/status', (_req, res) => {
   });
 });
 
+// Het recept dat iemand op een SEO-pagina aanklikte, zodat het bovenaan de
+// resultaten kan. Alleen uit de eigen index: een willekeurige URL uit de query
+// gaan we niet ophalen.
+function findPinnedInternetRecipe(rawUrl) {
+  const wanted = String(rawUrl || '').trim().replace(/\/$/, '');
+  if (!wanted) return null;
+  const candidate = getCurrentInternetRecipePool().find(entry =>
+    entry.crawler_site_key && String(entry.url || '').replace(/\/$/, '') === wanted
+  );
+  return candidate ? serializeInternetRecipe(buildIndexedInternetRecipeResult(candidate)) : null;
+}
+
 app.get('/api/internet-recipes', async (req, res) => {
   try {
     const filters = normalizeInternetRecipeFilters(req.query);
     // randomize zodat je niet telkens exact dezelfde eerste resultaten krijgt.
     const recipes = await collectInternetRecipes(filters, { limit: INTERNET_SEARCH_RECIPE_LIMIT, randomize: true });
+    const pinned = findPinnedInternetRecipe(req.query.pin);
+    if (pinned) {
+      const rest = recipes.filter(recipe => recipe.url !== pinned.url);
+      return res.json([pinned, ...rest].slice(0, INTERNET_SEARCH_RECIPE_LIMIT));
+    }
     return res.json(recipes);
   } catch (err) {
     console.error('❌ internet recipe search error:', err);
