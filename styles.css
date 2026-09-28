@@ -232,7 +232,7 @@ html {
 .container {
   width: 95%;
   max-width: 1200px;
-  margin: 0 auto 32px;
+  margin: 24px auto 32px;
   background: #fff;
   border-radius: var(--radius-lg);
   padding: 32px;
