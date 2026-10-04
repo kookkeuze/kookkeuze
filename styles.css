@@ -5663,6 +5663,85 @@ body.mobile-menu-open .mobile-nav-header {
   margin-top: 0.5rem;
 }
 
+/* Drie manieren om te beginnen. Op een telefoon onder elkaar en even breed,
+   daarboven naast elkaar. */
+.empty-state-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  width: 100%;
+  max-width: 300px;
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 601px) {
+  .empty-state-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: none;
+  }
+}
+
+/* Uitnodiging voor een account, op plekken waar je zonder account niet verder
+   kunt (bijv. de weekmenu-planner). */
+.guest-account-prompt {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 20px 16px;
+  text-align: center;
+}
+
+.guest-account-prompt-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #28372f;
+}
+
+.guest-account-prompt-text {
+  margin: 0;
+  max-width: 340px;
+  color: #5f6b63;
+}
+
+.guest-account-prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Knop die eruitziet als een link, midden in een zin. */
+.inline-link-btn {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: #2f6a37;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.url-duplicate-note {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: #fffaf0;
+  color: #7b6b45;
+  font-size: 13px;
+}
+
+.url-duplicate-note[hidden] {
+  display: none;
+}
+
 /* Voorbeeld-banner voor niet-ingelogde bezoekers (demo-data). */
 .guest-demo-banner {
   display: flex;
@@ -6257,6 +6336,41 @@ body.mobile-menu-open .mobile-nav-header {
 .bulk-progress-step.is-current {
   background: #ffffff;
   box-shadow: inset 0 0 0 2px var(--green);
+}
+
+.bulk-quick-save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 14px;
+  border: 1px solid #cfe9d4;
+  border-radius: var(--radius-md);
+  background: #eaf7ec;
+}
+
+.bulk-quick-save[hidden] {
+  display: none;
+}
+
+.bulk-quick-save-text {
+  flex: 1 1 200px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #2f6a37;
+}
+
+#bulkRecipeForm .bulk-quick-save-btn {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  #bulkRecipeForm .bulk-quick-save-btn {
+    flex: 1 1 100%;
+  }
 }
 
 .bulk-recipe-head {

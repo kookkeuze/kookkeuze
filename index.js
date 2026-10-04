@@ -36,6 +36,10 @@ function decodeJwtPayload(token) {
   }
 }
 
+// Of er tijdens dit bezoek een verlopen sessie is opgeruimd. Zo weten we het
+// verschil tussen 'log opnieuw in' en een bezoeker die nog geen account heeft.
+let sessionExpiredThisVisit = false;
+
 function getValidToken() {
   const token = localStorage.getItem('token');
   if (!token) return null;
@@ -48,6 +52,7 @@ function getValidToken() {
 
   if (Date.now() >= payload.exp * 1000) {
     localStorage.removeItem('token');
+    sessionExpiredThisVisit = true;
     return null;
   }
 
@@ -152,7 +157,9 @@ function ensureLoggedInOrNotify(targetEl) {
   if (getValidToken()) return true;
 
   if (targetEl) {
-    targetEl.innerHTML = '<p>Je sessie is verlopen. Log opnieuw in om verder te gaan.</p>';
+    targetEl.innerHTML = sessionExpiredThisVisit
+      ? '<p>Je sessie is verlopen. <button type="button" class="inline-link-btn" data-guest-login>Log opnieuw in</button> om verder te gaan.</p>'
+      : guestAccountPromptHtml();
   }
   if (typeof updateAuthUI === 'function') updateAuthUI();
   return false;
@@ -161,6 +168,20 @@ function ensureLoggedInOrNotify(targetEl) {
 // True wanneer er geen ingelogde gebruiker is (bezoeker ziet dan demo-data).
 function isGuestUser() {
   return !getValidToken();
+}
+
+// Voor een bezoeker zonder account: geen 'sessie verlopen', maar uitleggen
+// waarom een account nodig is, met de weg ernaartoe erbij.
+function guestAccountPromptHtml() {
+  return `
+    <div class="guest-account-prompt" role="note">
+      <p class="guest-account-prompt-title">Maak een gratis account aan</p>
+      <p class="guest-account-prompt-text">Dan bewaren we je recepten en weekmenu's in je eigen database.</p>
+      <div class="guest-account-prompt-actions">
+        <button type="button" class="green-btn" data-guest-register>Gratis account</button>
+        <button type="button" class="ghost-btn" data-guest-login>Ik heb al een account</button>
+      </div>
+    </div>`;
 }
 
 // Subtiele banner boven demo-data voor niet-ingelogde bezoekers, met CTA naar
@@ -1774,19 +1795,45 @@ document.getElementById('randomBtn').addEventListener('click', () => drawRandomR
   document.getElementById('searchBtn')?.click();
 })();
 
+// Lege database: meteen de drie manieren om te beginnen laten zien, in plaats
+// van één knop naar een formulier waar je dan alsnog moet kiezen.
+function emptyDatabaseHtml() {
+  return `
+    <div class="empty-state">
+      <p class="empty-state-title">Je database is nog leeg</p>
+      <p class="empty-state-sub">Kies hoe je wilt beginnen. Later toevoegen kan altijd.</p>
+      <div class="empty-state-actions">
+        <button type="button" class="green-btn" data-empty-action="links">Links plakken</button>
+        <button type="button" class="ghost-btn" data-empty-action="packs">Recept pakketten</button>
+        <button type="button" class="ghost-btn" data-empty-action="own">Eigen recept</button>
+      </div>
+    </div>`;
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-empty-action]');
+  if (!btn) return;
+  const action = btn.dataset.emptyAction;
+  if (action === 'packs') {
+    openRecipePackFlow({ fromOnboarding: false });
+    return;
+  }
+  activateTab('#voegReceptToe');
+  if (action === 'own') {
+    setAddRecipeMode('own');
+  } else {
+    setLinkBulkMode(true);
+    // Staat er nog een afgeronde ronde, dan eerst terug naar het plakveld.
+    if (bulkDoneStep && !bulkDoneStep.hidden) resetBulk();
+    document.getElementById('bulkUrls')?.focus();
+  }
+});
+
 function showRecipes(arr, options = {}) {
   if (!arr || arr.length === 0) {
     const isInternetMode = options.mode === 'internet';
     if (!isInternetMode && getValidToken()) {
-      resultDiv.innerHTML = `
-        <div class="empty-state">
-          <p class="empty-state-title">Je database is nog leeg</p>
-          <p class="empty-state-sub">Voeg je eerste recept toe en begin met je persoonlijke receptendatabase.</p>
-          <button class="accent-btn empty-state-add-btn">Voeg een recept toe</button>
-        </div>`;
-      resultDiv.querySelector('.empty-state-add-btn').addEventListener('click', () => {
-        activateTab('#voegReceptToe');
-      });
+      resultDiv.innerHTML = emptyDatabaseHtml();
     } else {
       resultDiv.innerHTML = '<p>Geen resultaten gevonden.</p>';
     }
@@ -3780,6 +3827,80 @@ async function openConfirmModal({ title, message = '', confirmLabel = 'Bevestige
   return result === true;
 }
 
+/* ---- Toevoegen zonder account ----
+   Een bezoeker die een link plakt, krijgt een dialoog in plaats van een melding
+   onderaan het formulier (die zie je op een telefoon niet). De geplakte links
+   bewaren we in de browser: registreren via e-mail gaat via een
+   bevestigingslink, en dan kom je terug op een verse pagina. */
+const PENDING_RECIPE_DRAFT_KEY = 'pendingRecipeDraft';
+const PENDING_RECIPE_DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function savePendingRecipeDraft() {
+  const url = document.getElementById('url')?.value.trim() || '';
+  const bulk = document.getElementById('bulkUrls')?.value.trim() || '';
+  if (!url && !bulk) return false;
+  try {
+    localStorage.setItem(PENDING_RECIPE_DRAFT_KEY, JSON.stringify({
+      url,
+      bulk,
+      bulkMode: linkBulkMode,
+      savedAt: Date.now()
+    }));
+    return true;
+  } catch (_err) {
+    return false;
+  }
+}
+
+// Na het inloggen: de geplakte links terugzetten en verdergaan waar je was.
+function restorePendingRecipeDraft() {
+  let draft = null;
+  try {
+    draft = JSON.parse(localStorage.getItem(PENDING_RECIPE_DRAFT_KEY) || 'null');
+    localStorage.removeItem(PENDING_RECIPE_DRAFT_KEY);
+  } catch (_err) {
+    return;
+  }
+  if (!draft || Date.now() - Number(draft.savedAt || 0) > PENDING_RECIPE_DRAFT_MAX_AGE_MS) return;
+
+  const urlInput = document.getElementById('url');
+  const bulkUrls = document.getElementById('bulkUrls');
+  if (urlInput && draft.url && !urlInput.value.trim()) urlInput.value = draft.url;
+  if (bulkUrls && draft.bulk && !bulkUrls.value.trim()) {
+    bulkUrls.value = draft.bulk;
+    bulkUrls.dispatchEvent(new Event('input'));
+  }
+  setLinkBulkMode(!!draft.bulkMode);
+  activateTab('#voegReceptToe');
+
+  // Eén link: meteen de informatie ophalen, dat was de volgende stap al.
+  if (!draft.bulkMode && draft.url) fetchInfoBtn?.click();
+  else showRecipeAddedToast('Je links staan nog voor je klaar.');
+}
+
+async function ensureLoggedInForAdding() {
+  if (getValidToken()) return true;
+
+  if (sessionExpiredThisVisit) {
+    ensureLoggedInOrNotify(addMessageDiv);
+    return false;
+  }
+
+  const draftSaved = savePendingRecipeDraft();
+  const choice = await openChoiceModal({
+    title: 'Maak een gratis account aan',
+    message: 'Dan bewaren we je recepten in je eigen database.'
+      + (draftSaved ? ' Wat je hebt geplakt, staat daarna nog voor je klaar.' : ''),
+    choices: [
+      { label: 'Ik heb al een account', value: 'login', variant: 'ghost' },
+      { label: 'Gratis account', value: 'register', variant: 'green' }
+    ]
+  });
+  if (choice === 'register') openAuthModalAt(registerPane);
+  else if (choice === 'login') openAuthModalAt(loginPane);
+  return false;
+}
+
 const fieldNameToId = {
   'Titel': 'title',
   'Soort gerecht': 'dishTypeNew',
@@ -3832,9 +3953,49 @@ Object.values(fieldNameToId).concat('url').forEach(id => {
   });
 });
 
+// Kijkt of deze link al in de actieve database staat. Lukt dat niet, dan gaan
+// we uit van niet: dubbel toevoegen is minder erg dan niet kunnen toevoegen.
+async function isRecipeUrlInDatabase(url) {
+  try {
+    return (await fetchExistingRecipeUrlKeys()).has(recipeUrlKey(url));
+  } catch (_err) {
+    return false;
+  }
+}
+
+function setUrlDuplicateNote(show) {
+  const note = document.getElementById('urlDuplicateNote');
+  if (note) note.hidden = !show;
+}
+
+document.getElementById('url')?.addEventListener('input', () => setUrlDuplicateNote(false));
+
+// Plakken is de bedoeling: dan meteen ophalen in plaats van eerst nog op de
+// knop te laten drukken. Zitten er meerdere links in het geplakte, dan zet
+// de schakelaar zich om naar 'Meerdere links tegelijk'.
+document.getElementById('url')?.addEventListener('paste', e => {
+  const pasted = e.clipboardData?.getData('text') || '';
+  const links = extractRecipeLinks(pasted);
+  if (links.length > 1) {
+    e.preventDefault();
+    const bulkUrls = document.getElementById('bulkUrls');
+    if (bulkUrls) {
+      bulkUrls.value = pasted.trim();
+      bulkUrls.dispatchEvent(new Event('input'));
+    }
+    setLinkBulkMode(true);
+    return;
+  }
+  // Bezoekers zonder account niet bij het plakken al een dialoog geven; die
+  // komt pas als ze zelf op de knop drukken.
+  if (links.length === 1 && getValidToken()) {
+    setTimeout(() => fetchInfoBtn?.click(), 0);
+  }
+});
+
 if (fetchInfoBtn) {
   fetchInfoBtn.addEventListener('click', async () => {
-    if (!ensureLoggedInOrNotify(addMessageDiv)) return;
+    if (!(await ensureLoggedInForAdding())) return;
     const urlInput = document.getElementById('url');
     const urlValue = urlInput.value.trim();
     clearMissingState();
@@ -3848,6 +4009,11 @@ if (fetchInfoBtn) {
     const originalText = fetchInfoBtn.textContent;
     fetchInfoBtn.textContent = 'Bezig...';
     addMessageDiv.innerHTML = '';
+
+    // Los van het ophalen, zodat het ophalen er niet op hoeft te wachten.
+    isRecipeUrlInDatabase(urlValue).then(exists => {
+      if (urlInput.value.trim() === urlValue) setUrlDuplicateNote(exists);
+    });
 
     try {
       const res = await fetch(`${API_BASE}/api/recipe-info?url=${encodeURIComponent(urlValue)}`, {
@@ -3937,7 +4103,17 @@ if (homeLogo) {
 
 addRecipeForm.addEventListener('submit', async e => {
   e.preventDefault();
-  if (!ensureLoggedInOrNotify(addMessageDiv)) return;
+  if (!(await ensureLoggedInForAdding())) return;
+  const submittedUrl = document.getElementById('url').value.trim();
+  if (submittedUrl && await isRecipeUrlInDatabase(submittedUrl)) {
+    const addAnyway = await openConfirmModal({
+      title: 'Dit recept staat al in je database',
+      message: 'Wil je het toch nog een keer toevoegen?',
+      confirmLabel: 'Toch toevoegen',
+      cancelLabel: 'Annuleer'
+    });
+    if (!addAnyway) return;
+  }
   const cal = document.getElementById('caloriesNew').value.trim();
   const recipeNoteNew = document.getElementById('recipeNoteNew');
   const noteText = recipeNoteNew?.value.trim() || '';
@@ -3990,6 +4166,7 @@ addRecipeForm.addEventListener('submit', async e => {
     addMessageDiv.innerHTML = inlineMessage;
     showRecipeAddedToast(toastMessage);
     addRecipeForm.reset();
+    setUrlDuplicateNote(false);
     ['dishTypeNew', 'mealCategoryNew', 'mealTypeNew', 'timeRequiredNew']
       .forEach(id => document.getElementById(id)?._multiSelectApi?.clear());
 
@@ -4208,6 +4385,7 @@ function pumpBulkFetches() {
         item.info = info || {};
         item.status = 'ready';
         if (bulkItems[bulkIndex] === item) renderBulkItem();
+        else updateBulkQuickSave();
       })
       .finally(() => {
         if (session !== bulkSession) return;
@@ -4243,6 +4421,7 @@ function renderBulkItem() {
   const item = bulkItems[bulkIndex];
   if (!item) return;
   renderBulkProgress();
+  updateBulkQuickSave();
   clearBulkMissingState();
 
   let domain = item.url;
@@ -4379,7 +4558,7 @@ function resetBulk() {
 }
 
 async function startBulk() {
-  if (!ensureLoggedInOrNotify(addMessageDiv)) return;
+  if (!(await ensureLoggedInForAdding())) return;
   const links = extractRecipeLinks(bulkUrlsInput?.value).slice(0, BULK_MAX_LINKS);
   if (!links.length) return;
 
@@ -4432,30 +4611,9 @@ async function saveCurrentBulkItem() {
     return;
   }
 
-  const cal = bulkCaloriesInput.value.trim();
-  const bodyData = {
-    title,
-    url: item.url,
-    dish_type: getSelectedValues(document.getElementById('bulkDishType')),
-    meal_category: getSelectedValues(document.getElementById('bulkMealCategory')),
-    meal_type: getSelectedValues(document.getElementById('bulkMealType')),
-    time_required: getSelectedValues(document.getElementById('bulkTimeRequired')),
-    calories: cal ? parseInt(cal, 10) : null
-  };
-
   bulkSaveBtn.disabled = true;
   try {
-    const res = await fetch(`${API_BASE}/api/recipes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify(withActiveDatabaseBody(bodyData))
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.error) {
-      bulkRecipeStatus.className = 'bulk-recipe-status is-error';
-      bulkRecipeStatus.textContent = data.error || 'Opslaan mislukt. Probeer het nog eens.';
-      return;
-    }
+    await postBulkRecipe(readBulkFormBody(item));
     item.result = 'saved';
     item.title = title;
     showRecipeAddedToast('Recept toegevoegd!');
@@ -4463,11 +4621,114 @@ async function saveCurrentBulkItem() {
   } catch (err) {
     console.error(err);
     bulkRecipeStatus.className = 'bulk-recipe-status is-error';
-    bulkRecipeStatus.textContent = 'Server niet bereikbaar. Probeer het nog eens.';
+    bulkRecipeStatus.textContent = err.message;
   } finally {
     bulkSaveBtn.disabled = false;
   }
 }
+
+// Slaat één recept op; bij een fout volgt een Error met een leesbare melding.
+async function postBulkRecipe(bodyData) {
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/api/recipes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(withActiveDatabaseBody(bodyData))
+    });
+  } catch (_err) {
+    throw new Error('Server niet bereikbaar. Probeer het nog eens.');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) throw new Error(data.error || 'Opslaan mislukt. Probeer het nog eens.');
+  return data;
+}
+
+function readBulkFormBody(item) {
+  const cal = bulkCaloriesInput.value.trim();
+  return {
+    title: bulkTitleInput.value.trim(),
+    url: item.url,
+    dish_type: getSelectedValues(document.getElementById('bulkDishType')),
+    meal_category: getSelectedValues(document.getElementById('bulkMealCategory')),
+    meal_type: getSelectedValues(document.getElementById('bulkMealType')),
+    time_required: getSelectedValues(document.getElementById('bulkTimeRequired')),
+    calories: cal ? parseInt(cal, 10) : null
+  };
+}
+
+/* ---- Snel opslaan ----
+   Een recept is 'compleet' als de titel en alle vier de keuzelijsten
+   automatisch gevonden zijn. Die hoef je niet één voor één te bevestigen. */
+function isBulkItemComplete(item) {
+  const info = item.info;
+  return item.status === 'ready' && !item.result && !!info && !info.error && !!info.title
+    && Object.values(bulkInfoFieldBySelect).every(field => !!info[field]);
+}
+
+function bulkBodyFromInfo(item) {
+  const { info } = item;
+  return {
+    title: info.title,
+    url: item.url,
+    dish_type: [info.dish_type],
+    meal_category: [info.meal_category],
+    meal_type: [info.meal_type],
+    time_required: [info.time_required],
+    calories: info.calories ?? null
+  };
+}
+
+function updateBulkQuickSave() {
+  const box = document.getElementById('bulkQuickSave');
+  const btn = document.getElementById('bulkQuickSaveBtn');
+  if (!box || !btn || btn.disabled) return;
+  const count = bulkItems.filter(isBulkItemComplete).length;
+  // Bij één compleet recept is dit gewoon 'Opslaan & volgende'.
+  box.hidden = count < 2;
+  if (box.hidden) return;
+  document.getElementById('bulkQuickSaveText').textContent =
+    `${count} recepten zijn helemaal herkend. Die kun je in één keer opslaan.`;
+  btn.textContent = `Sla ${count} recepten op`;
+}
+
+async function quickSaveCompleteBulkItems() {
+  const btn = document.getElementById('bulkQuickSaveBtn');
+  const complete = bulkItems.filter(isBulkItemComplete);
+  if (!btn || !complete.length) return;
+
+  const session = bulkSession;
+  btn.disabled = true;
+  btn.textContent = 'Bezig...';
+  let saved = 0;
+  for (const item of complete) {
+    // Bij het recept dat open staat tellen jouw aanpassingen, niet wat we vonden.
+    const body = item === bulkItems[bulkIndex] ? readBulkFormBody(item) : bulkBodyFromInfo(item);
+    if (!body.title) continue;
+    try {
+      await postBulkRecipe(body);
+      item.result = 'saved';
+      item.title = body.title;
+      saved += 1;
+    } catch (err) {
+      // Mislukt: blijft open staan, dan kun je het gewoon nog langslopen.
+      console.error(err);
+    }
+    if (session !== bulkSession) break;
+  }
+  btn.disabled = false;
+  if (session !== bulkSession) return;
+
+  if (saved) showRecipeAddedToast(saved === 1 ? 'Recept toegevoegd!' : `${saved} recepten toegevoegd!`);
+  if (bulkItems[bulkIndex]?.result) {
+    goToNextBulkItem();
+  } else {
+    renderBulkProgress();
+    updateBulkQuickSave();
+  }
+}
+
+document.getElementById('bulkQuickSaveBtn')?.addEventListener('click', quickSaveCompleteBulkItems);
 
 // Enter in een veld of de hoofdknop: in de plakstap beginnen, daarna opslaan.
 bulkRecipeForm?.addEventListener('submit', e => {
@@ -4720,7 +4981,7 @@ const ownStepBuilder = createStepBuilder(
 
 ownRecipeForm?.addEventListener('submit', async e => {
   e.preventDefault();
-  if (!ensureLoggedInOrNotify(addMessageDiv)) return;
+  if (!(await ensureLoggedInForAdding())) return;
 
   const readValue = id => document.getElementById(id)?.value.trim() || '';
   const readNumber = id => {
@@ -4958,8 +5219,8 @@ function renderOverviewPage() {
   if (overviewGuestBanner) overviewGuestBanner.innerHTML = guest ? guestDemoBannerHtml() : '';
 
   if (!overviewAllRecipes || overviewAllRecipes.length === 0) {
-    allRecipesDiv.innerHTML = `<tr><td colspan="10">Er zijn nog geen recepten toegevoegd.</td></tr>`;
-    if (overviewGridContainer) overviewGridContainer.innerHTML = '<p>Er zijn nog geen recepten toegevoegd.</p>';
+    allRecipesDiv.innerHTML = `<tr><td colspan="10">${emptyDatabaseHtml()}</td></tr>`;
+    if (overviewGridContainer) overviewGridContainer.innerHTML = emptyDatabaseHtml();
     renderOverviewPagination(0);
     applyOverviewViewMode();
     return;
@@ -5192,13 +5453,18 @@ function updateAuthUI(){
   }
 
   if (loggedIn){
-    loadAccessibleDatabases()
+    const databasesLoaded = loadAccessibleDatabases();
+    databasesLoaded
       .then(async () => {
         await ensureRecipeNotesLoaded(true);
         refreshDatabaseDrivenViews();
         return maybeStartRecipePackOnboarding();
       })
       .catch(() => {});
+    // Pas na het laden van de databases, zodat het ophalen weet in welke
+    // database het moet kijken. Ook als dat laden mislukt: de geplakte links
+    // mogen dan niet zomaar verdwijnen.
+    databasesLoaded.catch(() => {}).then(restorePendingRecipeDraft);
     setAuthPane(loggedInPane);
   } else {
     clearRecipeNotesCache();
@@ -5441,17 +5707,22 @@ window.addEventListener('click', e => { if (e.target === authModal) hideModal(au
 /* Banner-CTA bij demo-data opent direct de registratie. Staat de banner in de
    random-receptenkaart, dan sluiten we die kaart eerst zodat je meteen de
    registratiekaart ziet i.p.v. de receptenkaart die eroverheen blijft staan. */
-document.addEventListener('click', (e) => {
-  const cta = e.target.closest('[data-guest-register]');
-  if (!cta) return;
-  e.preventDefault();
+function openAuthModalAt(pane) {
   if (randomRecipeModal && !randomRecipeModal.classList.contains('hidden')) {
     closeRandomRecipeModalPanel();
   }
   resetForms();
   updateAuthUI();
-  setAuthPane(registerPane);
+  setAuthPane(pane);
   authModal.classList.remove('hidden');
+}
+
+document.addEventListener('click', (e) => {
+  const registerCta = e.target.closest('[data-guest-register]');
+  const loginCta = e.target.closest('[data-guest-login]');
+  if (!registerCta && !loginCta) return;
+  e.preventDefault();
+  openAuthModalAt(registerCta ? registerPane : loginPane);
 });
 
 /* CTA onder stappen: "Ik wil beginnen!" opent de login/registratie */

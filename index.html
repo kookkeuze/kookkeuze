@@ -475,6 +475,7 @@
               <input id="url" type="url" placeholder="Plak hier je recept-URL" required />
               <button id="fetchInfoBtn" type="button" class="green-btn fetch-info-btn">Haal informatie op</button>
             </div>
+            <p id="urlDuplicateNote" class="url-duplicate-note" hidden>Dit recept staat al in je database.</p>
           </div>
         </section>
 
@@ -757,6 +758,13 @@
           <div class="bulk-progress">
             <p id="bulkProgressLabel" class="bulk-progress-label" aria-live="polite"></p>
             <ol id="bulkProgressBar" class="bulk-progress-bar" aria-hidden="true"></ol>
+          </div>
+
+          <!-- Verschijnt zodra twee of meer recepten volledig herkend zijn:
+               die hoef je dan niet allemaal langs te lopen. -->
+          <div id="bulkQuickSave" class="bulk-quick-save" hidden>
+            <p id="bulkQuickSaveText" class="bulk-quick-save-text"></p>
+            <button type="button" id="bulkQuickSaveBtn" class="green-btn bulk-quick-save-btn"></button>
           </div>
 
           <section class="add-recipe-section bulk-recipe-card">
