@@ -993,6 +993,14 @@ button {
   box-shadow: 0 0 0 3px rgba(216, 199, 161, 0.18) !important;
 }
 
+/* De markering hoort op de knop van een keuzelijst, niet op de omhullende
+   div: die gaf een beige rand die breder was dan het veld zelf. */
+#addRecipeForm .multi-select.field-missing,
+#bulkRecipeForm .multi-select.field-missing {
+  background: transparent;
+  box-shadow: none !important;
+}
+
 .field-error-text {
   margin: -2px 0 0;
   color: #7b6b45;
@@ -6290,15 +6298,25 @@ body.mobile-menu-open .mobile-nav-header {
   display: none;
 }
 
+/* Eén recept tegelijk, dus geen reden om de hele schermbreedte te vullen:
+   een smallere kolom met twee velden naast elkaar leest rustiger. */
 .bulk-review {
   display: grid;
-  gap: 16px;
+  gap: 14px;
+  max-width: 720px;
   scroll-margin-top: 90px;
 }
 
 .bulk-progress {
   display: grid;
   gap: 8px;
+}
+
+.bulk-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .bulk-progress-label {
@@ -6308,8 +6326,8 @@ body.mobile-menu-open .mobile-nav-header {
   color: #2f3a35;
 }
 
-/* Eén streepje per recept: groen is opgeslagen, grijs overgeslagen, met rand
-   is het recept dat nu open staat. */
+/* Eén streepje per recept: groen is opgeslagen, grijs overgeslagen, het
+   donkerdere groen is het recept dat nu open staat. */
 .bulk-progress-bar {
   display: flex;
   gap: 4px;
@@ -6320,9 +6338,10 @@ body.mobile-menu-open .mobile-nav-header {
 
 .bulk-progress-step {
   flex: 1 1 0;
-  height: 6px;
+  height: 4px;
   border-radius: 999px;
   background: #e3ebe5;
+  transition: background-color 0.2s ease;
 }
 
 .bulk-progress-step.is-saved {
@@ -6330,23 +6349,21 @@ body.mobile-menu-open .mobile-nav-header {
 }
 
 .bulk-progress-step.is-skipped {
-  background: #b9c3bc;
+  background: #c5cec8;
 }
 
 .bulk-progress-step.is-current {
-  background: #ffffff;
-  box-shadow: inset 0 0 0 2px var(--green);
+  background: #9fdba7;
 }
 
 .bulk-quick-save {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 14px;
-  padding: 12px 14px;
-  border: 1px solid #cfe9d4;
+  gap: 8px 14px;
+  padding: 10px 14px;
   border-radius: var(--radius-md);
-  background: #eaf7ec;
+  background: #eef8f0;
 }
 
 .bulk-quick-save[hidden] {
@@ -6354,23 +6371,29 @@ body.mobile-menu-open .mobile-nav-header {
 }
 
 .bulk-quick-save-text {
-  flex: 1 1 200px;
+  flex: 1 1 0;
+  min-width: 0;
   margin: 0;
   font-size: 13px;
   line-height: 1.5;
   color: #2f6a37;
 }
 
+/* Bewust geen tweede volle groene knop: 'Opslaan & volgende' blijft de
+   hoofdknop op dit scherm. */
 #bulkRecipeForm .bulk-quick-save-btn {
   flex: 0 0 auto;
-  padding: 10px 16px;
-  font-size: 13px;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1.5px solid var(--green);
+  background: #ffffff;
+  box-shadow: none;
+  color: #2f6a37;
+  font-size: 12px;
 }
 
-@media (max-width: 600px) {
-  #bulkRecipeForm .bulk-quick-save-btn {
-    flex: 1 1 100%;
-  }
+#bulkRecipeForm .bulk-quick-save-btn:hover {
+  background: #f4fbf5;
 }
 
 .bulk-recipe-head {
@@ -6382,8 +6405,8 @@ body.mobile-menu-open .mobile-nav-header {
 
 .bulk-recipe-photo {
   flex: 0 0 auto;
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-sm);
   overflow: hidden;
   background: #eef4ef;
@@ -6398,7 +6421,7 @@ body.mobile-menu-open .mobile-nav-header {
 
 .bulk-recipe-meta {
   display: grid;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
@@ -6415,6 +6438,7 @@ body.mobile-menu-open .mobile-nav-header {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  justify-self: start;
   font-size: 13px;
   color: #2f6a37;
   text-decoration: none;
@@ -6425,67 +6449,143 @@ body.mobile-menu-open .mobile-nav-header {
   height: 12px;
 }
 
+/* Status als één regel tekst met een gekleurd bolletje, geen gekleurd vlak:
+   de gemarkeerde velden zeggen al wat er ontbreekt. */
 .bulk-recipe-status {
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  line-height: 1.5;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #6b766f;
 }
 
-.bulk-recipe-status.is-loading {
-  background: #f3f6f4;
-  color: #5f6b63;
+.bulk-recipe-status:empty {
+  display: none;
+}
+
+.bulk-recipe-status::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c5cec8;
+  transform: translateY(-1px);
 }
 
 .bulk-recipe-status.is-complete {
-  background: #eaf7ec;
   color: #2f6a37;
 }
 
+.bulk-recipe-status.is-complete::before {
+  background: var(--green);
+}
+
 .bulk-recipe-status.is-warning {
-  background: #fffaf0;
   color: #7b6b45;
 }
 
+.bulk-recipe-status.is-warning::before {
+  background: #e0b45a;
+}
+
 .bulk-recipe-status.is-error {
-  background: #fdeeee;
   color: #a33a3a;
 }
 
+.bulk-recipe-status.is-error::before {
+  background: #d65c5c;
+}
+
+/* Hooguit twee kolommen, ook op een breed scherm. */
+@media (min-width: 769px) {
+  .bulk-recipe-card .add-recipe-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 18px;
+  }
+}
+
+.bulk-optional {
+  font-weight: 500;
+  color: #8a978f;
+}
+
+/* Knoppen onderin de kaart, rechts: de hoofdactie het laatst, waar je duim
+   of muis na het invullen vanzelf terechtkomt. */
 .bulk-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px 18px;
 }
 
-.bulk-actions > button {
-  flex: 1 1 140px;
+.bulk-recipe-card .bulk-actions {
+  padding-top: 16px;
+  border-top: 1px solid #eef2ef;
+}
+
+#bulkRecipeForm .bulk-primary-btn {
+  width: auto;
   min-width: 0;
-  padding: 12px 18px;
-  font-size: 14px;
-  white-space: normal;
+  padding: 12px 24px;
+  font-size: 13px;
 }
 
+/* Tweede keus als gewone tekst, zodat er maar één knop opvalt. */
+.bulk-secondary-btn,
 .bulk-stop-btn {
-  justify-self: center;
   min-height: 44px;
-  padding: 8px 16px;
+  padding: 8px 4px;
   border: 0;
   background: transparent;
   box-shadow: none;
   color: #5f6b63;
-  font-size: 13px;
-  text-decoration: underline;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
   cursor: pointer;
 }
 
+.bulk-stop-btn {
+  min-height: 32px;
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #8a978f;
+}
+
+.bulk-secondary-btn:hover,
 .bulk-stop-btn:hover {
   background: transparent;
   color: #2f3a35;
+  transform: none;
+}
+
+/* Telefoon: hoofdknop over de volle breedte bovenaan, de tweede keus eronder. */
+@media (max-width: 600px) {
+  .bulk-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+  }
+
+  #bulkRecipeForm .bulk-primary-btn {
+    order: -1;
+    width: 100%;
+    padding: 14px 18px;
+  }
+
+  .bulk-recipe-card .add-recipe-grid {
+    gap: 14px;
+  }
 }
 
 .bulk-done {
+  max-width: 720px;
   scroll-margin-top: 90px;
 }
 

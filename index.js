@@ -4444,7 +4444,7 @@ function renderBulkItem() {
 
   if (item.status !== 'ready') {
     bulkRecipeStatus.className = 'bulk-recipe-status is-loading';
-    bulkRecipeStatus.textContent = 'Informatie ophalen...';
+    bulkRecipeStatus.textContent = 'Gegevens ophalen...';
     setBulkFormDisabled(true);
     return;
   }
@@ -4483,15 +4483,18 @@ function renderBulkItem() {
     if (input._multiSelectApi) input.nextElementSibling?.classList.add('field-missing');
   });
 
+  // Eén korte regel onder de sitenaam; de gemarkeerde velden vertellen de rest.
   if (info.error) {
     bulkRecipeStatus.className = 'bulk-recipe-status is-warning';
-    bulkRecipeStatus.textContent = info.error;
+    bulkRecipeStatus.textContent = info.blocked
+      ? 'Deze site laat zich niet uitlezen, vul zelf aan'
+      : info.error;
   } else if (!missing.length) {
     bulkRecipeStatus.className = 'bulk-recipe-status is-complete';
-    bulkRecipeStatus.textContent = 'Alles automatisch gevonden. Even controleren en opslaan.';
+    bulkRecipeStatus.textContent = 'Alles gevonden';
   } else {
     bulkRecipeStatus.className = 'bulk-recipe-status is-warning';
-    bulkRecipeStatus.textContent = 'Niet alles gevonden. Vul aan wat je weet; alleen de titel is verplicht.';
+    bulkRecipeStatus.textContent = 'Niet alles gevonden, vul aan wat je weet';
   }
 }
 
@@ -4687,9 +4690,8 @@ function updateBulkQuickSave() {
   // Bij één compleet recept is dit gewoon 'Opslaan & volgende'.
   box.hidden = count < 2;
   if (box.hidden) return;
-  document.getElementById('bulkQuickSaveText').textContent =
-    `${count} recepten zijn helemaal herkend. Die kun je in één keer opslaan.`;
-  btn.textContent = `Sla ${count} recepten op`;
+  document.getElementById('bulkQuickSaveText').textContent = `${count} recepten zijn al compleet.`;
+  btn.textContent = 'Sla ze direct op';
 }
 
 async function quickSaveCompleteBulkItems() {

@@ -756,7 +756,10 @@
 
         <div id="bulkReviewStep" class="bulk-review" hidden>
           <div class="bulk-progress">
-            <p id="bulkProgressLabel" class="bulk-progress-label" aria-live="polite"></p>
+            <div class="bulk-progress-row">
+              <p id="bulkProgressLabel" class="bulk-progress-label" aria-live="polite"></p>
+              <button type="button" id="bulkStopBtn" class="bulk-stop-btn">Stoppen</button>
+            </div>
             <ol id="bulkProgressBar" class="bulk-progress-bar" aria-hidden="true"></ol>
           </div>
 
@@ -773,10 +776,9 @@
               <div class="bulk-recipe-meta">
                 <p id="bulkRecipeDomain" class="bulk-recipe-domain"></p>
                 <a id="bulkRecipeLink" class="bulk-recipe-link" href="#" target="_blank" rel="noopener">Bekijk recept <img src="icons/externe-link.svg" alt="" class="bulk-recipe-link-icon" /></a>
+                <p id="bulkRecipeStatus" class="bulk-recipe-status" aria-live="polite"></p>
               </div>
             </div>
-
-            <p id="bulkRecipeStatus" class="bulk-recipe-status" aria-live="polite"></p>
 
             <div class="add-recipe-grid">
               <div class="add-recipe-field">
@@ -800,17 +802,16 @@
                 <select id="bulkTimeRequired" data-options-from="timeRequiredNew" data-field-name="Tijd"></select>
               </div>
               <div class="add-recipe-field">
-                <label for="bulkCalories">Calorieën <span class="add-recipe-optional">optioneel</span></label>
+                <label for="bulkCalories">Calorieën <span class="bulk-optional">optioneel</span></label>
                 <input id="bulkCalories" type="number" min="0" inputmode="numeric" placeholder="bijv. 450 per persoon" />
               </div>
             </div>
-          </section>
 
-          <div class="bulk-actions">
-            <button type="button" id="bulkSkipBtn" class="ghost-btn">Overslaan</button>
-            <button type="submit" id="bulkSaveBtn" class="green-btn">Opslaan &amp; volgende</button>
-          </div>
-          <button type="button" id="bulkStopBtn" class="bulk-stop-btn">Stoppen</button>
+            <div class="bulk-actions">
+              <button type="button" id="bulkSkipBtn" class="bulk-secondary-btn">Overslaan</button>
+              <button type="submit" id="bulkSaveBtn" class="green-btn bulk-primary-btn">Opslaan &amp; volgende</button>
+            </div>
+          </section>
         </div>
 
         <section id="bulkDoneStep" class="add-recipe-section bulk-done" hidden>
@@ -823,8 +824,8 @@
           </div>
           <ul id="bulkDoneList" class="bulk-done-list"></ul>
           <div class="bulk-actions">
-            <button type="button" id="bulkAgainBtn" class="ghost-btn">Meer links plakken</button>
-            <button type="button" id="bulkToOverviewBtn" class="green-btn">Naar overzicht</button>
+            <button type="button" id="bulkAgainBtn" class="bulk-secondary-btn">Meer links plakken</button>
+            <button type="button" id="bulkToOverviewBtn" class="green-btn bulk-primary-btn">Naar overzicht</button>
           </div>
         </section>
       </form>
