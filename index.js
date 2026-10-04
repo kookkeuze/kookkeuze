@@ -543,10 +543,57 @@ function fetchRecipeImage(url) {
   return bezig;
 }
 
+const PHOTO_REVEAL_MS = 200;
+
+// Een foto pas laten zien als hij helemaal binnen is. Zonder dit verdwijnt het
+// glimmende laadvlak meteen en zie je een leeg vak waarin de foto regel voor
+// regel opbouwt. Nu laadt de foto ín het laadvlak (dat even groot is) en komt
+// er met een korte fade overheen; daarna neemt hij de plek van het vlak over.
+// Zit de foto al in het geheugen van de browser, dan staat hij er meteen.
+function revealPhoto(img, placeholder, onSettled) {
+  img.classList.add('photo-reveal');
+  if (placeholder) {
+    img.classList.add('photo-overlay');
+    placeholder.appendChild(img);
+  }
+
+  const settle = () => {
+    if (placeholder?.isConnected) {
+      img.classList.remove('photo-overlay');
+      placeholder.replaceWith(img);
+    }
+    onSettled?.();
+  };
+
+  if (img.complete && img.naturalWidth > 0) {
+    img.classList.add('is-revealed');
+    settle();
+    return;
+  }
+
+  // Geen requestAnimationFrame: dat loopt niet in een verborgen tabblad, en
+  // dan zou de foto onzichtbaar blijven tot je terugkomt. De img stond al
+  // met opacity 0 in de pagina, dus de fade loopt ook zo.
+  img.addEventListener('load', () => {
+    img.classList.add('is-revealed');
+    setTimeout(settle, PHOTO_REVEAL_MS + 40);
+  }, { once: true });
+}
+
+// Alles behalve het laadvlak uit de cel halen; het laadvlak blijft staan tot
+// de foto er overheen ligt.
+function keepOnlyPlaceholder(container, placeholderSelector) {
+  const placeholder = container.querySelector(placeholderSelector);
+  Array.from(container.children).forEach(child => {
+    if (child !== placeholder) child.remove();
+  });
+  return placeholder;
+}
+
 function setOverviewImage(cell, imageUrl, title) {
-  cell.innerHTML = '';
-  cell.classList.add('is-loading');
   const safeTitle = (title || 'Recept').trim();
+  const placeholder = keepOnlyPlaceholder(cell, '.recipe-thumb-skeleton');
+  cell.classList.add('is-loading');
 
   if (imageUrl) {
     const img = document.createElement('img');
@@ -554,15 +601,15 @@ function setOverviewImage(cell, imageUrl, title) {
     img.alt = safeTitle;
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';
-    img.src = imageUrl;
-    img.addEventListener('load', () => {
-      cell.classList.remove('is-loading');
-      cell.classList.add('is-loaded');
-    });
     img.addEventListener('error', () => {
       renderImageFallback(cell, safeTitle);
     });
-    cell.appendChild(img);
+    img.src = imageUrl;
+    if (!placeholder) cell.appendChild(img);
+    revealPhoto(img, placeholder, () => {
+      cell.classList.remove('is-loading');
+      cell.classList.add('is-loaded');
+    });
     return;
   }
 
@@ -582,8 +629,8 @@ function getImageSourceLabel(rawUrl) {
 }
 
 function setResultCardImage(container, imageUrl, title) {
-  container.innerHTML = '';
   const safeTitle = (title || 'Recept').trim();
+  const placeholder = keepOnlyPlaceholder(container, '.recipe-card-image-skeleton');
 
   if (imageUrl) {
     const img = document.createElement('img');
@@ -591,11 +638,12 @@ function setResultCardImage(container, imageUrl, title) {
     img.alt = safeTitle;
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';
-    img.src = imageUrl;
     img.addEventListener('error', () => {
       container.innerHTML = '<div class="recipe-card-image-fallback">Geen foto</div>';
     });
-    container.appendChild(img);
+    img.src = imageUrl;
+    if (!placeholder) container.appendChild(img);
+    revealPhoto(img, placeholder);
 
     // Subtiele bronvermelding onderin de foto (originele site).
     let sourceUrl = '';
@@ -4433,10 +4481,7 @@ function renderBulkItem() {
   if (bulkRecipeDomain) bulkRecipeDomain.textContent = domain;
   if (bulkRecipeLink) bulkRecipeLink.href = item.url;
 
-  if (bulkRecipePhoto) {
-    bulkRecipePhoto.innerHTML = '';
-    bulkRecipePhoto.classList.add('is-empty');
-  }
+  if (bulkRecipePhoto) bulkRecipePhoto.innerHTML = '';
 
   bulkTitleInput.value = '';
   bulkCaloriesInput.value = '';
@@ -4467,10 +4512,11 @@ function renderBulkItem() {
     img.alt = '';
     img.referrerPolicy = 'no-referrer';
     img.src = imageUrl;
-    img.addEventListener('load', () => bulkRecipePhoto.classList.remove('is-empty'));
     img.addEventListener('error', () => img.remove());
     bulkRecipePhoto.innerHTML = '';
     bulkRecipePhoto.appendChild(img);
+    // Het lichtgroene vak blijft staan; de foto komt er met een fade overheen.
+    revealPhoto(img, null);
   });
 
   // Wat na het invullen nog leeg is, markeren. Niet op info.missing leunen:
@@ -4688,8 +4734,12 @@ function updateBulkQuickSave() {
   if (!box || !btn || btn.disabled) return;
   const count = bulkItems.filter(isBulkItemComplete).length;
   // Bij één compleet recept is dit gewoon 'Opslaan & volgende'.
-  box.hidden = count < 2;
-  if (box.hidden) return;
+  const show = count >= 2;
+  // Via een klasse in plaats van 'hidden': dan kan de balk openschuiven in
+  // plaats van de kaart eronder in één klap omlaag te duwen.
+  box.classList.toggle('is-visible', show);
+  box.setAttribute('aria-hidden', String(!show));
+  if (!show) return;
   document.getElementById('bulkQuickSaveText').textContent = `${count} recepten zijn al compleet.`;
   btn.textContent = 'Sla ze direct op';
 }

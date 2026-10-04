@@ -765,14 +765,18 @@
 
           <!-- Verschijnt zodra twee of meer recepten volledig herkend zijn:
                die hoef je dan niet allemaal langs te lopen. -->
-          <div id="bulkQuickSave" class="bulk-quick-save" hidden>
-            <p id="bulkQuickSaveText" class="bulk-quick-save-text"></p>
-            <button type="button" id="bulkQuickSaveBtn" class="green-btn bulk-quick-save-btn"></button>
+          <div id="bulkQuickSave" class="bulk-quick-save" aria-hidden="true">
+            <div class="bulk-quick-save-clip">
+              <div class="bulk-quick-save-body">
+                <p id="bulkQuickSaveText" class="bulk-quick-save-text"></p>
+                <button type="button" id="bulkQuickSaveBtn" class="green-btn bulk-quick-save-btn"></button>
+              </div>
+            </div>
           </div>
 
           <section class="add-recipe-section bulk-recipe-card">
             <div class="bulk-recipe-head">
-              <div id="bulkRecipePhoto" class="bulk-recipe-photo is-empty" aria-hidden="true"></div>
+              <div id="bulkRecipePhoto" class="bulk-recipe-photo" aria-hidden="true"></div>
               <div class="bulk-recipe-meta">
                 <p id="bulkRecipeDomain" class="bulk-recipe-domain"></p>
                 <a id="bulkRecipeLink" class="bulk-recipe-link" href="#" target="_blank" rel="noopener">Bekijk recept <img src="icons/externe-link.svg" alt="" class="bulk-recipe-link-icon" /></a>

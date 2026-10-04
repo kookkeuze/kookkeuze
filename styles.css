@@ -1104,10 +1104,48 @@ select:focus {
   overflow-x: hidden;
   z-index: 1200;
   display: none;
+  /* Openen: de lijst komt een paar pixels uit het veld en wordt zichtbaar.
+     'display ... allow-discrete' plus @starting-style laat dat werken terwijl
+     de lijst dicht echt 'display: none' blijft (en dus nergens een
+     scrollbalk of klikvlak achterlaat). Oudere browsers slaan de animatie
+     gewoon over. Sluiten gaat sneller dan openen. */
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  transform-origin: top center;
+  transition:
+    opacity 100ms var(--ease-out),
+    transform 100ms var(--ease-out),
+    display 100ms allow-discrete;
 }
 
 .multi-select.open .multi-select-menu {
   display: block;
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 150ms var(--ease-out),
+    transform 150ms var(--ease-out),
+    display 150ms allow-discrete;
+}
+
+@starting-style {
+  .multi-select.open .multi-select-menu {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .multi-select-menu,
+  .multi-select.open .multi-select-menu {
+    transform: none;
+  }
+
+  @starting-style {
+    .multi-select.open .multi-select-menu {
+      transform: none;
+    }
+  }
 }
 
 .multi-select-option {
@@ -1540,6 +1578,33 @@ select:focus {
 
 .overview-image-cell.is-loaded .recipe-thumb-skeleton {
   display: none;
+}
+
+/* Receptfoto's (zie revealPhoto in index.js): de foto laadt ín het laadvlak
+   en fadet erover zodra hij binnen is. -1px en +2px omdat het laadvlak een
+   rand van 1px heeft: zo ligt de foto precies over het hele vlak en verspringt
+   er niets als hij daarna de plek van het vlak overneemt. Een fade is ook
+   met 'minder beweging' prima: er beweegt niets. */
+.recipe-thumb-skeleton,
+.recipe-card-image-skeleton {
+  position: relative;
+}
+
+.photo-reveal {
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out);
+}
+
+.photo-reveal.is-revealed {
+  opacity: 1;
+}
+
+.photo-overlay {
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: calc(100% + 2px) !important;
+  height: calc(100% + 2px) !important;
 }
 
 /* Details rij styling */
@@ -6300,9 +6365,11 @@ body.mobile-menu-open .mobile-nav-header {
 
 /* Eén recept tegelijk, dus geen reden om de hele schermbreedte te vullen:
    een smallere kolom met twee velden naast elkaar leest rustiger. */
+/* Tussenruimte via marges in plaats van 'gap': de snel-opslaan-balk moet zijn
+   eigen ruimte kunnen inklappen, en een gap blijft ook rond een lege rij staan. */
 .bulk-review {
-  display: grid;
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
   max-width: 720px;
   scroll-margin-top: 90px;
 }
@@ -6356,7 +6423,45 @@ body.mobile-menu-open .mobile-nav-header {
   background: #9fdba7;
 }
 
-.bulk-quick-save {
+.bulk-review > * + * {
+  margin-top: 14px;
+}
+
+/* De balk verschijnt halverwege, als recepten op de achtergrond binnenkomen.
+   Hij schuift open (rijhoogte 0fr -> 1fr, plus zijn eigen tussenruimte) zodat
+   de kaart eronder rustig meezakt in plaats van onder je vinger weg te
+   springen. */
+.bulk-review > .bulk-quick-save {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-top: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows var(--duration-base) var(--ease-standard),
+    margin-top var(--duration-base) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-out),
+    visibility 0s linear var(--duration-base);
+}
+
+.bulk-review > .bulk-quick-save.is-visible {
+  grid-template-rows: 1fr;
+  margin-top: 14px;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    grid-template-rows var(--duration-base) var(--ease-standard),
+    margin-top var(--duration-base) var(--ease-standard),
+    opacity var(--duration-base) var(--ease-out) 60ms,
+    visibility 0s;
+}
+
+.bulk-quick-save-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bulk-quick-save-body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -6366,8 +6471,12 @@ body.mobile-menu-open .mobile-nav-header {
   background: #eef8f0;
 }
 
-.bulk-quick-save[hidden] {
-  display: none;
+/* Minder beweging: niet openschuiven, alleen in- en uitfaden. */
+@media (prefers-reduced-motion: reduce) {
+  .bulk-review > .bulk-quick-save,
+  .bulk-review > .bulk-quick-save.is-visible {
+    transition: opacity var(--duration-fast) var(--ease-out), visibility 0s;
+  }
 }
 
 .bulk-quick-save-text {
