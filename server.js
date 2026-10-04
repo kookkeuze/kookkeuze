@@ -846,6 +846,7 @@ function mapDishType(text) {
     { key: 'quiche', value: 'Hartige taart' },
     { key: 'ovenschotel', value: 'Ovenschotel' },
     { key: 'ovenschaal', value: 'Ovenschotel' },
+    { key: 'gratin', value: 'Ovenschotel' },
     { key: 'uit de oven', value: 'Ovenschotel' },
     { key: 'wrap', value: 'Wraps' },
     { key: 'tortilla', value: 'Wraps' },
@@ -1048,7 +1049,54 @@ function cleanInstagramCaption(ogDescription) {
   return s.replace(/^["“”]|["“”]\s*\.?\s*$/g, '').trim();
 }
 
-async function fetchInstagramCaption(url) {
+// Shortcode uit /p/<code>/, /reel/<code>/, /reels/<code>/, /tv/<code>/,
+// ook met een gebruikersnaam ervoor (/jorisdekock/reel/<code>/).
+function extractInstagramShortcode(url) {
+  try {
+    const parts = new URL(url).pathname.split('/').filter(Boolean);
+    const i = parts.findIndex(p => /^(p|reel|reels|tv)$/i.test(p));
+    const code = i >= 0 ? parts[i + 1] : null;
+    return code && /^[A-Za-z0-9_-]{5,}$/.test(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+// Alleen echte mediabestanden; de inlogpagina heeft als og:image het
+// Instagram-logo op static.cdninstagram.com.
+function isInstagramMediaImage(url) {
+  try {
+    const u = new URL(url);
+    return INSTAGRAM_CDN_HOST_RE.test(u.hostname) && !/^static\./i.test(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+// Vanaf een datacenter-IP (Railway) krijgt een gewone bericht-pagina de
+// inlogmuur, ook met een bot-User-Agent. Het oEmbed-endpoint geeft JSON met de
+// volledige caption in `title` en een thumbnail, en valt daar niet onder.
+// Het accepteert geen /reels/-links, dus we sturen altijd /p/<code>/.
+async function fetchInstagramViaOembed(shortcode, viaBrowser) {
+  const postUrl = `https://www.instagram.com/p/${shortcode}/`;
+  const endpoint = `https://www.instagram.com/api/v1/oembed/?url=${encodeURIComponent(postUrl)}`;
+  const headers = { 'User-Agent': DEFAULT_HTML_HEADERS['User-Agent'], 'Accept': 'application/json' };
+  const response = viaBrowser
+    ? await browserFetch(endpoint, { headers, timeoutMs: 10000 })
+    : await fetch(endpoint, { headers, signal: AbortSignal.timeout(10000) });
+  if (!response.ok) return { failed: `oembed${viaBrowser ? '/browser' : ''} ${response.status}` };
+  const data = JSON.parse(await response.text());
+  // Instagram zet een U+2028 aan het eind van regels met een kopje.
+  const caption = String(data.title || '').replace(/[\u2028\u2029]\n?/g, '\n').trim();
+  if (!caption) return { failed: `oembed${viaBrowser ? '/browser' : ''} geen caption` };
+  return {
+    caption,
+    ogTitle: data.author_name ? `${data.author_name} on Instagram` : null,
+    imageUrl: isInstagramMediaImage(data.thumbnail_url) ? data.thumbnail_url : null
+  };
+}
+
+async function fetchInstagramViaHtml(url) {
   const botUserAgents = [
     'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
     'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
@@ -1065,13 +1113,53 @@ async function fetchInstagramCaption(url) {
       const html = await response.text();
       const caption = cleanInstagramCaption(extractOgContent(html, 'og:description'));
       if (caption) {
-        return { caption, ogTitle: extractOgContent(html, 'og:title') };
+        const image = [extractOgContent(html, 'og:image'), ...extractInstagramCdnImagesFromHtml(html)]
+          .find(isInstagramMediaImage) || null;
+        return { caption, ogTitle: extractOgContent(html, 'og:title'), imageUrl: image };
       }
     } catch (_err) {
       // probeer volgende user-agent
     }
   }
+  return { failed: 'html' };
+}
+
+// /api/recipe-info en /api/recipe-image vragen hetzelfde bericht vrijwel
+// tegelijk op; zo gaat er maar één verzoek naar Instagram.
+const INSTAGRAM_POST_TTL_MS = 60 * 60 * 1000;
+const INSTAGRAM_POST_FAIL_TTL_MS = 2 * 60 * 1000;
+const instagramPostCache = new Map();
+
+async function loadInstagramPost(url) {
+  const shortcode = extractInstagramShortcode(url);
+  const attempts = shortcode
+    ? [() => fetchInstagramViaOembed(shortcode, false), () => fetchInstagramViaOembed(shortcode, true), () => fetchInstagramViaHtml(url)]
+    : [() => fetchInstagramViaHtml(url)];
+  const failures = [];
+  for (const attempt of attempts) {
+    try {
+      const result = await attempt();
+      if (result && result.caption) return result;
+      failures.push(result?.failed || 'leeg');
+    } catch (err) {
+      failures.push(err.message);
+    }
+  }
+  console.warn(`⚠️ Instagram-bericht niet uitgelezen (${shortcode || url}): ${failures.join(' | ')}`);
   return null;
+}
+
+function fetchInstagramPost(url) {
+  const key = extractInstagramShortcode(url) || url;
+  const cached = instagramPostCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.promise;
+  const entry = { promise: loadInstagramPost(url), expiresAt: Date.now() + INSTAGRAM_POST_TTL_MS };
+  instagramPostCache.set(key, entry);
+  entry.promise.then(post => {
+    if (!post) entry.expiresAt = Date.now() + INSTAGRAM_POST_FAIL_TTL_MS;
+  });
+  if (instagramPostCache.size > 500) instagramPostCache.delete(instagramPostCache.keys().next().value);
+  return entry.promise;
 }
 
 // Verwijder leidende opsommingstekens én emoji/symbolen van een regel.
@@ -1106,6 +1194,10 @@ const INGREDIENTS_HEADER_RE = /^(ingredi[eë]nten?|ingredients?|wat (je |heb je 
 const SECTION_STOP_RE = /^(bereiding|bereidingswijze|werkwijze|instructie|instructions?|method|directions?|stappen|stap\b|aanpak|how to|preparation|voorbereiding|nutrition|voedingswaarde|macro|per (serving|portie|burrito)|total per|total\b|smakelijk|eet smakelijk|enjoy)\b/i;
 // Regels die we binnen de lijst overslaan: hashtags, voedingswaarde, calls-to-action.
 const INGREDIENT_SKIP_RE = /^(#|calorie|protein|eiwit|carb|koolhydr|fats?\b|vet\b|kcal|follow|link in bio|tag\b|save this|comment|sla dit|deel (dit|het)|volg |bewaar)/i;
+// Genummerde bereidingsstap ("1. Verhit olie…", "2) Voeg…"): de bereiding is
+// begonnen, ook als er geen "Bereiding"-kopje boven staat. "1.5 kg" valt hier
+// niet onder (geen spatie + letter na de punt).
+const STEP_LINE_RE = /^\d{1,2}\s*[.)]\s+\p{L}/u;
 
 // Sub-kopje binnen de ingrediënten ("Saus", "Afwerking", "Voor de saus:", "To make ...:").
 // Een regel die op ':' eindigt is altijd een kopje; verder een vaste lijst losse labels.
@@ -1127,7 +1219,7 @@ function parseIngredientsFromCaption(caption) {
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i];
       if (!line) continue;
-      if (SECTION_STOP_RE.test(line)) break;
+      if (SECTION_STOP_RE.test(line) || STEP_LINE_RE.test(line)) break;
       if (isIngredientSubHeader(line) || INGREDIENT_SKIP_RE.test(line)) continue;
       const cleaned = normalizeIngredientText(stripLeadingBullet(line));
       if (cleaned) items.push(cleaned);
@@ -1140,7 +1232,7 @@ function parseIngredientsFromCaption(caption) {
   let stopped = false;
   for (const line of lines) {
     if (!line) continue;
-    if (SECTION_STOP_RE.test(line)) { stopped = true; continue; }
+    if (SECTION_STOP_RE.test(line) || STEP_LINE_RE.test(line)) { stopped = true; continue; }
     if (stopped || INGREDIENT_SKIP_RE.test(line)) continue;
     if (!looksLikeIngredientLine(line)) continue;
     const cleaned = normalizeIngredientText(stripLeadingBullet(line));
@@ -1196,8 +1288,36 @@ function parseCaloriesFromCaption(caption) {
   return m ? parseInt(m[1], 10) : null;
 }
 
+// Captions noemen zelden een totale tijd; meestal staat er per stap een duur
+// ("8-10 minuten glazig", "20-25 minuten in de oven"). Een expliciet label
+// gaat voor; anders tellen we de stappen op, met de bovengrens van een bereik.
+const CAPTION_TIME_LABEL_RE = /(?:bereidingstijd|kooktijd|totale?\s*tijd|klaar in|ready in|total time|prep time|cook time)\s*[:\-]?\s*([^\n.,;|]{1,40})/i;
+const CAPTION_DURATION_RE = /(\d+(?:[.,]\d+)?)(?:\s*(?:-|–|tot|à)\s*(\d+(?:[.,]\d+)?))?\s*(uur|uren|hours?|hrs?|minuten|minuut|mins?)\b/gi;
+
+function parseCaptionMinutes(caption) {
+  const label = caption.match(CAPTION_TIME_LABEL_RE);
+  const labelled = label ? parseDurationToMinutes(label[1]) : null;
+  if (labelled) return labelled;
+  let total = 0;
+  for (const m of caption.matchAll(CAPTION_DURATION_RE)) {
+    const value = parseFloat((m[2] || m[1]).replace(',', '.'));
+    total += /^(uur|uren|hour|hrs?)/i.test(m[3]) ? value * 60 : value;
+  }
+  return total > 0 ? Math.round(total) : null;
+}
+
+// De tekst vóór de ingrediëntenlijst: receptnaam en intro. Losse ingrediënten
+// zoals "bouillon" mogen de soort gerecht niet bepalen ("Soep").
+function captionLeadText(caption) {
+  const lines = caption.split(/\r?\n/);
+  const end = lines.findIndex(l => INGREDIENTS_HEADER_RE.test(l.trim()) || looksLikeIngredientLine(l));
+  return (end >= 0 ? lines.slice(0, end) : lines).join('\n');
+}
+
+const MAIN_DISH_TYPES = new Set(['Ovenschotel', 'Pasta', 'Rijst', 'Wraps', 'Hartige taart', 'Kip', 'Rund', 'Varken', 'Vis']);
+
 async function buildInstagramPayload(url) {
-  const data = await fetchInstagramCaption(url);
+  const data = await fetchInstagramPost(url);
   if (!data || !data.caption) {
     return { error: 'Kon de Instagram-beschrijving niet uitlezen. Het bericht is mogelijk privé, verwijderd of heeft geen tekst.' };
   }
@@ -1205,19 +1325,18 @@ async function buildInstagramPayload(url) {
   const caption = data.caption;
   const title = parseTitleFromCaption(caption, data.ogTitle);
 
-  // Soort/menugang bepalen we op de receptnaam + intro (de tekst vóór de
-  // ingrediëntenlijst). Zo triggeren losse ingrediënten zoals "bouillon" geen
-  // verkeerde soort ("Soep"). Doel/tijd/calorieën mogen uit de hele caption.
-  const headerMatch = caption.search(/\n\s*(?:ingredi[eë]nten?|ingredients?|wat (?:je |heb je )?nodig|what you(?:'?ll)? need|boodschappen|benodigdheden|je hebt nodig|dit heb je nodig)/i);
-  const leadText = (headerMatch >= 0 ? caption.slice(0, headerMatch) : caption);
-  const dishSource = `${title || ''} ${leadText}`.toLowerCase();
+  // Soort/menugang op receptnaam + intro; doel/tijd/calorieën uit de hele caption.
+  const dishSource = `${title || ''} ${captionLeadText(caption)}`.toLowerCase();
   const fullText = caption.toLowerCase();
-  const minutes = parseDurationToMinutes(caption);
+  const minutes = parseCaptionMinutes(caption);
+  const dishType = mapDishType(dishSource);
 
   const payload = {
     title,
-    dish_type: mapDishType(dishSource),
-    meal_category: mapMealCategory(dishSource),
+    dish_type: dishType,
+    // Zonder expliciete menugang is een ovenschotel, pasta of vleesgerecht
+    // vrijwel altijd het hoofdgerecht.
+    meal_category: mapMealCategory(dishSource) || (MAIN_DISH_TYPES.has(dishType) ? 'Hoofdgerecht' : null),
     meal_type: mapMealType(fullText),
     time_required: mapTimeRequired(minutes),
     calories: parseCaloriesFromCaption(caption),
@@ -2117,6 +2236,20 @@ app.get('/api/recipe-image', async (req, res) => {
   const deadline = Date.now() + RECIPE_IMAGE_BUDGET_MS;
 
   try {
+    // De HTML-pagina geeft vanaf onze server de inlogmuur met het Instagram-
+    // logo als og:image; de thumbnail komt uit dezelfde opvraag als de caption.
+    if (isInstagramUrl(cacheKey)) {
+      const post = await fetchInstagramPost(cacheKey);
+      const proxied = post && post.imageUrl
+        ? `/api/image-proxy?url=${encodeURIComponent(post.imageUrl)}&ref=${encodeURIComponent('https://www.instagram.com/')}`
+        : null;
+      recipeImageCache.set(cacheKey, {
+        imageUrl: proxied,
+        expiresAt: Date.now() + (proxied ? IMAGE_CACHE_TTL_MS : IMAGE_NEGATIVE_CACHE_TTL_MS)
+      });
+      return res.json({ imageUrl: proxied });
+    }
+
     const html = await fetchHtmlWithRetries(cacheKey, deadline);
     if (!html) {
       // Niets binnen het budget. Kwam dat doordat de tijd op was, dan blokkeert
@@ -4661,6 +4794,9 @@ module.exports = {
   buildPinterestDescriptionPayload,
   buildPinterestPayload,
   cleanInstagramCaption,
+  extractInstagramShortcode,
+  fetchInstagramPost,
+  parseCaptionMinutes,
   parseIngredientsFromCaption,
   parseTitleFromCaption,
   parseCaloriesFromCaption,
