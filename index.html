@@ -439,8 +439,11 @@
            van, vandaar de extra ruimte en het streepje ertussen. -->
       <div class="add-recipe-toolbar">
         <div class="add-recipe-mode-switch" role="group" aria-label="Manier van toevoegen kiezen" data-active-mode="link">
-          <button type="button" id="modeLinkBtn" class="add-recipe-mode-btn active" aria-pressed="true">Ik heb een link</button>
-          <button type="button" id="modeOwnBtn" class="add-recipe-mode-btn" aria-pressed="false">Ik heb een eigen recept</button>
+          <!-- Op een telefoon passen drie keer 'Ik heb ...' niet naast elkaar;
+               dan blijft alleen het korte deel staan. -->
+          <button type="button" id="modeLinkBtn" class="add-recipe-mode-btn active" aria-pressed="true"><span class="mode-long">Ik heb een link</span><span class="mode-short">Link</span></button>
+          <button type="button" id="modeBulkBtn" class="add-recipe-mode-btn" aria-pressed="false"><span class="mode-long">Ik heb meerdere links</span><span class="mode-short">Meerdere links</span></button>
+          <button type="button" id="modeOwnBtn" class="add-recipe-mode-btn" aria-pressed="false"><span class="mode-long">Ik heb een eigen recept</span><span class="mode-short">Eigen recept</span></button>
         </div>
 
         <span class="add-recipe-toolbar-divider" aria-hidden="true"></span>
@@ -714,6 +717,96 @@
         </section>
 
         <button type="submit" class="green-btn">Recept opslaan</button>
+      </form>
+
+      <!-- Meerdere links: eerst alles in één keer plakken, daarna loop je de
+           recepten één voor één langs. De keuzelijsten krijgen hun opties uit
+           het formulier hierboven (data-options-from), zodat ze gelijk blijven. -->
+      <form id="bulkRecipeForm" hidden novalidate>
+        <section id="bulkPasteStep" class="add-recipe-section">
+          <div class="add-recipe-section-head">
+            <span class="add-recipe-step-badge" aria-hidden="true">1</span>
+            <div class="add-recipe-section-title">
+              <h3>Plak je links</h3>
+              <p>Tot 20 tegelijk. Onder elkaar, met spaties ertussen of midden in een appje: wij halen de links eruit.</p>
+            </div>
+          </div>
+
+          <div class="add-recipe-field">
+            <label for="bulkUrls" class="sr-only">Recept-links</label>
+            <textarea id="bulkUrls" rows="6" placeholder="https://www.ah.nl/allerhande/recept/...&#10;https://www.instagram.com/reel/..."></textarea>
+            <p id="bulkUrlCount" class="bulk-url-count" aria-live="polite"></p>
+          </div>
+
+          <button type="submit" id="bulkStartBtn" class="green-btn" disabled>Recepten ophalen</button>
+        </section>
+
+        <div id="bulkReviewStep" class="bulk-review" hidden>
+          <div class="bulk-progress">
+            <p id="bulkProgressLabel" class="bulk-progress-label" aria-live="polite"></p>
+            <ol id="bulkProgressBar" class="bulk-progress-bar" aria-hidden="true"></ol>
+          </div>
+
+          <section class="add-recipe-section bulk-recipe-card">
+            <div class="bulk-recipe-head">
+              <div id="bulkRecipePhoto" class="bulk-recipe-photo is-empty" aria-hidden="true"></div>
+              <div class="bulk-recipe-meta">
+                <p id="bulkRecipeDomain" class="bulk-recipe-domain"></p>
+                <a id="bulkRecipeLink" class="bulk-recipe-link" href="#" target="_blank" rel="noopener">Bekijk recept <img src="icons/externe-link.svg" alt="" class="bulk-recipe-link-icon" /></a>
+              </div>
+            </div>
+
+            <p id="bulkRecipeStatus" class="bulk-recipe-status" aria-live="polite"></p>
+
+            <div class="add-recipe-grid">
+              <div class="add-recipe-field">
+                <label for="bulkTitle">Titel</label>
+                <input id="bulkTitle" type="text" maxlength="255" />
+              </div>
+              <div class="add-recipe-field">
+                <label for="bulkDishType">Soort gerecht</label>
+                <select id="bulkDishType" data-options-from="dishTypeNew" data-field-name="Soort gerecht"></select>
+              </div>
+              <div class="add-recipe-field">
+                <label for="bulkMealCategory">Menugang</label>
+                <select id="bulkMealCategory" data-options-from="mealCategoryNew" data-field-name="Menugang"></select>
+              </div>
+              <div class="add-recipe-field">
+                <label for="bulkMealType">Doel gerecht</label>
+                <select id="bulkMealType" data-options-from="mealTypeNew" data-field-name="Doel gerecht"></select>
+              </div>
+              <div class="add-recipe-field">
+                <label for="bulkTimeRequired">Tijd</label>
+                <select id="bulkTimeRequired" data-options-from="timeRequiredNew" data-field-name="Tijd"></select>
+              </div>
+              <div class="add-recipe-field">
+                <label for="bulkCalories">Calorieën <span class="add-recipe-optional">optioneel</span></label>
+                <input id="bulkCalories" type="number" min="0" inputmode="numeric" placeholder="bijv. 450 per persoon" />
+              </div>
+            </div>
+          </section>
+
+          <div class="bulk-actions">
+            <button type="button" id="bulkSkipBtn" class="ghost-btn">Overslaan</button>
+            <button type="submit" id="bulkSaveBtn" class="green-btn">Opslaan &amp; volgende</button>
+          </div>
+          <button type="button" id="bulkStopBtn" class="bulk-stop-btn">Stoppen</button>
+        </div>
+
+        <section id="bulkDoneStep" class="add-recipe-section bulk-done" hidden>
+          <div class="add-recipe-section-head">
+            <span class="add-recipe-step-badge" aria-hidden="true"><i class="fas fa-check"></i></span>
+            <div class="add-recipe-section-title">
+              <h3 id="bulkDoneTitle"></h3>
+              <p id="bulkDoneSubtitle"></p>
+            </div>
+          </div>
+          <ul id="bulkDoneList" class="bulk-done-list"></ul>
+          <div class="bulk-actions">
+            <button type="button" id="bulkAgainBtn" class="ghost-btn">Meer links plakken</button>
+            <button type="button" id="bulkToOverviewBtn" class="green-btn">Naar overzicht</button>
+          </div>
+        </section>
       </form>
 
       <div id="addMessage"></div>

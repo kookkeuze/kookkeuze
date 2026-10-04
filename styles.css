@@ -730,6 +730,7 @@ button {
 }
 
 #addRecipeForm,
+#bulkRecipeForm,
 #ownRecipeForm,
 #ownRecipeEditForm {
   width: 100%;
@@ -842,6 +843,7 @@ button {
 }
 
 #addRecipeForm .add-recipe-field > label,
+#bulkRecipeForm .add-recipe-field > label,
 #ownRecipeForm .add-recipe-field > label,
 #ownRecipeEditForm .add-recipe-field > label,
 .add-recipe-field > .add-recipe-field-label {
@@ -923,6 +925,8 @@ button {
 #addRecipeForm input,
 #addRecipeForm select,
 #addRecipeForm textarea,
+#bulkRecipeForm input,
+#bulkRecipeForm textarea,
 #ownRecipeForm input,
 #ownRecipeForm select,
 #ownRecipeForm textarea,
@@ -942,6 +946,8 @@ button {
 #addRecipeForm input:focus,
 #addRecipeForm select:focus,
 #addRecipeForm textarea:focus,
+#bulkRecipeForm input:focus,
+#bulkRecipeForm textarea:focus,
 #ownRecipeForm input:focus,
 #ownRecipeForm select:focus,
 #ownRecipeForm textarea:focus,
@@ -954,6 +960,7 @@ button {
 }
 
 #addRecipeForm textarea,
+#bulkRecipeForm textarea,
 #ownRecipeForm textarea,
 #ownRecipeEditForm textarea {
   min-height: 116px;
@@ -972,13 +979,15 @@ button {
   overflow: hidden;
 }
 
-#addRecipeForm .field-missing {
+#addRecipeForm .field-missing,
+#bulkRecipeForm .field-missing {
   border-color: #d8c7a1 !important;
   background-color: #fffaf0;
   box-shadow: 0 0 0 3px rgba(216, 199, 161, 0.18) !important;
 }
 
-#addRecipeForm .multi-select.field-missing .multi-select-trigger {
+#addRecipeForm .multi-select.field-missing .multi-select-trigger,
+#bulkRecipeForm .multi-select.field-missing .multi-select-trigger {
   border-color: #d8c7a1 !important;
   background-color: #fffaf0;
   box-shadow: 0 0 0 3px rgba(216, 199, 161, 0.18) !important;
@@ -1141,28 +1150,34 @@ select:focus {
 }
 
 #addRecipeForm .multi-select,
-#addRecipeForm .multi-select-trigger {
+#addRecipeForm .multi-select-trigger,
+#bulkRecipeForm .multi-select,
+#bulkRecipeForm .multi-select-trigger {
   width: 100%;
   min-width: 0;
   max-width: 100%;
 }
 
-#addRecipeForm .multi-select-menu {
+#addRecipeForm .multi-select-menu,
+#bulkRecipeForm .multi-select-menu {
   padding: 10px;
 }
 
-#addRecipeForm .multi-select-option {
+#addRecipeForm .multi-select-option,
+#bulkRecipeForm .multi-select-option {
   grid-template-columns: 18px minmax(0, 1fr);
   column-gap: 12px;
   padding: 9px 10px;
 }
 
-#addRecipeForm .multi-select-option input {
+#addRecipeForm .multi-select-option input,
+#bulkRecipeForm .multi-select-option input {
   width: 18px;
   height: 18px;
 }
 
-#addRecipeForm .multi-select-option span {
+#addRecipeForm .multi-select-option span,
+#bulkRecipeForm .multi-select-option span {
   line-height: 1.4;
 }
 
@@ -5985,6 +6000,7 @@ body.mobile-menu-open .mobile-nav-header {
    elkaar en gaat pas vanaf 760px naast elkaar staan. */
 
 #addRecipeForm[hidden],
+#bulkRecipeForm[hidden],
 #ownRecipeForm[hidden] {
   display: none;
 }
@@ -6015,7 +6031,7 @@ body.mobile-menu-open .mobile-nav-header {
 .add-recipe-mode-switch {
   position: relative;
   display: inline-grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
   padding: 3px;
   background: linear-gradient(135deg, #edf7ef 0%, #f9fcfa 100%);
@@ -6031,7 +6047,7 @@ body.mobile-menu-open .mobile-nav-header {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: calc((100% - 6px) / 2);
+  width: calc((100% - 6px) / 3);
   height: calc(100% - 6px);
   border-radius: 999px;
   background: #ffffff;
@@ -6040,8 +6056,18 @@ body.mobile-menu-open .mobile-nav-header {
   z-index: 0;
 }
 
-.add-recipe-mode-switch[data-active-mode="own"]::before {
+.add-recipe-mode-switch[data-active-mode="bulk"]::before {
   transform: translateX(100%);
+}
+
+.add-recipe-mode-switch[data-active-mode="own"]::before {
+  transform: translateX(200%);
+}
+
+/* Lange tekst op een breed scherm, korte op de telefoon (zie de media query
+   hieronder): drie keer 'Ik heb ...' past niet naast elkaar op 375 px. */
+.add-recipe-mode-btn .mode-short {
+  display: none;
 }
 
 .add-recipe-mode-btn {
@@ -6083,8 +6109,257 @@ body.mobile-menu-open .mobile-nav-header {
     margin: 2px 0;
   }
 
+  .add-recipe-mode-switch {
+    width: 100%;
+  }
+
   .add-recipe-mode-btn {
-    padding: 6px 12px;
+    padding: 6px 8px;
+  }
+
+  .add-recipe-mode-btn .mode-long {
+    display: none;
+  }
+
+  .add-recipe-mode-btn .mode-short {
+    display: inline;
+  }
+}
+
+/* --- Meerdere links tegelijk ---
+   Eerst een plakveld, dan recept voor recept hetzelfde soort kaart als bij
+   één link, en tot slot een lijstje met wat er is gebeurd. */
+.bulk-url-count {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: 13px;
+  color: #5f6b63;
+}
+
+#bulkRecipeForm #bulkStartBtn {
+  justify-self: start;
+  min-width: 230px;
+  padding: 13px 26px;
+  font-size: 14px;
+}
+
+#bulkRecipeForm button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+#bulkPasteStep[hidden],
+.bulk-review[hidden],
+.bulk-done[hidden] {
+  display: none;
+}
+
+.bulk-review {
+  display: grid;
+  gap: 16px;
+  scroll-margin-top: 90px;
+}
+
+.bulk-progress {
+  display: grid;
+  gap: 8px;
+}
+
+.bulk-progress-label {
+  margin: 0;
+  font-weight: 700;
+  font-size: 14px;
+  color: #2f3a35;
+}
+
+/* Eén streepje per recept: groen is opgeslagen, grijs overgeslagen, met rand
+   is het recept dat nu open staat. */
+.bulk-progress-bar {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bulk-progress-step {
+  flex: 1 1 0;
+  height: 6px;
+  border-radius: 999px;
+  background: #e3ebe5;
+}
+
+.bulk-progress-step.is-saved {
+  background: var(--green);
+}
+
+.bulk-progress-step.is-skipped {
+  background: #b9c3bc;
+}
+
+.bulk-progress-step.is-current {
+  background: #ffffff;
+  box-shadow: inset 0 0 0 2px var(--green);
+}
+
+.bulk-recipe-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.bulk-recipe-photo {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #eef4ef;
+}
+
+.bulk-recipe-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bulk-recipe-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bulk-recipe-domain {
+  margin: 0;
+  font-weight: 700;
+  color: #2f3a35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-recipe-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: #2f6a37;
+  text-decoration: none;
+}
+
+.bulk-recipe-link-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.bulk-recipe-status {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.bulk-recipe-status.is-loading {
+  background: #f3f6f4;
+  color: #5f6b63;
+}
+
+.bulk-recipe-status.is-complete {
+  background: #eaf7ec;
+  color: #2f6a37;
+}
+
+.bulk-recipe-status.is-warning {
+  background: #fffaf0;
+  color: #7b6b45;
+}
+
+.bulk-recipe-status.is-error {
+  background: #fdeeee;
+  color: #a33a3a;
+}
+
+.bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.bulk-actions > button {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 12px 18px;
+  font-size: 14px;
+  white-space: normal;
+}
+
+.bulk-stop-btn {
+  justify-self: center;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #5f6b63;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.bulk-stop-btn:hover {
+  background: transparent;
+  color: #2f3a35;
+}
+
+.bulk-done {
+  scroll-margin-top: 90px;
+}
+
+.bulk-done-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bulk-done-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: #f6f9f7;
+  font-size: 14px;
+}
+
+.bulk-done-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #2f3a35;
+}
+
+.bulk-done-state {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5f6b63;
+}
+
+.bulk-done-item.is-saved .bulk-done-state {
+  color: #2f6a37;
+}
+
+@media (max-width: 600px) {
+  #bulkRecipeForm #bulkStartBtn {
+    width: 100%;
+    min-width: 0;
   }
 }
 

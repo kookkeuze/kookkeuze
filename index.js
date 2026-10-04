@@ -4026,22 +4026,460 @@ const OWN_PHOTO_MAX_EDGE = 1400;
 const OWN_PHOTO_QUALITY = 0.82;
 
 const addRecipeModeSwitch = document.querySelector('.add-recipe-mode-switch');
+const modeBulkBtn = document.getElementById('modeBulkBtn');
+const bulkRecipeForm = document.getElementById('bulkRecipeForm');
 
 function setAddRecipeMode(mode) {
-  const own = mode === 'own';
-  addRecipeForm.hidden = own;
-  if (ownRecipeForm) ownRecipeForm.hidden = !own;
-  modeLinkBtn?.classList.toggle('active', !own);
-  modeOwnBtn?.classList.toggle('active', own);
-  modeLinkBtn?.setAttribute('aria-pressed', String(!own));
-  modeOwnBtn?.setAttribute('aria-pressed', String(own));
+  const forms = { link: addRecipeForm, bulk: bulkRecipeForm, own: ownRecipeForm };
+  const buttons = { link: modeLinkBtn, bulk: modeBulkBtn, own: modeOwnBtn };
+  if (!forms[mode]) mode = 'link';
+  Object.entries(forms).forEach(([key, form]) => {
+    if (form) form.hidden = key !== mode;
+  });
+  Object.entries(buttons).forEach(([key, btn]) => {
+    btn?.classList.toggle('active', key === mode);
+    btn?.setAttribute('aria-pressed', String(key === mode));
+  });
   // Stuurt het witte blokje van de schuif naar de gekozen kant.
-  if (addRecipeModeSwitch) addRecipeModeSwitch.dataset.activeMode = own ? 'own' : 'link';
+  if (addRecipeModeSwitch) addRecipeModeSwitch.dataset.activeMode = mode;
   if (addMessageDiv) addMessageDiv.innerHTML = '';
 }
 
 modeLinkBtn?.addEventListener('click', () => setAddRecipeMode('link'));
+modeBulkBtn?.addEventListener('click', () => setAddRecipeMode('bulk'));
 modeOwnBtn?.addEventListener('click', () => setAddRecipeMode('own'));
+
+/* ========= MEERDERE LINKS TEGELIJK =========
+   Je plakt een stapel links, daarna loop je ze één voor één langs met
+   hetzelfde soort formulier als bij één link. De informatie wordt op de
+   achtergrond alvast opgehaald, zodat het volgende recept meestal al klaarstaat
+   als je op 'Opslaan & volgende' tikt. */
+const BULK_MAX_LINKS = 20;
+// Twee tegelijk: snel genoeg, maar Instagram blokkeert ons IP sneller als we
+// er een hele stapel tegelijk op afsturen.
+const BULK_FETCH_CONCURRENCY = 2;
+
+const bulkUrlsInput = document.getElementById('bulkUrls');
+const bulkUrlCount = document.getElementById('bulkUrlCount');
+const bulkStartBtn = document.getElementById('bulkStartBtn');
+const bulkPasteStep = document.getElementById('bulkPasteStep');
+const bulkReviewStep = document.getElementById('bulkReviewStep');
+const bulkDoneStep = document.getElementById('bulkDoneStep');
+const bulkProgressLabel = document.getElementById('bulkProgressLabel');
+const bulkProgressBar = document.getElementById('bulkProgressBar');
+const bulkRecipePhoto = document.getElementById('bulkRecipePhoto');
+const bulkRecipeDomain = document.getElementById('bulkRecipeDomain');
+const bulkRecipeLink = document.getElementById('bulkRecipeLink');
+const bulkRecipeStatus = document.getElementById('bulkRecipeStatus');
+const bulkTitleInput = document.getElementById('bulkTitle');
+const bulkCaloriesInput = document.getElementById('bulkCalories');
+const bulkSaveBtn = document.getElementById('bulkSaveBtn');
+const bulkSkipBtn = document.getElementById('bulkSkipBtn');
+const bulkSelectIds = ['bulkDishType', 'bulkMealCategory', 'bulkMealType', 'bulkTimeRequired'];
+// Welk veld uit /api/recipe-info bij welke keuzelijst hoort.
+const bulkInfoFieldBySelect = {
+  bulkDishType: 'dish_type',
+  bulkMealCategory: 'meal_category',
+  bulkMealType: 'meal_type',
+  bulkTimeRequired: 'time_required'
+};
+
+// Elk item: { url, status: 'pending'|'loading'|'ready', info,
+//             result: null|'saved'|'skipped'|'existing', title }
+let bulkItems = [];
+let bulkIndex = 0;
+let bulkActiveFetches = 0;
+// Ophoger zodat antwoorden uit een afgebroken ronde niets meer aanraken.
+let bulkSession = 0;
+
+bulkSelectIds.forEach(id => {
+  const select = document.getElementById(id);
+  const source = document.getElementById(select?.dataset.optionsFrom || '');
+  if (!select || !source) return;
+  Array.from(source.options).forEach(opt => {
+    select.appendChild(new Option(opt.textContent, opt.value));
+  });
+  createMultiSelect(select, select.dataset.fieldName);
+});
+
+// Vergelijkingssleutel voor 'staat dit recept er al in': geen hoofdletters,
+// geen 'www.' en geen slash aan het eind.
+function recipeUrlKey(url) {
+  return String(url || '').trim().toLowerCase()
+    .replace(/^https?:\/\/(www\.)?/, '')
+    .replace(/\/+$/, '');
+}
+
+// Haalt alle links uit willekeurige tekst. Een link zonder https:// (zoals
+// 'www.ah.nl/...') telt ook, leestekens aan het eind van een zin niet.
+function extractRecipeLinks(text) {
+  const matches = String(text || '').match(/(?:https?:\/\/|www\.)[^\s<>"']+/gi) || [];
+  const seen = new Set();
+  const links = [];
+  matches.forEach(raw => {
+    let value = raw.replace(/[.,;:!?)\]}>]+$/, '');
+    if (!/^https?:\/\//i.test(value)) value = `https://${value}`;
+    let parsed;
+    try {
+      parsed = new URL(value);
+    } catch (_err) {
+      return;
+    }
+    const key = recipeUrlKey(parsed.toString());
+    if (seen.has(key)) return;
+    seen.add(key);
+    links.push(parsed.toString());
+  });
+  return links;
+}
+
+function updateBulkUrlCount() {
+  const links = extractRecipeLinks(bulkUrlsInput?.value);
+  if (bulkStartBtn) bulkStartBtn.disabled = links.length === 0;
+  if (!bulkUrlCount) return;
+  if (!bulkUrlsInput.value.trim()) {
+    bulkUrlCount.textContent = '';
+  } else if (!links.length) {
+    bulkUrlCount.textContent = 'Nog geen links gevonden.';
+  } else if (links.length > BULK_MAX_LINKS) {
+    bulkUrlCount.textContent = `${links.length} links gevonden. We nemen de eerste ${BULK_MAX_LINKS}; de rest kun je daarna plakken.`;
+  } else {
+    bulkUrlCount.textContent = links.length === 1 ? '1 link gevonden.' : `${links.length} links gevonden.`;
+  }
+}
+
+bulkUrlsInput?.addEventListener('input', updateBulkUrlCount);
+
+function showBulkPhase(phase) {
+  if (bulkPasteStep) bulkPasteStep.hidden = phase !== 'paste';
+  if (bulkReviewStep) bulkReviewStep.hidden = phase !== 'review';
+  if (bulkDoneStep) bulkDoneStep.hidden = phase !== 'done';
+}
+
+async function fetchExistingRecipeUrlKeys() {
+  const params = new URLSearchParams();
+  appendActiveDatabaseParam(params);
+  const res = await fetch(`${API_BASE}/api/recipes?${params.toString()}`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Kon je recepten niet ophalen.');
+  const recipes = await res.json();
+  return new Set((Array.isArray(recipes) ? recipes : []).map(recipe => recipeUrlKey(recipe.url)));
+}
+
+function pumpBulkFetches() {
+  const session = bulkSession;
+  while (bulkActiveFetches < BULK_FETCH_CONCURRENCY) {
+    const item = bulkItems.find(entry => entry.status === 'pending');
+    if (!item) return;
+    item.status = 'loading';
+    bulkActiveFetches += 1;
+    fetch(`${API_BASE}/api/recipe-info?url=${encodeURIComponent(item.url)}`, { headers: authHeaders() })
+      .then(res => res.json())
+      .catch(() => ({ error: 'Kon geen informatie ophalen. Vul de gegevens zelf in.' }))
+      .then(info => {
+        if (session !== bulkSession) return;
+        item.info = info || {};
+        item.status = 'ready';
+        if (bulkItems[bulkIndex] === item) renderBulkItem();
+      })
+      .finally(() => {
+        if (session !== bulkSession) return;
+        bulkActiveFetches -= 1;
+        pumpBulkFetches();
+      });
+  }
+}
+
+function renderBulkProgress() {
+  const reviewable = bulkItems.filter(item => item.result !== 'existing');
+  const position = reviewable.indexOf(bulkItems[bulkIndex]) + 1;
+  if (bulkProgressLabel) bulkProgressLabel.textContent = `Recept ${position} van ${reviewable.length}`;
+  if (!bulkProgressBar) return;
+  bulkProgressBar.innerHTML = reviewable.map(item => {
+    const state = item === bulkItems[bulkIndex] ? 'current' : (item.result || 'todo');
+    return `<li class="bulk-progress-step is-${state}"></li>`;
+  }).join('');
+}
+
+function clearBulkMissingState() {
+  bulkReviewStep?.querySelectorAll('.field-missing').forEach(el => el.classList.remove('field-missing'));
+  bulkReviewStep?.querySelectorAll('.field-error-text').forEach(el => el.remove());
+}
+
+function setBulkFormDisabled(disabled) {
+  bulkReviewStep?.querySelectorAll('.bulk-recipe-card input, .bulk-recipe-card .multi-select-trigger')
+    .forEach(el => { el.disabled = disabled; });
+  if (bulkSaveBtn) bulkSaveBtn.disabled = disabled;
+}
+
+function renderBulkItem() {
+  const item = bulkItems[bulkIndex];
+  if (!item) return;
+  renderBulkProgress();
+  clearBulkMissingState();
+
+  let domain = item.url;
+  try {
+    domain = new URL(item.url).hostname.replace(/^www\./, '');
+  } catch (_err) {
+    /* laat de hele url staan */
+  }
+  if (bulkRecipeDomain) bulkRecipeDomain.textContent = domain;
+  if (bulkRecipeLink) bulkRecipeLink.href = item.url;
+
+  if (bulkRecipePhoto) {
+    bulkRecipePhoto.innerHTML = '';
+    bulkRecipePhoto.classList.add('is-empty');
+  }
+
+  bulkTitleInput.value = '';
+  bulkCaloriesInput.value = '';
+  bulkSelectIds.forEach(id => document.getElementById(id)?._multiSelectApi?.clear());
+
+  if (item.status !== 'ready') {
+    bulkRecipeStatus.className = 'bulk-recipe-status is-loading';
+    bulkRecipeStatus.textContent = 'Informatie ophalen...';
+    setBulkFormDisabled(true);
+    return;
+  }
+
+  setBulkFormDisabled(false);
+  const info = item.info || {};
+  if (info.title) bulkTitleInput.value = info.title;
+  bulkSelectIds.forEach(id => {
+    const value = info[bulkInfoFieldBySelect[id]];
+    if (value) setMultiSelectValues(id, [value]);
+  });
+  if (info.calories != null) bulkCaloriesInput.value = info.calories;
+
+  // Pas na de receptinformatie: voor Instagram leunt de foto op dezelfde
+  // (gecachete) opvraag, zo gaat er geen tweede verzoek naar Instagram.
+  const session = bulkSession;
+  fetchRecipeImage(item.url).then(imageUrl => {
+    if (!imageUrl || session !== bulkSession || bulkItems[bulkIndex] !== item || !bulkRecipePhoto) return;
+    const img = document.createElement('img');
+    img.alt = '';
+    img.referrerPolicy = 'no-referrer';
+    img.src = imageUrl;
+    img.addEventListener('load', () => bulkRecipePhoto.classList.remove('is-empty'));
+    img.addEventListener('error', () => img.remove());
+    bulkRecipePhoto.innerHTML = '';
+    bulkRecipePhoto.appendChild(img);
+  });
+
+  // Wat na het invullen nog leeg is, markeren. Niet op info.missing leunen:
+  // bij een geblokkeerde site stuurt de server die lijst niet mee. Calorieën
+  // zijn optioneel en tellen niet mee.
+  const missing = [bulkTitleInput, ...bulkSelectIds.map(id => document.getElementById(id))]
+    .filter(input => input && !isFilled(input));
+  missing.forEach(input => {
+    input.classList.add('field-missing');
+    if (input._multiSelectApi) input.nextElementSibling?.classList.add('field-missing');
+  });
+
+  if (info.error) {
+    bulkRecipeStatus.className = 'bulk-recipe-status is-warning';
+    bulkRecipeStatus.textContent = info.error;
+  } else if (!missing.length) {
+    bulkRecipeStatus.className = 'bulk-recipe-status is-complete';
+    bulkRecipeStatus.textContent = 'Alles automatisch gevonden. Even controleren en opslaan.';
+  } else {
+    bulkRecipeStatus.className = 'bulk-recipe-status is-warning';
+    bulkRecipeStatus.textContent = 'Niet alles gevonden. Vul aan wat je weet; alleen de titel is verplicht.';
+  }
+}
+
+// Een gemarkeerd veld is ingevuld: de markering mag weg.
+[bulkTitleInput, ...bulkSelectIds.map(id => document.getElementById(id))].forEach(input => {
+  if (!input) return;
+  input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', () => {
+    if (!isFilled(input)) return;
+    input.classList.remove('field-missing');
+    if (input._multiSelectApi) input.nextElementSibling?.classList.remove('field-missing');
+    input.closest('.add-recipe-field')?.querySelector('.field-error-text')?.remove();
+  });
+});
+
+function goToNextBulkItem() {
+  let next = bulkIndex + 1;
+  while (next < bulkItems.length && bulkItems[next].result) next += 1;
+  if (next >= bulkItems.length) {
+    finishBulk();
+    return;
+  }
+  bulkIndex = next;
+  renderBulkItem();
+  bulkReviewStep?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function finishBulk() {
+  bulkSession += 1;
+  const saved = bulkItems.filter(item => item.result === 'saved');
+  const labels = {
+    saved: 'Toegevoegd',
+    skipped: 'Overgeslagen',
+    existing: 'Stond er al in',
+    open: 'Niet behandeld'
+  };
+
+  document.getElementById('bulkDoneTitle').textContent = saved.length === 1
+    ? '1 recept toegevoegd'
+    : `${saved.length} recepten toegevoegd`;
+  document.getElementById('bulkDoneSubtitle').textContent = saved.length
+    ? 'Ze staan nu in je overzicht en doen mee bij het kiezen en plannen.'
+    : 'Er is deze keer niets nieuws bij gekomen.';
+  document.getElementById('bulkDoneList').innerHTML = bulkItems.map(item => {
+    const state = item.result || 'open';
+    return `<li class="bulk-done-item is-${state}">
+      <span class="bulk-done-name">${escapeHtml(item.title || recipeUrlKey(item.url))}</span>
+      <span class="bulk-done-state">${labels[state]}</span>
+    </li>`;
+  }).join('');
+
+  showBulkPhase('done');
+  bulkDoneStep?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (saved.length) fetchAllRecipes();
+}
+
+function resetBulk() {
+  bulkSession += 1;
+  bulkItems = [];
+  bulkIndex = 0;
+  bulkActiveFetches = 0;
+  if (bulkUrlsInput) bulkUrlsInput.value = '';
+  updateBulkUrlCount();
+  showBulkPhase('paste');
+}
+
+async function startBulk() {
+  if (!ensureLoggedInOrNotify(addMessageDiv)) return;
+  const links = extractRecipeLinks(bulkUrlsInput?.value).slice(0, BULK_MAX_LINKS);
+  if (!links.length) return;
+
+  addMessageDiv.innerHTML = '';
+  bulkStartBtn.disabled = true;
+  const originalText = bulkStartBtn.textContent;
+  bulkStartBtn.textContent = 'Bezig...';
+
+  let existingKeys = new Set();
+  try {
+    existingKeys = await fetchExistingRecipeUrlKeys();
+  } catch (err) {
+    // Zonder die lijst kunnen we dubbele recepten niet vooraf wegfilteren,
+    // maar toevoegen werkt gewoon.
+    console.error(err);
+  } finally {
+    bulkStartBtn.disabled = false;
+    bulkStartBtn.textContent = originalText;
+  }
+
+  bulkSession += 1;
+  bulkActiveFetches = 0;
+  bulkItems = links.map(url => {
+    const exists = existingKeys.has(recipeUrlKey(url));
+    return { url, status: exists ? 'ready' : 'pending', info: null, result: exists ? 'existing' : null, title: '' };
+  });
+
+  const firstOpen = bulkItems.findIndex(item => !item.result);
+  if (firstOpen === -1) {
+    addMessageDiv.innerHTML = `<p style="color:#8a6d3b;">${links.length === 1 ? 'Dit recept staat' : 'Deze recepten staan'} al in je database.</p>`;
+    return;
+  }
+
+  bulkIndex = firstOpen;
+  showBulkPhase('review');
+  pumpBulkFetches();
+  renderBulkItem();
+  bulkReviewStep?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function saveCurrentBulkItem() {
+  const item = bulkItems[bulkIndex];
+  if (!item || item.status !== 'ready') return;
+
+  const title = bulkTitleInput.value.trim();
+  clearBulkMissingState();
+  if (!title) {
+    setMissingState(bulkTitleInput, 'Een titel is verplicht.');
+    bulkTitleInput.focus();
+    return;
+  }
+
+  const cal = bulkCaloriesInput.value.trim();
+  const bodyData = {
+    title,
+    url: item.url,
+    dish_type: getSelectedValues(document.getElementById('bulkDishType')),
+    meal_category: getSelectedValues(document.getElementById('bulkMealCategory')),
+    meal_type: getSelectedValues(document.getElementById('bulkMealType')),
+    time_required: getSelectedValues(document.getElementById('bulkTimeRequired')),
+    calories: cal ? parseInt(cal, 10) : null
+  };
+
+  bulkSaveBtn.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/api/recipes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(withActiveDatabaseBody(bodyData))
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) {
+      bulkRecipeStatus.className = 'bulk-recipe-status is-error';
+      bulkRecipeStatus.textContent = data.error || 'Opslaan mislukt. Probeer het nog eens.';
+      return;
+    }
+    item.result = 'saved';
+    item.title = title;
+    showRecipeAddedToast('Recept toegevoegd!');
+    goToNextBulkItem();
+  } catch (err) {
+    console.error(err);
+    bulkRecipeStatus.className = 'bulk-recipe-status is-error';
+    bulkRecipeStatus.textContent = 'Server niet bereikbaar. Probeer het nog eens.';
+  } finally {
+    bulkSaveBtn.disabled = false;
+  }
+}
+
+// Enter in een veld of de hoofdknop: in de plakstap beginnen, daarna opslaan.
+bulkRecipeForm?.addEventListener('submit', e => {
+  e.preventDefault();
+  if (bulkReviewStep && !bulkReviewStep.hidden) saveCurrentBulkItem();
+  else if (bulkPasteStep && !bulkPasteStep.hidden) startBulk();
+});
+
+bulkSkipBtn?.addEventListener('click', () => {
+  const item = bulkItems[bulkIndex];
+  if (!item) return;
+  item.result = 'skipped';
+  item.title = bulkTitleInput.value.trim() || item.info?.title || '';
+  goToNextBulkItem();
+});
+
+document.getElementById('bulkStopBtn')?.addEventListener('click', async () => {
+  const remaining = bulkItems.filter(item => !item.result).length;
+  const stop = await openConfirmModal({
+    title: 'Stoppen met toevoegen?',
+    message: `Er ${remaining === 1 ? 'staat nog 1 recept' : `staan nog ${remaining} recepten`} open. Wat je al hebt opgeslagen, blijft bewaard.`,
+    confirmLabel: 'Stoppen',
+    cancelLabel: 'Doorgaan'
+  });
+  if (!stop) return;
+  bulkItems.forEach(item => {
+    if (!item.title) item.title = item.info?.title || '';
+  });
+  finishBulk();
+});
+
+document.getElementById('bulkAgainBtn')?.addEventListener('click', () => {
+  resetBulk();
+  bulkUrlsInput?.focus();
+});
+
+document.getElementById('bulkToOverviewBtn')?.addEventListener('click', () => {
+  resetBulk();
+  document.querySelector('.nav-tabs a[href="#overzichtRecepten"]')?.click();
+});
 
 // Foto's van een telefoon zijn zo een paar megabyte. In de browser verkleinen
 // scheelt uploadtijd en houdt de database klein.
