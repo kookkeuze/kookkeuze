@@ -4277,6 +4277,7 @@ modeOwnBtn?.addEventListener('click', () => setAddRecipeMode('own'));
 // omzetten voelt als één veld dat groter wordt, niet als een ander scherm.
 // Wat je al had geplakt, gaat mee naar de andere kant.
 function setLinkBulkMode(on, sourceToggle) {
+  const changed = linkBulkMode !== on;
   linkBulkMode = on;
   bulkToggles.forEach(toggle => { toggle.checked = on; });
 
@@ -4291,6 +4292,15 @@ function setLinkBulkMode(on, sourceToggle) {
   }
 
   setAddRecipeMode('link');
+  // Het andere formulier komt zacht binnen in plaats van in één klap. Geen
+  // uitgaande animatie: dan hoef je nergens op te wachten.
+  if (changed) {
+    playEnter(on ? bulkRecipeForm : addRecipeForm, {
+      from: 'translateY(4px)',
+      duration: 180,
+      easing: motionToken('--ease-out', 'cubic-bezier(0.25, 0.46, 0.45, 0.94)')
+    });
+  }
   // Focus naar de schakelaar in het formulier dat nu zichtbaar is, zodat je
   // met het toetsenbord niet je plek kwijtraakt.
   if (sourceToggle && document.activeElement === sourceToggle) {
@@ -4555,6 +4565,45 @@ function renderBulkItem() {
   });
 });
 
+/* ---- Kleine binnenkomers ----
+   Via de Web Animations API: geen klassen om op te ruimen, en een nieuwe
+   animatie op hetzelfde element vervangt de vorige (snel achter elkaar tikken
+   stapelt dus niets op). Bij 'minder beweging' blijft er alleen een korte
+   fade over, zonder verschuiven of opploppen. */
+const ENTER_ANIMATION_ID = 'kk-enter';
+
+function motionToken(name, fallback) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+}
+
+function playEnter(el, { from, duration, easing, delay = 0 }) {
+  if (!el?.animate) return;
+  el.getAnimations().forEach(anim => {
+    if (anim.id === ENTER_ANIMATION_ID) anim.cancel();
+  });
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const keyframes = reduce
+    ? [{ opacity: 0 }, { opacity: 1 }]
+    : [{ opacity: 0, transform: from }, { opacity: 1, transform: 'none' }];
+  const anim = el.animate(keyframes, {
+    duration: reduce ? Math.min(duration, 150) : duration,
+    easing: reduce ? 'ease-out' : easing,
+    delay: reduce ? 0 : delay,
+    // Tijdens de wachttijd van een volgende regel al onzichtbaar staan.
+    fill: 'backwards'
+  });
+  anim.id = ENTER_ANIMATION_ID;
+}
+
+// Volgende recept: de inhoud komt van rechts binnen, zodat je ziet dat er iets
+// veranderd is (de opbouw is per recept precies hetzelfde). De kaart zelf en
+// de knoppen blijven staan.
+function playNextBulkItemEnter() {
+  const easing = motionToken('--ease-standard', 'cubic-bezier(0.32, 0.72, 0, 1)');
+  bulkReviewStep?.querySelectorAll('.bulk-recipe-head, .bulk-recipe-card .add-recipe-grid')
+    .forEach(el => playEnter(el, { from: 'translateX(12px)', duration: 220, easing }));
+}
+
 function goToNextBulkItem() {
   let next = bulkIndex + 1;
   while (next < bulkItems.length && bulkItems[next].result) next += 1;
@@ -4564,6 +4613,7 @@ function goToNextBulkItem() {
   }
   bulkIndex = next;
   renderBulkItem();
+  playNextBulkItemEnter();
   bulkReviewStep?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -4592,8 +4642,28 @@ function finishBulk() {
   }).join('');
 
   showBulkPhase('done');
+  playBulkDoneEnter();
   bulkDoneStep?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   if (saved.length) fetchAllRecipes();
+}
+
+// Klaar: een zeldzaam succesmoment, de enige plek met een speels effect. Het
+// vinkje ploept op en de regels komen kort na elkaar binnen. De knoppen doen
+// niet mee, die zijn meteen bruikbaar.
+function playBulkDoneEnter() {
+  if (!bulkDoneStep) return;
+  playEnter(bulkDoneStep.querySelector('.add-recipe-step-badge'), {
+    from: 'scale(0.6)',
+    duration: 400,
+    easing: motionToken('--ease-spring', 'cubic-bezier(0.34, 1.56, 0.64, 1)')
+  });
+  const easing = motionToken('--ease-out', 'cubic-bezier(0.25, 0.46, 0.45, 0.94)');
+  bulkDoneStep.querySelectorAll('.bulk-done-item').forEach((row, index) => {
+    // Na een stuk of acht regels niet verder oplopen: anders wacht de
+    // laatste van twintig bijna een seconde.
+    const delay = 80 + Math.min(index, 8) * 40;
+    playEnter(row, { from: 'translateY(6px)', duration: 220, easing, delay });
+  });
 }
 
 function resetBulk() {
