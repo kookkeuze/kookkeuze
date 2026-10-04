@@ -1084,8 +1084,11 @@ async function fetchInstagramViaOembed(shortcode, viaBrowser) {
   const response = viaBrowser
     ? await browserFetch(endpoint, { headers, timeoutMs: 10000 })
     : await fetch(endpoint, { headers, signal: AbortSignal.timeout(10000) });
-  if (!response.ok) return { failed: `oembed${viaBrowser ? '/browser' : ''} ${response.status}` };
-  const data = JSON.parse(await response.text());
+  const body = await response.text();
+  if (!response.ok) {
+    return { failed: `oembed${viaBrowser ? '/browser' : ''} ${response.status} ${body.slice(0, 80).replace(/\s+/g, ' ')}` };
+  }
+  const data = JSON.parse(body);
   // Instagram zet een U+2028 aan het eind van regels met een kopje.
   const caption = String(data.title || '').replace(/[\u2028\u2029]\n?/g, '\n').trim();
   if (!caption) return { failed: `oembed${viaBrowser ? '/browser' : ''} geen caption` };
@@ -1102,6 +1105,7 @@ async function fetchInstagramViaHtml(url) {
     'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
     'Twitterbot/1.0'
   ];
+  const statuses = [];
   for (const ua of botUserAgents) {
     try {
       const response = await fetch(url, {
@@ -1109,6 +1113,7 @@ async function fetchInstagramViaHtml(url) {
         redirect: 'follow',
         signal: AbortSignal.timeout(14000)
       });
+      statuses.push(response.status);
       if (!response.ok) continue;
       const html = await response.text();
       const caption = cleanInstagramCaption(extractOgContent(html, 'og:description'));
@@ -1117,11 +1122,11 @@ async function fetchInstagramViaHtml(url) {
           .find(isInstagramMediaImage) || null;
         return { caption, ogTitle: extractOgContent(html, 'og:title'), imageUrl: image };
       }
-    } catch (_err) {
-      // probeer volgende user-agent
+    } catch (err) {
+      statuses.push(err.name);
     }
   }
-  return { failed: 'html' };
+  return { failed: `html ${statuses.join('/')}` };
 }
 
 // /api/recipe-info en /api/recipe-image vragen hetzelfde bericht vrijwel
@@ -1145,8 +1150,9 @@ async function loadInstagramPost(url) {
       failures.push(err.message);
     }
   }
-  console.warn(`⚠️ Instagram-bericht niet uitgelezen (${shortcode || url}): ${failures.join(' | ')}`);
-  return null;
+  const reason = failures.join(' | ');
+  console.warn(`⚠️ Instagram-bericht niet uitgelezen (${shortcode || url}): ${reason}`);
+  return { reason };
 }
 
 function fetchInstagramPost(url) {
@@ -1156,7 +1162,7 @@ function fetchInstagramPost(url) {
   const entry = { promise: loadInstagramPost(url), expiresAt: Date.now() + INSTAGRAM_POST_TTL_MS };
   instagramPostCache.set(key, entry);
   entry.promise.then(post => {
-    if (!post) entry.expiresAt = Date.now() + INSTAGRAM_POST_FAIL_TTL_MS;
+    if (!post.caption) entry.expiresAt = Date.now() + INSTAGRAM_POST_FAIL_TTL_MS;
   });
   if (instagramPostCache.size > 500) instagramPostCache.delete(instagramPostCache.keys().next().value);
   return entry.promise;
@@ -1318,8 +1324,11 @@ const MAIN_DISH_TYPES = new Set(['Ovenschotel', 'Pasta', 'Rijst', 'Wraps', 'Hart
 
 async function buildInstagramPayload(url) {
   const data = await fetchInstagramPost(url);
-  if (!data || !data.caption) {
-    return { error: 'Kon de Instagram-beschrijving niet uitlezen. Het bericht is mogelijk privé, verwijderd of heeft geen tekst.' };
+  if (!data.caption) {
+    return {
+      error: 'Kon de Instagram-beschrijving niet uitlezen. Het bericht is mogelijk privé, verwijderd of heeft geen tekst.',
+      reason: data.reason
+    };
   }
 
   const caption = data.caption;
