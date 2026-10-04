@@ -439,11 +439,8 @@
            van, vandaar de extra ruimte en het streepje ertussen. -->
       <div class="add-recipe-toolbar">
         <div class="add-recipe-mode-switch" role="group" aria-label="Manier van toevoegen kiezen" data-active-mode="link">
-          <!-- Op een telefoon passen drie keer 'Ik heb ...' niet naast elkaar;
-               dan blijft alleen het korte deel staan. -->
-          <button type="button" id="modeLinkBtn" class="add-recipe-mode-btn active" aria-pressed="true"><span class="mode-long">Ik heb een link</span><span class="mode-short">Link</span></button>
-          <button type="button" id="modeBulkBtn" class="add-recipe-mode-btn" aria-pressed="false"><span class="mode-long">Ik heb meerdere links</span><span class="mode-short">Meerdere links</span></button>
-          <button type="button" id="modeOwnBtn" class="add-recipe-mode-btn" aria-pressed="false"><span class="mode-long">Ik heb een eigen recept</span><span class="mode-short">Eigen recept</span></button>
+          <button type="button" id="modeLinkBtn" class="add-recipe-mode-btn active" aria-pressed="true">Ik heb een link</button>
+          <button type="button" id="modeOwnBtn" class="add-recipe-mode-btn" aria-pressed="false">Ik heb een eigen recept</button>
         </div>
 
         <span class="add-recipe-toolbar-divider" aria-hidden="true"></span>
@@ -463,6 +460,14 @@
               <p>We vullen dan zo veel mogelijk vast voor je in. Wat we niet vinden, vul je hieronder zelf aan.</p>
             </div>
           </div>
+
+          <!-- Schakelt naar het formulier voor meerdere links hieronder; dat
+               heeft op dezelfde plek dezelfde schakelaar, aangevinkt. -->
+          <label class="bulk-toggle">
+            <input type="checkbox" class="bulk-toggle-input" role="switch" data-bulk-toggle />
+            <span class="bulk-toggle-track" aria-hidden="true"><span class="bulk-toggle-thumb"></span></span>
+            <span class="bulk-toggle-text">Meerdere links tegelijk</span>
+          </label>
 
           <div class="add-recipe-field">
             <label for="url">Recept-URL</label>
@@ -719,7 +724,8 @@
         <button type="submit" class="green-btn">Recept opslaan</button>
       </form>
 
-      <!-- Meerdere links: eerst alles in één keer plakken, daarna loop je de
+      <!-- Meerdere links (schakelaar 'Meerdere links tegelijk' bij 'Ik heb een
+           link'): eerst alles in één keer plakken, daarna loop je de
            recepten één voor één langs. De keuzelijsten krijgen hun opties uit
            het formulier hierboven (data-options-from), zodat ze gelijk blijven. -->
       <form id="bulkRecipeForm" hidden novalidate>
@@ -731,6 +737,12 @@
               <p>Tot 20 tegelijk. Onder elkaar, met spaties ertussen of midden in een appje: wij halen de links eruit.</p>
             </div>
           </div>
+
+          <label class="bulk-toggle">
+            <input type="checkbox" class="bulk-toggle-input" role="switch" data-bulk-toggle checked />
+            <span class="bulk-toggle-track" aria-hidden="true"><span class="bulk-toggle-thumb"></span></span>
+            <span class="bulk-toggle-text">Meerdere links tegelijk</span>
+          </label>
 
           <div class="add-recipe-field">
             <label for="bulkUrls" class="sr-only">Recept-links</label>

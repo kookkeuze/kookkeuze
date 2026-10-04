@@ -4026,28 +4026,56 @@ const OWN_PHOTO_MAX_EDGE = 1400;
 const OWN_PHOTO_QUALITY = 0.82;
 
 const addRecipeModeSwitch = document.querySelector('.add-recipe-mode-switch');
-const modeBulkBtn = document.getElementById('modeBulkBtn');
 const bulkRecipeForm = document.getElementById('bulkRecipeForm');
+const bulkToggles = Array.from(document.querySelectorAll('[data-bulk-toggle]'));
+// Binnen 'Ik heb een link': één link (addRecipeForm) of meerdere (bulkRecipeForm).
+let linkBulkMode = false;
 
 function setAddRecipeMode(mode) {
-  const forms = { link: addRecipeForm, bulk: bulkRecipeForm, own: ownRecipeForm };
-  const buttons = { link: modeLinkBtn, bulk: modeBulkBtn, own: modeOwnBtn };
-  if (!forms[mode]) mode = 'link';
-  Object.entries(forms).forEach(([key, form]) => {
-    if (form) form.hidden = key !== mode;
-  });
-  Object.entries(buttons).forEach(([key, btn]) => {
-    btn?.classList.toggle('active', key === mode);
-    btn?.setAttribute('aria-pressed', String(key === mode));
-  });
+  const own = mode === 'own';
+  addRecipeForm.hidden = own || linkBulkMode;
+  if (bulkRecipeForm) bulkRecipeForm.hidden = own || !linkBulkMode;
+  if (ownRecipeForm) ownRecipeForm.hidden = !own;
+  modeLinkBtn?.classList.toggle('active', !own);
+  modeOwnBtn?.classList.toggle('active', own);
+  modeLinkBtn?.setAttribute('aria-pressed', String(!own));
+  modeOwnBtn?.setAttribute('aria-pressed', String(own));
   // Stuurt het witte blokje van de schuif naar de gekozen kant.
-  if (addRecipeModeSwitch) addRecipeModeSwitch.dataset.activeMode = mode;
+  if (addRecipeModeSwitch) addRecipeModeSwitch.dataset.activeMode = own ? 'own' : 'link';
   if (addMessageDiv) addMessageDiv.innerHTML = '';
 }
 
 modeLinkBtn?.addEventListener('click', () => setAddRecipeMode('link'));
-modeBulkBtn?.addEventListener('click', () => setAddRecipeMode('bulk'));
 modeOwnBtn?.addEventListener('click', () => setAddRecipeMode('own'));
+
+// Beide formulieren hebben de schakelaar op dezelfde plek in stap 1, dus
+// omzetten voelt als één veld dat groter wordt, niet als een ander scherm.
+// Wat je al had geplakt, gaat mee naar de andere kant.
+function setLinkBulkMode(on, sourceToggle) {
+  linkBulkMode = on;
+  bulkToggles.forEach(toggle => { toggle.checked = on; });
+
+  const urlInput = document.getElementById('url');
+  const bulkUrls = document.getElementById('bulkUrls');
+  if (on && urlInput?.value.trim() && bulkUrls && !bulkUrls.value.trim()) {
+    bulkUrls.value = urlInput.value.trim();
+    bulkUrls.dispatchEvent(new Event('input'));
+  } else if (!on && bulkUrls && urlInput && !urlInput.value.trim()) {
+    const links = extractRecipeLinks(bulkUrls.value);
+    if (links.length === 1) urlInput.value = links[0];
+  }
+
+  setAddRecipeMode('link');
+  // Focus naar de schakelaar in het formulier dat nu zichtbaar is, zodat je
+  // met het toetsenbord niet je plek kwijtraakt.
+  if (sourceToggle && document.activeElement === sourceToggle) {
+    bulkToggles.find(toggle => toggle !== sourceToggle && toggle.offsetParent !== null)?.focus();
+  }
+}
+
+bulkToggles.forEach(toggle => {
+  toggle.addEventListener('change', () => setLinkBulkMode(toggle.checked, toggle));
+});
 
 /* ========= MEERDERE LINKS TEGELIJK =========
    Je plakt een stapel links, daarna loop je ze één voor één langs met

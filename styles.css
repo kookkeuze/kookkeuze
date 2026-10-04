@@ -6031,7 +6031,7 @@ body.mobile-menu-open .mobile-nav-header {
 .add-recipe-mode-switch {
   position: relative;
   display: inline-grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
   padding: 3px;
   background: linear-gradient(135deg, #edf7ef 0%, #f9fcfa 100%);
@@ -6047,7 +6047,7 @@ body.mobile-menu-open .mobile-nav-header {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: calc((100% - 6px) / 3);
+  width: calc((100% - 6px) / 2);
   height: calc(100% - 6px);
   border-radius: 999px;
   background: #ffffff;
@@ -6056,18 +6056,8 @@ body.mobile-menu-open .mobile-nav-header {
   z-index: 0;
 }
 
-.add-recipe-mode-switch[data-active-mode="bulk"]::before {
-  transform: translateX(100%);
-}
-
 .add-recipe-mode-switch[data-active-mode="own"]::before {
-  transform: translateX(200%);
-}
-
-/* Lange tekst op een breed scherm, korte op de telefoon (zie de media query
-   hieronder): drie keer 'Ik heb ...' past niet naast elkaar op 375 px. */
-.add-recipe-mode-btn .mode-short {
-  display: none;
+  transform: translateX(100%);
 }
 
 .add-recipe-mode-btn {
@@ -6109,26 +6099,93 @@ body.mobile-menu-open .mobile-nav-header {
     margin: 2px 0;
   }
 
-  .add-recipe-mode-switch {
-    width: 100%;
-  }
-
   .add-recipe-mode-btn {
-    padding: 6px 8px;
-  }
-
-  .add-recipe-mode-btn .mode-long {
-    display: none;
-  }
-
-  .add-recipe-mode-btn .mode-short {
-    display: inline;
+    padding: 6px 12px;
   }
 }
 
 /* --- Meerdere links tegelijk ---
    Eerst een plakveld, dan recept voor recept hetzelfde soort kaart als bij
    één link, en tot slot een lijstje met wat er is gebeurd. */
+
+/* Schakelaar in stap 1. De hele regel is aanklikbaar (44 px hoog) en het
+   bolletje reageert al bij het indrukken, niet pas bij loslaten. */
+.bulk-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: start;
+  min-height: 44px;
+  margin: -6px 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.bulk-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.bulk-toggle-track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: #dfe7e1;
+  transition: background-color 0.2s ease;
+}
+
+.bulk-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 2px 5px rgba(47, 58, 53, 0.22);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), width 0.15s ease;
+}
+
+/* Ingedrukt: het bolletje rekt iets uit in de richting waarin het gaat. */
+.bulk-toggle:active .bulk-toggle-thumb {
+  width: 27px;
+}
+
+.bulk-toggle-input:checked + .bulk-toggle-track {
+  background: var(--green);
+}
+
+.bulk-toggle-input:checked + .bulk-toggle-track .bulk-toggle-thumb {
+  transform: translateX(18px);
+}
+
+.bulk-toggle:active .bulk-toggle-input:checked + .bulk-toggle-track .bulk-toggle-thumb {
+  transform: translateX(13px);
+}
+
+.bulk-toggle-input:focus-visible + .bulk-toggle-track {
+  box-shadow: var(--field-focus-ring);
+}
+
+.bulk-toggle-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3f4e45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bulk-toggle-track,
+  .bulk-toggle-thumb {
+    transition: none;
+  }
+}
+
 .bulk-url-count {
   margin: 0;
   min-height: 1.2em;
