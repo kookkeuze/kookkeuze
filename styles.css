@@ -8746,7 +8746,8 @@ h1, h2, h3,
   /* Ruimte onderaan voor de uitstekende kaarten en het hintje. */
   max-height: calc(90vh - 2 * var(--swipe-peek-gap) - var(--swipe-hint-space));
   max-height: calc(90dvh - 2 * var(--swipe-peek-gap) - var(--swipe-hint-space));
-  /* Verticaal scrollen doet de browser, zijwaarts slepen doen wij. */
+  /* Zijwaarts slepen doen wij, nooit de browser (geen 'terug'-veeg). Of het
+     scrollen of swipen is, beslist index.js na de eerste paar pixels. */
   touch-action: pan-y;
   /* Draaien rond een punt onder de kaart: dan kantelt hij zoals een kaart die
      je onderaan vasthoudt en opzij schuift. */

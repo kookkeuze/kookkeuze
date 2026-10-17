@@ -2224,13 +2224,11 @@ document.addEventListener('keydown', e => {
    De popup is de bovenste kaart van een stapeltje: erachter steken twee kaarten
    een stukje uit, zodat je ziet dat er nog meer komen. Sleep je de kaart opzij,
    dan schuiven die mee naar voren; laat je ver genoeg (of met vaart) los, dan
-   vliegt hij weg en komt het volgende recept naar voren. Verticaal blijft
-   gewoon scrollen: pas als de beweging duidelijk zijwaarts is, nemen we hem
-   over (touch-action: pan-y in de CSS laat het scrollen aan de browser). */
+   vliegt hij weg en komt het volgende recept naar voren. Omhoog en omlaag
+   blijft gewoon scrollen; zie moveRandomSwipe voor hoe we dat onderscheiden. */
 const randomSwipeStack = document.getElementById('randomSwipeStack');
 const randomRecipePanel = randomSwipeStack?.querySelector('.random-recipe-modal-content');
 const randomSwipeHint = document.getElementById('randomSwipeHint');
-const SWIPE_LOCK_PX = 10;
 const SWIPE_FLING_MS = 260;
 const SWIPE_SETTLE_MS = 380;
 const SWIPE_SEEN_KEY = 'kookkeuze-random-swipe-seen';
@@ -2346,55 +2344,51 @@ function randomSwipeVelocity(samples) {
   return dt > 0 ? (laatste.x - eerste.x) / dt : 0;
 }
 
-randomRecipePanel?.addEventListener('pointerdown', e => {
-  if (!canSwipeRandomRecipe()) return;
-  if (e.pointerType === 'mouse' && e.button !== 0) return;
-  if (e.target.closest('.modal-close, .recipe-export-dropdown, input, textarea, select')) return;
-  randomRecipePanel.classList.remove('is-nudging');
-  randomSwipe = {
-    id: e.pointerId,
-    x0: e.clientX,
-    y0: e.clientY,
-    dx: 0,
-    locked: false,
-    samples: [{ x: e.clientX, t: e.timeStamp }]
-  };
-});
+// Een vinger beweegt zelden precies horizontaal. Daarom beslissen we na de
+// eerste paar pixels zelf of het swipen of scrollen is, met een voorkeur voor
+// swipen: alles tot ~55° van horizontaal telt als swipe. Pas als het echt
+// omhoog of omlaag gaat, mag de browser scrollen.
+// Klein houden: we moeten beslissen voordat de browser zelf gaat scrollen.
+const SWIPE_DECIDE_PX = 6;
+const SWIPE_HORIZONTAL_BIAS = 0.7;
 
-randomRecipePanel?.addEventListener('pointermove', e => {
-  if (!randomSwipe || e.pointerId !== randomSwipe.id) return;
-  const dx = e.clientX - randomSwipe.x0;
-  const dy = e.clientY - randomSwipe.y0;
+function beginRandomSwipe(id, x, y, t, target) {
+  if (!canSwipeRandomRecipe()) return;
+  if (target.closest('.modal-close, .recipe-export-dropdown, input, textarea, select')) return;
+  randomRecipePanel.classList.remove('is-nudging');
+  randomSwipe = { id, x0: x, y0: y, dx: 0, locked: false, samples: [{ x, t }] };
+}
+
+// Geeft true terug zolang wij de beweging hebben (dan mag de browser niet
+// scrollen), false als het scrollen is of nog niet beslist.
+function moveRandomSwipe(x, y, t, onLock) {
+  const dx = x - randomSwipe.x0;
+  const dy = y - randomSwipe.y0;
 
   if (!randomSwipe.locked) {
-    // Eerst verticaal? Dan is het scrollen en laten we het met rust.
-    if (Math.abs(dy) > SWIPE_LOCK_PX && Math.abs(dy) >= Math.abs(dx)) {
+    if (Math.hypot(dx, dy) < SWIPE_DECIDE_PX) return false;
+    if (Math.abs(dx) < Math.abs(dy) * SWIPE_HORIZONTAL_BIAS) {
       randomSwipe = null;
-      return;
+      return false;
     }
-    if (Math.abs(dx) < SWIPE_LOCK_PX) return;
     randomSwipe.locked = true;
-    try {
-      randomRecipePanel.setPointerCapture(e.pointerId);
-    } catch {
-      // Pointer al weg (of geen echte); slepen werkt ook zonder capture.
-    }
+    onLock?.();
     randomSwipeStack.classList.add('is-dragging');
     window.getSelection?.()?.removeAllRanges();
     closeAllRecipeExportMenus();
   }
 
   randomSwipe.dx = dx;
-  randomSwipe.samples.push({ x: e.clientX, t: e.timeStamp });
+  randomSwipe.samples.push({ x, t });
   if (randomSwipe.samples.length > 8) randomSwipe.samples.shift();
   setRandomSwipeOffset(dx);
-});
+  return true;
+}
 
-function endRandomSwipe(e, geannuleerd) {
-  if (!randomSwipe || e.pointerId !== randomSwipe.id) return;
+function endRandomSwipe(geannuleerd) {
   const swipe = randomSwipe;
   randomSwipe = null;
-  if (!swipe.locked) return;
+  if (!swipe || !swipe.locked) return;
 
   randomSwipeStack.classList.remove('is-dragging');
   // De klik die na het loslaten volgt, mag geen link of knop op de kaart raken.
@@ -2414,8 +2408,65 @@ function endRandomSwipe(e, geannuleerd) {
   }
 }
 
-randomRecipePanel?.addEventListener('pointerup', e => endRandomSwipe(e, false));
-randomRecipePanel?.addEventListener('pointercancel', e => endRandomSwipe(e, true));
+// Vinger: touch-events, want alleen daar kunnen we het scrollen nog
+// tegenhouden nadat we hebben gezien welke kant de beweging op gaat. Met
+// pointer-events beslist de browser dat zelf, en die kiest bij een schuine
+// veeg te snel voor scrollen.
+function findRandomSwipeTouch(e) {
+  return randomSwipe && [...e.changedTouches].find(touch => touch.identifier === randomSwipe.id);
+}
+
+randomRecipePanel?.addEventListener('touchstart', e => {
+  if (e.touches.length !== 1) {
+    // Tweede vinger erbij (inzoomen): dan is het geen swipe meer.
+    if (randomSwipe) endRandomSwipe(true);
+    return;
+  }
+  const touch = e.changedTouches[0];
+  beginRandomSwipe(touch.identifier, touch.clientX, touch.clientY, e.timeStamp, e.target);
+}, { passive: true });
+
+randomRecipePanel?.addEventListener('touchmove', e => {
+  const touch = findRandomSwipeTouch(e);
+  if (!touch) return;
+  if (moveRandomSwipe(touch.clientX, touch.clientY, e.timeStamp) && e.cancelable) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+randomRecipePanel?.addEventListener('touchend', e => {
+  if (findRandomSwipeTouch(e)) endRandomSwipe(false);
+});
+
+randomRecipePanel?.addEventListener('touchcancel', e => {
+  if (findRandomSwipeTouch(e)) endRandomSwipe(true);
+});
+
+// Muis en pen: pointer-events, met capture zodat slepen buiten de kaart
+// gewoon doorloopt.
+randomRecipePanel?.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch') return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  beginRandomSwipe(e.pointerId, e.clientX, e.clientY, e.timeStamp, e.target);
+});
+
+randomRecipePanel?.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch' || !randomSwipe || e.pointerId !== randomSwipe.id) return;
+  moveRandomSwipe(e.clientX, e.clientY, e.timeStamp, () => {
+    try {
+      randomRecipePanel.setPointerCapture(e.pointerId);
+    } catch {
+      // Pointer al weg (of geen echte); slepen werkt ook zonder capture.
+    }
+  });
+});
+
+randomRecipePanel?.addEventListener('pointerup', e => {
+  if (e.pointerType !== 'touch' && randomSwipe?.id === e.pointerId) endRandomSwipe(false);
+});
+randomRecipePanel?.addEventListener('pointercancel', e => {
+  if (e.pointerType !== 'touch' && randomSwipe?.id === e.pointerId) endRandomSwipe(true);
+});
 
 randomRecipePanel?.addEventListener('click', e => {
   if (!randomSwipeSuppressClick) return;
