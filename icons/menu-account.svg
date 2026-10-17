@@ -1,0 +1,36 @@
+<svg width="100%" height="100%" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="rondje" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#eef7f0"/>
+            <stop offset="1" stop-color="#cfe7d4"/>
+        </linearGradient>
+        <linearGradient id="huid" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#fbd9b6"/>
+            <stop offset="1" stop-color="#e2a979"/>
+        </linearGradient>
+        <linearGradient id="shirt" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7ee08a"/>
+            <stop offset="1" stop-color="#3fae4d"/>
+        </linearGradient>
+        <radialGradient id="schaduw" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
+            <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+        </radialGradient>
+        <clipPath id="binnen">
+            <circle cx="32" cy="30" r="26"/>
+        </clipPath>
+    </defs>
+
+    <ellipse cx="32" cy="59" rx="20" ry="3.5" fill="url(#schaduw)"/>
+
+    <circle cx="32" cy="30" r="26" fill="url(#rondje)"/>
+    <g clip-path="url(#binnen)">
+        <path d="M12 60v-4a20 20 0 0 1 40 0v4Z" fill="url(#shirt)"/>
+        <path d="M28.5 34h7v6a3.5 3.5 0 0 1-7 0Z" fill="#e2a979"/>
+        <circle cx="32" cy="25" r="10" fill="url(#huid)"/>
+        <path d="M22.2 23.6c.6-6 4.6-9.3 9.8-9.3s9.2 3.3 9.8 9.4c-3-2.2-6.3-3.2-9.8-3.2s-6.8 1-9.8 3.1Z" fill="#6b4a32"/>
+        <circle cx="27.3" cy="28" r="1.5" fill="#f08f7a" opacity="0.45"/>
+        <circle cx="36.7" cy="28" r="1.5" fill="#f08f7a" opacity="0.45"/>
+    </g>
+    <circle cx="32" cy="30" r="25.4" fill="none" stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.2"/>
+</svg>
