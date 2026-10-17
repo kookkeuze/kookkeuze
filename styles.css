@@ -5036,6 +5036,13 @@ body.mobile-menu-open .mobile-nav-header {
   margin: 14px 0 6px;
 }
 
+.database-modal-sub {
+  margin: 6px 48px 4px 0;
+  color: #6f7f76;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
 .database-modal-content .database-bar {
   margin: 10px 0 12px;
 }
