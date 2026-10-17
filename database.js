@@ -192,7 +192,7 @@ async function initializeDatabase() {
 
     await pool.query(`
       INSERT INTO recipe_databases (owner_user_id, name, is_personal)
-      SELECT u.id, 'Mijn persoonlijke database', TRUE
+      SELECT u.id, 'Mijn persoonlijke kookboek', TRUE
       FROM users u
       WHERE NOT EXISTS (
         SELECT 1
@@ -1246,7 +1246,7 @@ function linkGoogleAccount(userId, googleSub, callback) {
 function createPersonalDatabase(userId, callback) {
   pool.query(`
       INSERT INTO recipe_databases (owner_user_id, name, is_personal)
-      VALUES ($1, 'Mijn persoonlijke database', TRUE)
+      VALUES ($1, 'Mijn persoonlijke kookboek', TRUE)
       ON CONFLICT DO NOTHING
       RETURNING id
     `, [userId], (dbErr, dbRes) => {
@@ -1691,7 +1691,7 @@ async function getOrCreateDefaultSharedDatabase(ownerUserId) {
 
   const created = await pool.query(`
     INSERT INTO recipe_databases (owner_user_id, name, is_personal, is_default_shared, legacy_seed_cleaned)
-    VALUES ($1, 'Gezamenlijke database', FALSE, TRUE, TRUE)
+    VALUES ($1, 'Gezamenlijk kookboek', FALSE, TRUE, TRUE)
     RETURNING id
   `, [ownerUserId]);
   const dbId = created.rows[0].id;
@@ -1722,7 +1722,7 @@ function inviteUserToDatabase(databaseId, inviterUserId, inviteEmail, callback) 
       LIMIT 1
     `, [databaseId]);
     const dbRow = dbRes.rows[0];
-    if (!dbRow) throw new Error('Database niet gevonden.');
+    if (!dbRow) throw new Error('Kookboek niet gevonden.');
 
     let targetDatabaseId = Number(databaseId);
     if (dbRow.is_personal) {

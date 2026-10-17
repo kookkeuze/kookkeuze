@@ -176,7 +176,7 @@ function guestAccountPromptHtml() {
   return `
     <div class="guest-account-prompt" role="note">
       <p class="guest-account-prompt-title">Maak een gratis account aan</p>
-      <p class="guest-account-prompt-text">Dan bewaren we je recepten en weekmenu's in je eigen database.</p>
+      <p class="guest-account-prompt-text">Dan bewaren we je recepten en weekmenu's in je eigen kookboek.</p>
       <div class="guest-account-prompt-actions">
         <button type="button" class="green-btn" data-guest-register>Gratis account</button>
         <button type="button" class="ghost-btn" data-guest-login>Ik heb al een account</button>
@@ -189,7 +189,7 @@ function guestAccountPromptHtml() {
 function guestDemoBannerHtml() {
   return `
     <div class="guest-demo-banner" role="note">
-      <span class="guest-demo-banner-text">Dit zijn voorbeeldrecepten. Maak een gratis account aan om je eigen receptendatabase op te bouwen.</span>
+      <span class="guest-demo-banner-text">Dit zijn voorbeeldrecepten. Maak een gratis account aan om je eigen kookboek op te bouwen.</span>
       <button type="button" class="guest-demo-banner-cta" data-guest-register>Gratis account</button>
     </div>`;
 }
@@ -860,9 +860,19 @@ function markMobileMenuOpen() {
 
 mobileMenuCloseBtn?.addEventListener('click', closeMobileHeaderMenu);
 
+// Kookboeken die al bestonden, heten in de database nog 'Gezamenlijke
+// database' e.d. Bezoekers zien overal 'kookboek', dus ook hier.
+function kookboekNaam(naam) {
+  const n = String(naam || '').trim();
+  if (!n) return 'Kookboek';
+  if (/^gezamenlijke database$/i.test(n)) return 'Gezamenlijk kookboek';
+  if (/^mijn persoonlijke database$/i.test(n)) return 'Mijn persoonlijke kookboek';
+  return n.replace(/database/gi, 'kookboek');
+}
+
 function buildDatabaseOptionsMarkup(selectedId) {
   return accessibleDatabases.map(db => {
-    let label = db.database_name || 'Database';
+    let label = kookboekNaam(db.database_name);
     if (db.is_personal) label = `Persoonlijk (${db.owner_email})`;
     else if (db.owner_email) label = `${label} (${db.owner_email})`;
     return `<option value="${escapeAttr(db.owner_user_id)}" ${Number(db.owner_user_id) === Number(selectedId) ? 'selected' : ''}>${escapeHtml(label)}</option>`;
@@ -992,8 +1002,8 @@ async function loadSharePanelData() {
   const activeDb = accessibleDatabases.find(db => Number(db.owner_user_id) === Number(activeId));
   const canManage = !!activeDb?.can_manage;
   if (!canManage) {
-    shareMembersList.innerHTML = '<p class="share-empty">Schakel naar een database met beheerrechten om delen te beheren.</p>';
-    shareInvitesList.innerHTML = '<p class="share-empty">Schakel naar een database met beheerrechten om uitnodigingen te beheren.</p>';
+    shareMembersList.innerHTML = '<p class="share-empty">Schakel naar een kookboek met beheerrechten om delen te beheren.</p>';
+    shareInvitesList.innerHTML = '<p class="share-empty">Schakel naar een kookboek met beheerrechten om uitnodigingen te beheren.</p>';
     return;
   }
 
@@ -1904,7 +1914,7 @@ document.getElementById('randomBtn').addEventListener('click', () => drawRandomR
 function emptyDatabaseHtml() {
   return `
     <div class="empty-state">
-      <p class="empty-state-title">Je database is nog leeg</p>
+      <p class="empty-state-title">Je kookboek is nog leeg</p>
       <p class="empty-state-sub">Kies hoe je wilt beginnen. Later toevoegen kan altijd.</p>
       <div class="empty-state-actions">
         <button type="button" class="green-btn" data-empty-action="links">Links plakken</button>
@@ -2012,8 +2022,8 @@ function buildRecipeCardsHtml(arr, options = {}) {
     ? 'to-own'
     : (sharedTargets.length ? 'to-shared' : null);
   const importLabel = importMode === 'to-own'
-    ? 'Importeer naar mijn database'
-    : 'Importeer naar gedeelde database';
+    ? 'Importeer naar mijn kookboek'
+    : 'Importeer naar gedeeld kookboek';
   // Voor guests in de database-modus: subtiele voorbeeld-banner boven de resultaten.
   const guestBanner = (!isInternetMode && !options.hideGuestBanner && isGuestUser())
     ? guestDemoBannerHtml()
@@ -2088,8 +2098,8 @@ function buildRecipeCardsHtml(arr, options = {}) {
                       data-recipe-time-required="${safeTimeRequired}"
                       data-recipe-calories="${safeCalories}"
                     >
-                      <span class="export-option-icon" aria-hidden="true"><img src="icons/toevoegen-database.svg" alt="" class="export-option-icon-img" /></span>
-                      <span>Voeg toe aan database</span>
+                      <span class="export-option-icon" aria-hidden="true"><img src="icons/toevoegen-kookboek.svg" alt="" class="export-option-icon-img" /></span>
+                      <span>Voeg toe aan kookboek</span>
                     </button>
                   ` : `
                     <button type="button" class="recipe-export-option plan-recipe-btn" data-recipe-id="${r.id}" data-recipe-title="${safeTitle}">
@@ -2097,7 +2107,7 @@ function buildRecipeCardsHtml(arr, options = {}) {
                       <span>Plan in weekmenu</span>
                     </button>
                     ${importMode ? `<button type="button" class="recipe-export-option import-recipe-btn" data-recipe-id="${r.id}" data-import-mode="${importMode}">
-                      <span class="export-option-icon" aria-hidden="true"><img src="icons/toevoegen-database.svg" alt="" class="export-option-icon-img" /></span>
+                      <span class="export-option-icon" aria-hidden="true"><img src="icons/toevoegen-kookboek.svg" alt="" class="export-option-icon-img" /></span>
                       <span>${importLabel}</span>
                     </button>` : ''}
                   `}
@@ -2728,13 +2738,13 @@ async function onRecipeCardClick(e) {
     const recipe = getInternetRecipePayloadFromElement(saveInternetBtn);
     const existing = findRecipeInDatabase(recipe?.url);
     if (existing) {
-      showRecipeAddedToast('Recept staat al in je database.');
+      showRecipeAddedToast('Recept staat al in je kookboek.');
       return;
     }
     openSaveInternetRecipeModal(recipe, async (filledRecipe) => {
       const saved = await ensureInternetRecipeSaved(filledRecipe);
       if (!saved) return;
-      showRecipeAddedToast('Recept toegevoegd aan je database.');
+      showRecipeAddedToast('Recept toegevoegd aan je kookboek.');
       const previewRecipe = {
         id: saved.id || '',
         title: filledRecipe.title || 'Recept',
@@ -2830,7 +2840,7 @@ function renderShoppingListScope() {
     shoppingListScope.textContent = '';
     return;
   }
-  shoppingListScope.textContent = db.is_personal ? '' : `Gedeeld · ${db.database_name}`;
+  shoppingListScope.textContent = db.is_personal ? '' : `Gedeeld · ${kookboekNaam(db.database_name)}`;
 }
 
 async function shoppingListRequest(path, options = {}) {
@@ -3767,14 +3777,14 @@ async function handleImportRecipe(recipeId, importMode) {
 
   if (importMode === 'to-own') {
     if (!isSharedDatabaseActive()) return;
-    await importRecipeBetweenDatabases(recipeId, Number(personalDb.owner_user_id), 'Recept geïmporteerd naar je eigen database.');
+    await importRecipeBetweenDatabases(recipeId, Number(personalDb.owner_user_id), 'Recept geïmporteerd naar je eigen kookboek.');
     return;
   }
 
   if (importMode === 'to-shared') {
     const sharedTargets = getSharedDatabaseTargets();
     if (!sharedTargets.length) {
-      showRecipeAddedToast('Je hebt nog geen gedeelde databases om naartoe te importeren.', 'error');
+      showRecipeAddedToast('Je hebt nog geen gedeelde kookboeken om naartoe te importeren.', 'error');
       return;
     }
 
@@ -3783,8 +3793,8 @@ async function handleImportRecipe(recipeId, importMode) {
       targetOwnerId = Number(sharedTargets[0].owner_user_id);
     } else {
       targetOwnerId = await openChoiceModal({
-        title: 'Importeren naar gedeelde database',
-        message: 'Kies de gedeelde database waar je dit recept naartoe wilt importeren.',
+        title: 'Importeren naar gedeeld kookboek',
+        message: 'Kies het gedeelde kookboek waar je dit recept naartoe wilt importeren.',
         choices: [
           ...sharedTargets.map(db => ({
             label: db.owner_email,
@@ -3797,7 +3807,7 @@ async function handleImportRecipe(recipeId, importMode) {
     }
 
     if (!targetOwnerId) return;
-    await importRecipeBetweenDatabases(recipeId, targetOwnerId, 'Recept geïmporteerd naar de gedeelde database.');
+    await importRecipeBetweenDatabases(recipeId, targetOwnerId, 'Recept geïmporteerd naar het gedeelde kookboek.');
   }
 }
 
@@ -4235,7 +4245,7 @@ async function ensureLoggedInForAdding() {
   const draftSaved = savePendingRecipeDraft();
   const choice = await openChoiceModal({
     title: 'Maak een gratis account aan',
-    message: 'Dan bewaren we je recepten in je eigen database.'
+    message: 'Dan bewaren we je recepten in je eigen kookboek.'
       + (draftSaved ? ' Wat je hebt geplakt, staat daarna nog voor je klaar.' : ''),
     choices: [
       { label: 'Ik heb al een account', value: 'login', variant: 'ghost' },
@@ -4453,7 +4463,7 @@ addRecipeForm.addEventListener('submit', async e => {
   const submittedUrl = document.getElementById('url').value.trim();
   if (submittedUrl && await isRecipeUrlInDatabase(submittedUrl)) {
     const addAnyway = await openConfirmModal({
-      title: 'Dit recept staat al in je database',
+      title: 'Dit recept staat al in je kookboek',
       message: 'Wil je het toch nog een keer toevoegen?',
       confirmLabel: 'Toch toevoegen',
       cancelLabel: 'Annuleer'
@@ -5005,7 +5015,7 @@ async function startBulk() {
 
   const firstOpen = bulkItems.findIndex(item => !item.result);
   if (firstOpen === -1) {
-    addMessageDiv.innerHTML = `<p style="color:#8a6d3b;">${links.length === 1 ? 'Dit recept staat' : 'Deze recepten staan'} al in je database.</p>`;
+    addMessageDiv.innerHTML = `<p style="color:#8a6d3b;">${links.length === 1 ? 'Dit recept staat' : 'Deze recepten staan'} al in je kookboek.</p>`;
     return;
   }
 

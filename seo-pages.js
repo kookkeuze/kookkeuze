@@ -129,13 +129,13 @@ const PAGES = [
       'Geen idee wat je vandaag moet eten? Je staat om zes uur voor een open koelkast, iedereen heeft honger, en precies op dat moment wil er niets te binnen schieten. Kookkeuze neemt die keuze van je over.',
       'De receptkiezer staat via de knop hieronder ingesteld op recepten die <strong>snel klaar</strong> zijn: binnen een halfuur op tafel. Zoek je iets anders, dan zet je de filters met één tik om. Je kiest op soort gerecht (pasta, kip, vis, vegetarisch, soep), op menugang, op bereidingstijd en op calorieën — zo vind je net zo makkelijk een <strong>gezond</strong> avondeten als een <strong>makkelijk</strong> gerecht voor doordeweeks.',
       'Kom je er dan nog niet uit? Druk op Random. Kookkeuze pakt zelf een recept dat aan je filters voldoet, en daarmee is het beslist. Geen eindeloos scrollen meer.',
-      'Met een gratis account bouw je daarna je eigen receptendatabase. Je plakt de link van elk recept dat je online tegenkomt, wij halen de titel en de foto op, en jij bepaalt onder welke categorieën het valt. Vervolgens plan je er je weekmenu mee en stuur je de ingrediënten door naar je boodschappenlijst. Zonder account kijk je vrij rond in de recepten hieronder.'
+      'Met een gratis account bouw je daarna je eigen kookboek. Je plakt de link van elk recept dat je online tegenkomt, wij halen de titel en de foto op, en jij bepaalt onder welke categorieën het valt. Vervolgens plan je er je weekmenu mee en stuur je de ingrediënten door naar je boodschappenlijst. Zonder account kijk je vrij rond in de recepten hieronder.'
     ],
     ctaLabel: 'Open de receptkiezer op "snel klaar"',
     ctaFilters: { time_required: 'Onder de 30 minuten' },
     listHeading: 'Binnen een halfuur klaar',
     listIntro:
-      'Een greep uit de recepten die binnen een halfuur klaar zijn. In je eigen database staan straks je eigen recepten.',
+      'Een greep uit de recepten die binnen een halfuur klaar zijn. In je eigen kookboek staan straks je eigen recepten.',
     filterSets: [{ time_required: ['Onder de 30 minuten'] }],
     sitemapPriority: '0.9'
   },
@@ -152,7 +152,7 @@ const PAGES = [
     breadcrumb: 'Snel klaar',
     intro: [
       'Bereidingstijd is in Kookkeuze een echt filter, geen slag in de lucht. Bij elk recept dat je opslaat leg je vast in welke categorie het valt: onder de 30 minuten, 30 tot 45 minuten, 45 minuten tot een uur, 1 tot 2 uur, of langer. Deze pagina laat de snelste categorie zien.',
-      'Dat filter is precies waar je op doordeweekse avonden iets aan hebt. Je zet de tijd op "onder de 30 minuten", eventueel met een soort gerecht erbij, en je houdt alleen over wat vanavond haalbaar is. De uitgebreide recepten blijven bewaard voor het weekend — ze staan gewoon in dezelfde database, achter een ander filter.'
+      'Dat filter is precies waar je op doordeweekse avonden iets aan hebt. Je zet de tijd op "onder de 30 minuten", eventueel met een soort gerecht erbij, en je houdt alleen over wat vanavond haalbaar is. De uitgebreide recepten blijven bewaard voor het weekend — ze staan gewoon in hetzelfde kookboek, achter een ander filter.'
     ],
     ctaLabel: 'Filter op onder de 30 minuten',
     ctaFilters: { time_required: 'Onder de 30 minuten' },
@@ -175,7 +175,7 @@ const PAGES = [
     intro: [
       'Snelle pasta recepten met kip zijn pastagerechten die je binnen 30 minuten op tafel zet, met kipfilet, kippendij of kipgehakt als basis. Hieronder staan zulke recepten van Nederlandse kooksites, allemaal in de categorie "onder de 30 minuten".',
       'Kip en pasta zijn een doordeweekse klassieker omdat ze tegelijk klaar zijn: terwijl de pasta kookt, bak je de kip en maak je de saus in dezelfde pan. Of het nu een romige saus wordt, pesto of tomaat — met de kip in reepjes of blokjes ben je snel klaar.',
-      'Vind je een recept dat je vaker wilt maken? Met een gratis account zet je het in je eigen receptendatabase, plan je het in je weekmenu en stuur je de ingrediënten naar je boodschappenlijst.'
+      'Vind je een recept dat je vaker wilt maken? Met een gratis account zet je het in je eigen kookboek, plan je het in je weekmenu en stuur je de ingrediënten naar je boodschappenlijst.'
     ],
     ctaLabel: 'Toon snelle pasta met kip',
     ctaFilters: { dish_type: 'Pasta', time_required: 'Onder de 30 minuten', search: 'kip' },
@@ -571,17 +571,17 @@ const PAGES = [
     footerOverviewLabel: 'Alle lekkere recepten',
     title: 'Lekkere recepten voor het avondeten – Kookkeuze',
     description:
-      'Lekkere recepten voor het avondeten, van pasta tot ovenschotel. Verzamel je favorieten in je eigen database en laat Kookkeuze kiezen wat het vanavond wordt.',
+      'Lekkere recepten voor het avondeten, van pasta tot ovenschotel. Verzamel je favorieten in je eigen kookboek en laat Kookkeuze kiezen wat het vanavond wordt.',
     h1: 'Lekkere recepten voor het avondeten',
     breadcrumb: 'Lekker',
     intro: [
       'Lekker is het enige criterium waar geen filter voor bestaat, want het verschilt per huishouden. Wat wij wél kunnen: zorgen dat de recepten die jij lekker vindt niet langer verspreid staan over bookmarks, screenshots en appjes aan jezelf.',
-      'In Kookkeuze plak je de link van een recept dat je ergens tegenkwam — een foodblog, een supermarktsite, een kookprogramma — en dan staat het in je eigen database. Wij halen de titel en de foto erbij, jij hangt er de categorieën aan die voor jou kloppen. Vanaf dat moment is "wat eten we vandaag" een keuze uit jouw eigen favorieten in plaats van uit het hele internet. Hieronder staan hoofdgerechten uit onze verzameling, zodat je ziet hoe dat eruitziet.'
+      'In Kookkeuze plak je de link van een recept dat je ergens tegenkwam — een foodblog, een supermarktsite, een kookprogramma — en dan staat het in je eigen kookboek. Wij halen de titel en de foto erbij, jij hangt er de categorieën aan die voor jou kloppen. Vanaf dat moment is "wat eten we vandaag" een keuze uit jouw eigen favorieten in plaats van uit het hele internet. Hieronder staan hoofdgerechten uit onze verzameling, zodat je ziet hoe dat eruitziet.'
     ],
     ctaLabel: 'Bekijk de hoofdgerechten',
     ctaFilters: { meal_category: 'Hoofdgerecht' },
     listHeading: 'Hoofdgerechten om uit te kiezen',
-    listIntro: 'Zo ziet een gevulde database eruit — met jouw recepten erin wordt het jouw lijst.',
+    listIntro: 'Zo ziet een gevuld kookboek eruit — met jouw recepten erin wordt het jouw lijst.',
     filterSets: [{ meal_category: ['Hoofdgerecht'] }],
     sitemapPriority: '0.7'
   },
@@ -663,7 +663,7 @@ const PAGES = [
     intro: [
       'Gezonde recepten om af te vallen zijn maaltijden die vullen met groente en eiwit, voor minder calorieën. Op deze pagina staan afvalrecepten van Nederlandse kooksites die onder de 500 kcal per portie blijven; het aantal calorieën komt van de receptsite zelf.',
       'Afvallen loopt bijna nooit stuk op één maaltijd. Het loopt stuk op de avond dat je geen idee hebt wat je gaat eten en het daarom maar wordt wat er het snelst op tafel staat. Een lijst met caloriearme recepten helpt daar weinig tegen — een filter dat je in twee tellen toepast wel.',
-      'Kookkeuze heeft daarom een calorieënfilter op elk recept in je database. Je vult bij het opslaan in hoeveel kcal een portie ongeveer telt, en daarna doorzoek je je hele verzameling op "onder de 300", "onder de 500", "onder de 700" — tot en met "boven de 1000" voor de dagen dat het niet hoeft.',
+      'Kookkeuze heeft daarom een calorieënfilter op elk recept in je kookboek. Je vult bij het opslaan in hoeveel kcal een portie ongeveer telt, en daarna doorzoek je je hele verzameling op "onder de 300", "onder de 500", "onder de 700" — tot en met "boven de 1000" voor de dagen dat het niet hoeft.',
       'Dat filter combineer je met de rest: gezond én binnen een halfuur, of caloriearm én vegetarisch. En omdat je er meteen je weekmenu mee plant en de ingrediënten doorstuurt naar je boodschappenlijst, staat de keuze al vast voordat de honger toeslaat.'
     ],
     ctaLabel: 'Toon recepten onder 500 kcal',

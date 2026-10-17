@@ -81,7 +81,7 @@
       "price": "0",
       "priceCurrency": "EUR"
     },
-    "description": "Persoonlijke receptendatabase, weekmenuplanner en boodschappenlijst voor thuis koken."
+    "description": "Persoonlijk kookboek, weekmenuplanner en boodschappenlijst voor thuis koken."
   }
   </script>
 
@@ -108,9 +108,9 @@
     <img src="Logo/Kookkeuze-logo.svg" alt="Kookkeuze-logo" class="logo-img" id="homeLogo" />
 
     <div class="topbar-actions">
-      <button id="databaseMenuBtn" class="topbar-action-btn database-menu-btn hidden" aria-label="Database instellingen">
-        <span class="action-icon-shell"><img src="icons/database.svg" alt="" width="24" height="24" class="topbar-icon-img" /></span>
-        <span class="database-text">Database</span>
+      <button id="databaseMenuBtn" class="topbar-action-btn database-menu-btn hidden" aria-label="Kookboek-instellingen">
+        <span class="action-icon-shell"><img src="icons/kookboek.svg" alt="" width="24" height="24" class="topbar-icon-img" /></span>
+        <span class="database-text">Kookboek</span>
       </button>
 
       <button id="shoppingListMenuBtn" class="topbar-action-btn shopping-list-menu-btn hidden" aria-label="Boodschappenlijst">
@@ -157,7 +157,7 @@
       <img src="icons/app.svg" alt="" width="22" height="22" class="mobile-menu-icon-img" aria-hidden="true" /> Installeer app
     </button>
     <button id="mobileDatabaseMenuBtn" type="button" class="mobile-header-menu-link mobile-header-database-link hidden">
-      <img src="icons/database.svg" alt="" width="22" height="22" class="mobile-menu-icon-img" aria-hidden="true" /> Database
+      <img src="icons/kookboek.svg" alt="" width="22" height="22" class="mobile-menu-icon-img" aria-hidden="true" /> Kookboek
     </button>
     <button id="mobileShoppingListMenuBtn" type="button" class="mobile-header-menu-link mobile-header-shopping-link hidden">
       <img src="icons/boodschappenlijst.svg" alt="" width="22" height="22" class="mobile-menu-icon-img" aria-hidden="true" /> Boodschappenlijst
@@ -196,7 +196,7 @@
 
   <h2 class="logged-title">Je bent ingelogd</h2>
   <p class="logged-sub">
-    Je kunt nu beginnen met het maken van je eigen recepten­database.<br />
+    Je kunt nu beginnen met het maken van je eigen kookboek.<br />
     Klik op <strong>“Voeg een recept toe”</strong> om te starten!
   </p>
 
@@ -339,7 +339,7 @@
     <!-- TAB 1: KIES EEN RECEPT -->
     <div id="kiesRecept" class="tab-content active">
       <div class="recipe-source-switch" role="group" aria-label="Kies waar je recepten zoekt">
-        <button type="button" class="recipe-source-switch-btn active" data-recipe-source-mode="database" aria-pressed="true">In je database</button>
+        <button type="button" class="recipe-source-switch-btn active" data-recipe-source-mode="database" aria-pressed="true">In je kookboek</button>
         <button type="button" class="recipe-source-switch-btn" data-recipe-source-mode="internet" aria-pressed="false">Op internet</button>
       </div>
       <div class="hero-header">
@@ -475,7 +475,7 @@
               <input id="url" type="url" placeholder="Plak hier je recept-URL" required />
               <button id="fetchInfoBtn" type="button" class="green-btn fetch-info-btn">Haal informatie op</button>
             </div>
-            <p id="urlDuplicateNote" class="url-duplicate-note" hidden>Dit recept staat al in je database.</p>
+            <p id="urlDuplicateNote" class="url-duplicate-note" hidden>Dit recept staat al in je kookboek.</p>
           </div>
         </section>
 
@@ -584,7 +584,7 @@
             <span class="add-recipe-step-badge" aria-hidden="true">1</span>
             <div class="add-recipe-section-title">
               <h3>Je recept</h3>
-              <p>Dit recept komt in je eigen database en krijgt een pagina op Kookkeuze.</p>
+              <p>Dit recept komt in je eigen kookboek en krijgt een pagina op Kookkeuze.</p>
             </div>
           </div>
 
@@ -1020,7 +1020,7 @@
         </div>
         <div class="recipe-note-actions">
           <button id="closeSaveInternetRecipeModalBtn" type="button" class="ghost-btn">Annuleer</button>
-          <button id="saveInternetRecipeConfirmBtn" type="button" class="green-btn">Opslaan in database</button>
+          <button id="saveInternetRecipeConfirmBtn" type="button" class="green-btn">Opslaan in kookboek</button>
         </div>
       </div>
     </div>
@@ -1030,24 +1030,24 @@
         <button id="closeDatabaseModal" class="modal-close" aria-label="Sluiten">
           <i class="fas fa-times"></i>
         </button>
-        <h3 class="assign-modal-title">Database instellingen</h3>
+        <h3 class="assign-modal-title">Kookboek-instellingen</h3>
         <div id="databaseBar" class="database-bar">
           <div class="database-bar-settings">
             <div class="database-bar-main">
-              <label for="activeDatabaseSelect">Actieve database</label>
+              <label for="activeDatabaseSelect">Actief kookboek</label>
               <select id="activeDatabaseSelect"></select>
             </div>
             <div class="database-bar-main">
               <label for="defaultDatabaseSelect">Standaard bij inloggen</label>
               <select id="defaultDatabaseSelect"></select>
-              <p class="database-setting-hint">Deze database openen we automatisch zodra je inlogt.</p>
+              <p class="database-setting-hint">Dit kookboek openen we automatisch zodra je inlogt.</p>
             </div>
           </div>
           <button id="toggleSharePanelBtn" type="button" class="overview-view-btn">Delen beheren</button>
         </div>
 
         <div id="sharePanel" class="share-panel hidden">
-          <h3>Database delen</h3>
+          <h3>Kookboek delen</h3>
           <div class="share-invite-row">
             <input id="shareInviteEmail" type="email" placeholder="Nodig uit via e-mailadres" />
             <button id="shareInviteBtn" type="button" class="green-btn">Uitnodigen</button>
@@ -1119,7 +1119,7 @@
         </button>
         <div class="recipe-pack-modal-header">
           <h3 class="assign-modal-title">Recept pakketten</h3>
-          <p class="recipe-pack-modal-sub">Voeg in 1 klik complete sets recepten toe aan je database.</p>
+          <p class="recipe-pack-modal-sub">Voeg in 1 klik complete sets recepten toe aan je kookboek.</p>
         </div>
         <div id="recipePackModalBody"></div>
       </div>
@@ -1152,7 +1152,7 @@
               <img src="icons/stap-1.svg" alt="" class="hiw-icon-img" aria-hidden="true" />
               <div class="step-number">1</div>
             </div>
-            <p>Maak gratis een account zodat je jouw eigen receptendatabase kunt opbouwen.</p>
+            <p>Maak gratis een account zodat je jouw eigen kookboek kunt opbouwen.</p>
           </div>
         </div>
 
@@ -1185,7 +1185,7 @@
               <img src="icons/stap-4.svg" alt="" class="hiw-icon-img" aria-hidden="true" />
               <div class="step-number">4</div>
             </div>
-            <p>Zet de <em>internet-schakelaar</em> aan en ontdek recepten van bekende websites. Voeg ze met één klik toe aan je eigen database.</p>
+            <p>Zet de <em>internet-schakelaar</em> aan en ontdek recepten van bekende websites. Voeg ze met één klik toe aan je eigen kookboek.</p>
           </div>
         </div>
 

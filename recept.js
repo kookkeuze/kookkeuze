@@ -442,7 +442,7 @@
           <div class="add-recipe-section-head">
             <div class="add-recipe-section-title">
               <h3>Recept bewerken</h3>
-              <p>Je wijzigingen gelden meteen voor iedereen die deze database gebruikt.</p>
+              <p>Je wijzigingen gelden meteen voor iedereen die dit kookboek gebruikt.</p>
             </div>
           </div>
 

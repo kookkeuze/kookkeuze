@@ -3759,13 +3759,13 @@ async function resolveDatabaseOwnerId(req) {
   }
   const ownerUserId = requested || await getPersonalDatabaseId(req.user.id);
   if (!ownerUserId) {
-    const err = new Error('Persoonlijke database niet gevonden.');
+    const err = new Error('Persoonlijk kookboek niet gevonden.');
     err.statusCode = 404;
     throw err;
   }
   const hasAccess = await dbCall(userHasDatabaseAccess, req.user.id, ownerUserId);
   if (!hasAccess) {
-    const err = new Error('Je hebt geen toegang tot deze database.');
+    const err = new Error('Je hebt geen toegang tot dit kookboek.');
     err.statusCode = 403;
     throw err;
   }
@@ -3781,7 +3781,7 @@ app.get('/api/recipe-packs/onboarding-status', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
   try {
     const personalDbId = await getPersonalDatabaseId(req.user.id);
-    if (!personalDbId) return res.status(404).json({ error: 'Persoonlijke database niet gevonden.' });
+    if (!personalDbId) return res.status(404).json({ error: 'Persoonlijk kookboek niet gevonden.' });
     const [seen, recipeCount] = await Promise.all([
       dbCall(getUserRecipePackOnboardingSeen, req.user.id),
       dbCall(getRecipeCountForDatabase, personalDbId)
@@ -4165,8 +4165,8 @@ app.post('/api/recipes/import-external', async (req, res) => {
 
     return res.json({
       message: savedRecipe.already_exists
-        ? 'Recept stond al in je database.'
-        : 'Recept toegevoegd aan je database.',
+        ? 'Recept stond al in je kookboek.'
+        : 'Recept toegevoegd aan je kookboek.',
       id: savedRecipe.id,
       already_exists: !!savedRecipe.already_exists
     });
@@ -4245,7 +4245,7 @@ app.post('/api/recipes/:id/import', async (req, res) => {
     const rawTargetId = Number(req.body?.targetDbOwnerId);
     const fallbackPersonalDbId = await getPersonalDatabaseId(req.user.id);
     const targetOwnerId = Number.isInteger(rawTargetId) && rawTargetId > 0 ? rawTargetId : fallbackPersonalDbId;
-    if (!targetOwnerId) return res.status(404).json({ error: 'Persoonlijke database niet gevonden.' });
+    if (!targetOwnerId) return res.status(404).json({ error: 'Persoonlijk kookboek niet gevonden.' });
     const canWriteTarget = await dbCall(userHasDatabaseAccess, req.user.id, targetOwnerId);
     if (!canWriteTarget) {
       return res.status(403).json({ error: 'Je hebt geen toegang tot de doel-database.' });
@@ -4256,13 +4256,13 @@ app.post('/api/recipes/:id/import', async (req, res) => {
 
     const imported = await dbCall(importRecipeToUserDatabase, recipeId, sourceOwnerId, targetOwnerId);
     if (!imported || !imported.source_found) {
-      return res.status(404).json({ error: 'Recept niet gevonden in deze database.' });
+      return res.status(404).json({ error: 'Recept niet gevonden in dit kookboek.' });
     }
     if (imported.already_exists) {
       const isOwnRecipe = Number(imported.source_user_id) === Number(req.user.id);
       return res.status(409).json({
         error: isOwnRecipe
-          ? 'Dit is je eigen recept en het staat al in je database.'
+          ? 'Dit is je eigen recept en het staat al in je kookboek.'
           : 'Dit recept staat al in de doel-database.'
       });
     }
@@ -4564,7 +4564,7 @@ app.get('/api/databases', async (req, res) => {
     const databases = await dbCall(listAccessibleDatabases, req.user.id);
     return res.json(databases);
   } catch (err) {
-    return res.status(500).json({ error: 'Kon databases niet ophalen.' });
+    return res.status(500).json({ error: 'Kon kookboeken niet ophalen.' });
   }
 });
 
@@ -4574,7 +4574,7 @@ app.get('/api/databases/shares', async (req, res) => {
   try {
     const databaseId = await resolveDatabaseOwnerId(req);
     const canManage = await dbCall(userCanManageDatabase, req.user.id, databaseId);
-    if (!canManage) return res.status(403).json({ error: 'Je hebt geen beheerrechten voor deze database.' });
+    if (!canManage) return res.status(403).json({ error: 'Je hebt geen beheerrechten voor dit kookboek.' });
     const [members, invites] = await Promise.all([
       dbCall(listDatabaseMembers, databaseId),
       dbCall(listDatabaseInvites, databaseId)
@@ -4594,12 +4594,12 @@ app.post('/api/databases/invite', async (req, res) => {
   try {
     const databaseId = await resolveDatabaseOwnerId(req);
     const canManage = await dbCall(userCanManageDatabase, req.user.id, databaseId);
-    if (!canManage) return res.status(403).json({ error: 'Je hebt geen beheerrechten voor deze database.' });
+    if (!canManage) return res.status(403).json({ error: 'Je hebt geen beheerrechten voor dit kookboek.' });
 
     const result = await dbCall(inviteUserToDatabase, databaseId, req.user.id, email);
     return res.json({
       message: result.type === 'member'
-        ? (result.already_had_access ? 'Gebruiker had al toegang.' : 'Gebruiker toegevoegd aan de gedeelde database.')
+        ? (result.already_had_access ? 'Gebruiker had al toegang.' : 'Gebruiker toegevoegd aan het gedeelde kookboek.')
         : 'Uitnodiging opgeslagen. Zodra deze gebruiker registreert met dit e-mailadres, krijgt hij toegang.',
       result
     });
@@ -4618,7 +4618,7 @@ app.delete('/api/databases/members/:memberUserId', async (req, res) => {
   try {
     const databaseId = await resolveDatabaseOwnerId(req);
     const canManage = await dbCall(userCanManageDatabase, req.user.id, databaseId);
-    if (!canManage) return res.status(403).json({ error: 'Je hebt geen beheerrechten voor deze database.' });
+    if (!canManage) return res.status(403).json({ error: 'Je hebt geen beheerrechten voor dit kookboek.' });
     await dbCall(revokeDatabaseMember, databaseId, memberUserId);
     return res.json({ message: 'Toegang ingetrokken.' });
   } catch (_err) {
@@ -4636,7 +4636,7 @@ app.delete('/api/databases/invites/:inviteId', async (req, res) => {
   try {
     const databaseId = await resolveDatabaseOwnerId(req);
     const canManage = await dbCall(userCanManageDatabase, req.user.id, databaseId);
-    if (!canManage) return res.status(403).json({ error: 'Je hebt geen beheerrechten voor deze database.' });
+    if (!canManage) return res.status(403).json({ error: 'Je hebt geen beheerrechten voor dit kookboek.' });
     const changed = await dbCall(revokeDatabaseInvite, databaseId, inviteId);
     if (!changed) return res.status(404).json({ error: 'Uitnodiging niet gevonden.' });
     return res.json({ message: 'Uitnodiging ingetrokken.' });
