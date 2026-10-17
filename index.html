@@ -931,11 +931,21 @@
     </div>
 
     <div id="randomRecipeModal" class="modal hidden" aria-hidden="true">
-      <div class="modal-content random-recipe-modal-content">
-        <button id="closeRandomRecipeModal" class="modal-close" aria-label="Sluiten">
-          <i class="fas fa-times"></i>
+      <div id="randomSwipeStack" class="random-swipe-stack">
+        <div class="random-swipe-peek random-swipe-peek--2" aria-hidden="true"></div>
+        <div class="random-swipe-peek random-swipe-peek--1" aria-hidden="true"></div>
+        <div class="modal-content random-recipe-modal-content">
+          <button id="closeRandomRecipeModal" class="modal-close" aria-label="Sluiten">
+            <i class="fas fa-times"></i>
+          </button>
+          <div id="randomRecipeBody"></div>
+        </div>
+        <button id="randomSwipeHint" type="button" class="random-swipe-hint" aria-label="Ander recept">
+          <i class="fas fa-chevron-left" aria-hidden="true"></i>
+          <span class="random-swipe-hint-touch">Swipe voor een ander recept</span>
+          <span class="random-swipe-hint-mouse">Sleep opzij voor een ander recept</span>
+          <i class="fas fa-chevron-right" aria-hidden="true"></i>
         </button>
-        <div id="randomRecipeBody"></div>
       </div>
     </div>
 

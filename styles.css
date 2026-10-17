@@ -4927,7 +4927,7 @@ body.mobile-menu-open .mobile-nav-header {
   animation: randomBackdropIn 0.2s ease both;
 }
 
-#randomRecipeModal:not(.hidden) .modal-content {
+#randomRecipeModal:not(.hidden) .random-swipe-stack {
   animation: randomPopIn 0.3s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
   transform-origin: center center;
 }
@@ -4935,7 +4935,7 @@ body.mobile-menu-open .mobile-nav-header {
 /* Handoff vanuit het groene vinkje: de popup vouwt vanuit een klein punt
    bovenin (waar het vinkje stond) naar beneden open en landt op zijn plek.
    Eén doorlopende beweging samen met de .to-preview-animatie van het vinkje. */
-#randomRecipeModal.from-add:not(.hidden) .modal-content {
+#randomRecipeModal.from-add:not(.hidden) .random-swipe-stack {
   transform-origin: center top;
   animation: addRecipeGrow 0.56s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
@@ -4956,8 +4956,8 @@ body.mobile-menu-open .mobile-nav-header {
 
 @media (prefers-reduced-motion: reduce) {
   #randomRecipeModal:not(.hidden),
-  #randomRecipeModal:not(.hidden) .modal-content,
-  #randomRecipeModal.from-add:not(.hidden) .modal-content {
+  #randomRecipeModal:not(.hidden) .random-swipe-stack,
+  #randomRecipeModal.from-add:not(.hidden) .random-swipe-stack {
     animation: none;
   }
 }
@@ -7973,7 +7973,7 @@ textarea {
   animation: surface-scrim-out var(--duration-fast) var(--ease-out) forwards;
 }
 
-#randomRecipeModal.closing .modal-content,
+#randomRecipeModal.closing .random-swipe-stack,
 .modal.app-dialog.closing .modal-content {
   /* .modal erbij is geen stijlkeuze maar specificiteit: zonder die extra
      klasse verliest deze regel van '.modal.closing > .modal-content:not(...)'
@@ -8032,7 +8032,7 @@ h1, h2, h3,
   .modal.closing,
   .modal.closing > .modal-content,
   #randomRecipeModal.closing,
-  #randomRecipeModal.closing .modal-content,
+  #randomRecipeModal.closing .random-swipe-stack,
   .app-dialog.closing,
   .app-dialog.closing .modal-content {
     animation: none;
@@ -8713,73 +8713,145 @@ h1, h2, h3,
 
 
 /* =========================================================================
-   NOG EEN WILLEKEURIG RECEPT
-   Zwevend op de kaart in de random-popup, zodat je door kunt bladeren zonder
-   te sluiten en opnieuw te beginnen. Bewust geen tweede groene knop: hij ligt
-   als doorschijnend laagje op de foto, tegenover de sluitknop aan de andere
-   kant, en heeft een eigen vorm zodat je hem er niet mee verwart.
+   SWIPEN DOOR RANDOM RECEPTEN
+   De popup is de bovenste kaart van een stapeltje. Twee kaarten erachter
+   steken onderaan een stukje uit, zodat je ziet dat er nog meer komen. Bij
+   het slepen schuiven ze mee naar voren (--swipe-progress loopt van 0 naar
+   1), zodat de volgende kaart al klaarligt als de bovenste wegvliegt.
    ========================================================================= */
 
-.random-again-btn {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 3;
-  width: 44px;
-  height: 44px;
-  min-width: 0;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.78);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  backdrop-filter: blur(16px) saturate(180%);
-  /* De binnenste haarlijn geeft de knop ook een rand als hij op wit ligt in
-     plaats van op een foto; daar doet het melkglas namelijk niets. */
-  box-shadow:
-    inset 0 0 0 1px rgba(24, 32, 28, 0.10),
-    0 1px 2px rgba(24, 32, 28, 0.10),
-    0 6px 18px rgba(24, 32, 28, 0.18);
-  color: #2f3740;
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background-color var(--duration-fast) var(--ease-out),
-              transform var(--duration-press) var(--ease-out);
+/* Geregistreerd, zodat de browser de waarde kan laten overlopen in plaats van
+   in één keer te verspringen. */
+@property --swipe-progress {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
 }
 
-/* Het lichtrandje bovenaan: daar vangt het materiaal het licht. */
-.random-again-btn::before {
-  content: '';
+.random-swipe-stack {
+  --swipe-progress: 0;
+  --swipe-peek-gap: 11px;
+  --swipe-hint-space: 46px;
+  position: relative;
+  width: min(900px, 100%);
+  margin: auto;
+}
+
+.random-swipe-stack > .modal-content.random-recipe-modal-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  /* Ruimte onderaan voor de uitstekende kaarten en het hintje. */
+  max-height: calc(90vh - 2 * var(--swipe-peek-gap) - var(--swipe-hint-space));
+  max-height: calc(90dvh - 2 * var(--swipe-peek-gap) - var(--swipe-hint-space));
+  /* Verticaal scrollen doet de browser, zijwaarts slepen doen wij. */
+  touch-action: pan-y;
+  /* Draaien rond een punt onder de kaart: dan kantelt hij zoals een kaart die
+     je onderaan vasthoudt en opzij schuift. */
+  transform-origin: 50% 130%;
+}
+
+.random-swipe-peek {
+  display: none;
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  border-top: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: var(--radius-lg);
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  box-shadow:
+    0 1px 2px rgba(24, 32, 28, 0.06),
+    0 8px 24px rgba(24, 32, 28, 0.12);
+}
+
+.random-swipe-stack.can-swipe .random-swipe-peek {
+  display: block;
+}
+
+/* Rust: 1 kaart erachter, 2 kaarten erachter. Op voortgang 1 staat de
+   middelste precies waar de bovenste stond, en de achterste waar de middelste
+   stond. */
+.random-swipe-peek--1 {
+  z-index: 1;
+  background: #f1f4f2;
+  transform:
+    translateY(calc(var(--swipe-peek-gap) * (1 - var(--swipe-progress))))
+    scale(calc(0.95 + 0.05 * var(--swipe-progress)));
+}
+
+.random-swipe-peek--2 {
+  z-index: 0;
+  background: #e2e8e4;
+  transform:
+    translateY(calc(var(--swipe-peek-gap) * (2 - var(--swipe-progress))))
+    scale(calc(0.9 + 0.05 * var(--swipe-progress)));
+}
+
+/* Tijdens het slepen volgt alles de vinger, zonder vertraging. */
+.random-swipe-stack.is-dragging {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.random-swipe-stack.is-dragging > .random-recipe-modal-content {
+  cursor: grabbing;
+  will-change: transform;
+}
+
+/* Losgelaten maar niet ver genoeg: terugveren, met een klein beetje
+   doorschieten — je gooide hem zelf, dus dat mag. */
+.random-swipe-stack.is-settling {
+  transition: --swipe-progress 380ms var(--ease-standard);
+}
+
+.random-swipe-stack.is-settling > .random-recipe-modal-content {
+  transition: transform 380ms cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+/* Ver genoeg: wegvliegen. Er zit al vaart in, dus vanaf het begin snel. */
+.random-swipe-stack.is-flinging {
+  transition: --swipe-progress 260ms var(--ease-out);
+}
+
+.random-swipe-stack.is-flinging > .random-recipe-modal-content {
+  transition:
+    transform 260ms cubic-bezier(0.2, 0.6, 0.4, 1),
+    opacity 200ms linear 60ms;
   pointer-events: none;
 }
 
-.random-again-btn:hover {
-  background: rgba(255, 255, 255, 0.92);
-}
-
-.random-again-btn[disabled] {
-  cursor: default;
-}
-
-.random-again-btn.is-busy i {
-  animation: random-again-spin 0.7s linear infinite;
-}
-
-@keyframes random-again-spin {
+/* Het volgende recept is nog onderweg: een cirkeltje op de lege kaart. */
+@keyframes random-swipe-spin {
   to { transform: rotate(360deg); }
 }
 
-/* De nieuwe kaart komt aan als materiaal in plaats van dat hij erin klapt.
-   Geen doorschieten: je hebt hem niet zelf in beweging gebracht. */
+.random-swipe-stack.is-waiting .random-swipe-peek--1::after {
+  content: '';
+  position: absolute;
+  top: calc(50% - 15px);
+  left: calc(50% - 15px);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid rgba(24, 32, 28, 0.1);
+  border-top-color: var(--green, #4caf50);
+  animation: random-swipe-spin 0.7s linear infinite;
+}
+
+/* Na het wegvliegen schuift alles één plek op; alleen de achterste kaart is
+   echt nieuw, en die komt er zacht bij. */
+@keyframes random-swipe-refill {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.random-swipe-stack.is-refilling .random-swipe-peek--2 {
+  animation: random-swipe-refill 380ms var(--ease-out);
+}
+
+/* Het nieuwe recept verschijnt op de plek van de kaart die al naar voren
+   was geschoven. */
 @keyframes random-swap-in {
   from { opacity: 0; transform: scale(0.985); }
   to   { opacity: 1; transform: none; }
@@ -8789,40 +8861,102 @@ h1, h2, h3,
   animation: random-swap-in var(--duration-base) var(--ease-standard);
 }
 
+/* Eén keer kort wiebelen voor wie nog nooit geswipet heeft, zodat de kaart
+   erachter even tevoorschijn komt. */
+@keyframes random-swipe-nudge {
+  0%   { transform: none; }
+  35%  { transform: translateX(-34px) rotate(-2.4deg); }
+  65%  { transform: translateX(-34px) rotate(-2.4deg); }
+  100% { transform: none; }
+}
+
+.random-recipe-modal-content.is-nudging {
+  animation: random-swipe-nudge 900ms var(--ease-standard);
+}
+
+/* Het hintje onder de stapel, op de achtergrond: zo staat het ook in beeld
+   als de kaart zelf moet scrollen. Ook een knop, voor wie niet kan of wil
+   swipen. */
+.random-swipe-hint {
+  display: none;
+  position: absolute;
+  top: calc(100% + 2 * var(--swipe-peek-gap) + 8px);
+  left: 0;
+  right: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 2px rgba(24, 32, 28, 0.35);
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.random-swipe-stack.can-swipe .random-swipe-hint {
+  display: flex;
+}
+
+.random-swipe-hint i {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.random-swipe-hint:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.random-swipe-hint-mouse {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .random-swipe-hint-touch {
+    display: none;
+  }
+
+  .random-swipe-hint-mouse {
+    display: inline;
+  }
+
+  .random-swipe-stack.can-swipe > .random-recipe-modal-content {
+    cursor: grab;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  /* Draaien is hier statusinformatie, dus die blijft; alleen zonder beweging. */
-  .random-again-btn.is-busy i {
-    animation: none;
-    opacity: 0.45;
-  }
-
-  .recipe-card.is-swapping-in {
+  .random-recipe-modal-content.is-nudging,
+  .recipe-card.is-swapping-in,
+  .random-swipe-stack.is-refilling .random-swipe-peek--2 {
     animation: none;
   }
-}
 
-@media (prefers-reduced-transparency: reduce) {
-  .random-again-btn {
-    background: #ffffff;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
+  /* Geen kantelen of wegvliegen: de kaart blijft staan en het nieuwe recept
+     verschijnt op zijn plek. */
+  .random-swipe-stack.is-flinging > .random-recipe-modal-content {
+    transition: opacity 120ms linear;
+    transform: none !important;
   }
 }
-
-@media (prefers-contrast: more) {
-  .random-again-btn {
-    background: #ffffff;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    border: 1px solid #46524b;
-  }
-}
-
 
 /* =========================================================================
-   SLUITEN EN OPNIEUW TREKKEN ALS PAAR
-   Ze horen bij elkaar: links opnieuw trekken, rechts sluiten. Dus even groot
-   en op dezelfde hoogte, allebei gemeten vanaf de rand van het venster.
+   SLUITKNOP OP VINGERMAAT
+   44 px, gemeten vanaf de rand van het venster.
    ========================================================================= */
 
 /* Was 28 px met een onzichtbaar raakvlak van 44 eromheen; nu is de knop zelf
@@ -8855,14 +8989,9 @@ h1, h2, h3,
   padding-right: 48px;
 }
 
-.random-again-btn {
-  top: 14px;
-  left: 14px;
-}
-
 /* .modal-content reserveert alleen rechts ruimte voor de scrollbalk, waardoor
-   de sluitknop verder van de rand kwam te staan dan de shuffle-knop links.
-   Aan beide kanten reserveren zet ze weer even ver van de rand. */
+   de kaart iets uit het midden kwam. Aan beide kanten reserveren houdt hem
+   gecentreerd. */
 .modal-content.random-recipe-modal-content {
   scrollbar-gutter: stable both-edges;
 }

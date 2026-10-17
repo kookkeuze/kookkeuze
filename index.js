@@ -1756,9 +1756,9 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
 
 /* — Random recept — */
 // Eén plek voor het trekken van een random recept, zodat de knop onder de
-// filters en de knop op de kaart in de popup gegarandeerd hetzelfde doen.
-// swap = true betekent: de popup staat al open en de kaart wordt vervangen.
-async function drawRandomRecipe({ swap = false } = {}) {
+// filters en het swipen in de popup gegarandeerd hetzelfde doen. Geeft
+// { recipe, options }, { empty } of { error } terug en toont zelf niets.
+async function fetchRandomRecipe() {
   const isInternet = recipeSourceMode === 'internet';
   try {
     // Guests mogen een random recept uit de demo-database opvragen.
@@ -1770,15 +1770,71 @@ async function drawRandomRecipe({ swap = false } = {}) {
       : await fetch(`${API_BASE}/api/recipes/random?` + qs, { headers: authHeaders() });
     const d = await res.json();
 
-    if (!d || d.message === 'Geen resultaten gevonden.') {
-      showRandomMessage('Geen resultaten gevonden.');
-      return;
-    }
-    showRandomResult(d, isInternet ? { mode: 'internet', swap } : { swap });
+    if (!d || d.message === 'Geen resultaten gevonden.') return { empty: true };
+    return { recipe: d, options: isInternet ? { mode: 'internet' } : {} };
   } catch (err) {
     console.error(err);
+    return { error: true };
+  }
+}
+
+// Het volgende recept halen we al op terwijl je naar het huidige kijkt, zodat
+// het na het swipen meteen klaarstaat (foto inbegrepen). De sleutel bevat de
+// filters: zet je die tussendoor anders, dan gooien we het klaarliggende
+// recept weg in plaats van er een te tonen dat niet meer klopt.
+let nextRandomRecipe = null;
+
+function randomRecipeKey() {
+  const isInternet = recipeSourceMode === 'internet';
+  const qs = buildRecipeToolParams({ includeSearch: false, includeDatabase: !isInternet }).toString();
+  return `${recipeSourceMode}|${getValidToken() ? 'in' : 'gast'}|${qs}`;
+}
+
+function prefetchNextRandomRecipe(currentUrl = '') {
+  const key = randomRecipeKey();
+  const promise = (async () => {
+    let result = await fetchRandomRecipe();
+    // Hetzelfde recept als nu in beeld voelt als een swipe die niets deed.
+    if (result.recipe && currentUrl && result.recipe.url === currentUrl) {
+      const nogEen = await fetchRandomRecipe();
+      if (nogEen.recipe) result = nogEen;
+    }
+    const url = result.recipe?.url;
+    if (url) {
+      fetchRecipeImage(url).then(src => {
+        if (!src) return;
+        const img = new Image();
+        img.referrerPolicy = 'no-referrer';
+        img.src = src;
+      });
+    }
+    return result;
+  })();
+  nextRandomRecipe = { key, promise };
+}
+
+function takeRandomRecipe() {
+  const klaar = nextRandomRecipe && nextRandomRecipe.key === randomRecipeKey()
+    ? nextRandomRecipe.promise
+    : null;
+  nextRandomRecipe = null;
+  if (!klaar) return fetchRandomRecipe();
+  // Mislukte de voorlader (bijv. even geen netwerk), probeer het dan nu nog.
+  return klaar.then(result => (result.error ? fetchRandomRecipe() : result));
+}
+
+function presentRandomResult(result, { swap = false } = {}) {
+  if (result.recipe) {
+    showRandomResult(result.recipe, { ...result.options, swap });
+  } else if (result.empty) {
+    showRandomMessage('Geen resultaten gevonden.');
+  } else {
     showRandomMessage('Er ging iets fout bij het ophalen van een random recept.');
   }
+}
+
+async function drawRandomRecipe() {
+  presentRandomResult(await takeRandomRecipe());
 }
 
 document.getElementById('randomBtn').addEventListener('click', () => drawRandomRecipe());
@@ -2117,39 +2173,23 @@ function showRandomResult(recipe, options = {}) {
     showRecipes([recipe], options);
     return;
   }
+  const wasOpen = !randomRecipeModal.classList.contains('hidden');
   randomRecipeBody.innerHTML = buildRecipeCardsHtml([recipe], {
     ...options,
     extraClass: 'weekmenu-preview-cards'
   });
   hydrateResultImages();
-  addRandomAgainButton({ swap: !!options.swap });
-  openRandomRecipeModal();
-}
+  setRandomSwipeEnabled(true);
 
-// De knop hangt aan het venster en niet aan de kaart, zodat hij op precies
-// dezelfde hoogte staat als de sluitknop aan de andere kant. Aan de kaart zou
-// hij 24 px lager uitkomen, want daar begint de kaart pas.
-function addRandomAgainButton({ swap = false } = {}) {
-  const paneel = randomRecipeModal?.querySelector('.random-recipe-modal-content');
-  if (!paneel) return;
-  paneel.querySelector('.random-again-btn')?.remove();
-
-  // Zonder kaart valt er niets opnieuw te trekken (bijv. bij een foutmelding).
-  const kaart = randomRecipeBody?.querySelector('.recipe-card');
-  if (!kaart) return;
-
-  if (swap) {
+  const kaart = randomRecipeBody.querySelector('.recipe-card');
+  if (options.swap && kaart) {
     kaart.classList.add('is-swapping-in');
     kaart.addEventListener('animationend', () => kaart.classList.remove('is-swapping-in'), { once: true });
   }
 
-  const knop = document.createElement('button');
-  knop.type = 'button';
-  knop.className = 'random-again-btn';
-  knop.title = 'Nog een willekeurig recept';
-  knop.setAttribute('aria-label', 'Nog een willekeurig recept');
-  knop.innerHTML = '<i class="fas fa-shuffle" aria-hidden="true"></i>';
-  paneel.appendChild(knop);
+  openRandomRecipeModal();
+  if (!wasOpen) nudgeRandomSwipeOnce();
+  prefetchNextRandomRecipe(recipe.url || '');
 }
 
 function showRandomMessage(message) {
@@ -2158,29 +2198,236 @@ function showRandomMessage(message) {
     return;
   }
   randomRecipeBody.innerHTML = `<p class="random-recipe-empty">${message}</p>`;
-  addRandomAgainButton();
+  // Zonder kaart valt er niets weg te swipen (bijv. bij een foutmelding).
+  setRandomSwipeEnabled(false);
   openRandomRecipeModal();
 }
-
-// Opnieuw trekken zonder de popup te sluiten. Tijdens het ophalen draait het
-// icoon door, zodat de knop niet dood aanvoelt terwijl de server bezig is.
-randomRecipeModal?.addEventListener('click', e => {
-  const knop = e.target.closest('.random-again-btn');
-  if (!knop || knop.disabled) return;
-  knop.disabled = true;
-  knop.classList.add('is-busy');
-  drawRandomRecipe({ swap: true });
-});
 
 closeRandomRecipeModalBtn?.addEventListener('click', closeRandomRecipeModalPanel);
 randomRecipeModal?.addEventListener('click', e => {
   if (e.target === randomRecipeModal) closeRandomRecipeModalPanel();
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && randomRecipeModal && !randomRecipeModal.classList.contains('hidden')) {
+  if (!randomRecipeModal || randomRecipeModal.classList.contains('hidden')) return;
+  if (e.key === 'Escape') {
     closeRandomRecipeModalPanel();
+    return;
+  }
+  // Pijltjestoetsen doen op de computer wat swipen op de telefoon doet.
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.target.closest?.('input, textarea, select')) {
+    e.preventDefault();
+    swipeToNextRandomRecipe(e.key === 'ArrowLeft' ? -1 : 1);
   }
 });
+
+/* — Swipen voor een ander recept —
+   De popup is de bovenste kaart van een stapeltje: erachter steken twee kaarten
+   een stukje uit, zodat je ziet dat er nog meer komen. Sleep je de kaart opzij,
+   dan schuiven die mee naar voren; laat je ver genoeg (of met vaart) los, dan
+   vliegt hij weg en komt het volgende recept naar voren. Verticaal blijft
+   gewoon scrollen: pas als de beweging duidelijk zijwaarts is, nemen we hem
+   over (touch-action: pan-y in de CSS laat het scrollen aan de browser). */
+const randomSwipeStack = document.getElementById('randomSwipeStack');
+const randomRecipePanel = randomSwipeStack?.querySelector('.random-recipe-modal-content');
+const randomSwipeHint = document.getElementById('randomSwipeHint');
+const SWIPE_LOCK_PX = 10;
+const SWIPE_FLING_MS = 260;
+const SWIPE_SETTLE_MS = 380;
+const SWIPE_SEEN_KEY = 'kookkeuze-random-swipe-seen';
+let randomSwipe = null;
+let randomSwipeBusy = false;
+let randomSwipeSuppressClick = false;
+
+function setRandomSwipeEnabled(enabled) {
+  randomSwipeStack?.classList.toggle('can-swipe', enabled);
+}
+
+function canSwipeRandomRecipe() {
+  return !!randomRecipePanel && !randomSwipeBusy && randomSwipeStack.classList.contains('can-swipe');
+}
+
+function hasSeenRandomSwipe() {
+  try {
+    return localStorage.getItem(SWIPE_SEEN_KEY) === '1';
+  } catch {
+    return true;
+  }
+}
+
+function markRandomSwipeSeen() {
+  try {
+    localStorage.setItem(SWIPE_SEEN_KEY, '1');
+  } catch {
+    // Geen opslag (privévenster): dan wiebelt de kaart de volgende keer weer.
+  }
+}
+
+// Wie nog nooit geswipet heeft, ziet de kaart na het openen één keer kort
+// opzij wiebelen, zodat de kaart erachter even tevoorschijn komt.
+function nudgeRandomSwipeOnce() {
+  if (!randomRecipePanel || hasSeenRandomSwipe()) return;
+  randomRecipePanel.classList.remove('is-nudging');
+  setTimeout(() => {
+    if (randomSwipe || randomSwipeBusy) return;
+    randomRecipePanel.classList.add('is-nudging');
+    randomRecipePanel.addEventListener('animationend', () => randomRecipePanel.classList.remove('is-nudging'), { once: true });
+  }, 450);
+}
+
+function setRandomSwipeOffset(dx) {
+  const breedte = randomRecipePanel.offsetWidth || 1;
+  const voortgang = Math.min(Math.abs(dx) / (breedte * 0.5), 1);
+  randomRecipePanel.style.transform = `translateX(${dx}px) rotate(${(dx / breedte) * 10}deg)`;
+  randomSwipeStack.style.setProperty('--swipe-progress', voortgang.toFixed(3));
+}
+
+function resetRandomSwipeStyles() {
+  randomRecipePanel.style.transform = '';
+  randomRecipePanel.style.opacity = '';
+  randomSwipeStack.style.setProperty('--swipe-progress', '0');
+}
+
+// Niet ver genoeg: de kaart veert terug op zijn plek.
+function settleRandomSwipeBack() {
+  randomSwipeStack.classList.add('is-settling');
+  resetRandomSwipeStyles();
+  setTimeout(() => randomSwipeStack.classList.remove('is-settling'), SWIPE_SETTLE_MS);
+}
+
+async function swipeToNextRandomRecipe(richting) {
+  if (!canSwipeRandomRecipe()) return;
+  randomSwipeBusy = true;
+  markRandomSwipeSeen();
+  closeAllRecipeExportMenus();
+  randomRecipePanel.classList.remove('is-nudging');
+
+  const volgende = takeRandomRecipe();
+  const breedte = randomRecipePanel.offsetWidth || window.innerWidth;
+  const weg = richting * (breedte + window.innerWidth * 0.4);
+
+  randomSwipeStack.classList.remove('is-dragging', 'is-settling');
+  randomSwipeStack.classList.add('is-flinging');
+  // Eén frame wachten, zodat de transitie vanaf de huidige sleeppositie loopt.
+  await new Promise(requestAnimationFrame);
+  randomRecipePanel.style.transform = `translateX(${weg}px) rotate(${richting * 16}deg)`;
+  randomRecipePanel.style.opacity = '0';
+  randomSwipeStack.style.setProperty('--swipe-progress', '1');
+
+  let binnen = false;
+  volgende.then(() => { binnen = true; });
+  await new Promise(resolve => setTimeout(resolve, SWIPE_FLING_MS));
+  // Nog niet binnen (de voorlader was niet op tijd)? Dan draait er een
+  // cirkeltje op de lege kaart, zodat hij niet dood aanvoelt.
+  if (!binnen) randomSwipeStack.classList.add('is-waiting');
+  const result = await volgende;
+  randomSwipeStack.classList.remove('is-waiting');
+
+  // De voorste lege kaart staat nu precies waar de popup stond. Zonder
+  // overgang zetten we de popup terug en de stapel op zijn rustpositie: de
+  // middelste kaart neemt dan de plek van de voorste in, dus dat zie je niet.
+  // Alleen de achterste kaart is nieuw; die komt er zacht bij.
+  randomSwipeStack.classList.remove('is-flinging');
+  resetRandomSwipeStyles();
+  randomRecipePanel.scrollTop = 0;
+  randomSwipeBusy = false;
+  // Tijdens het wegvliegen gesloten? Dan niet stiekem weer openen.
+  if (randomRecipeModal.classList.contains('hidden') || randomRecipeModal.classList.contains('closing')) return;
+  presentRandomResult(result, { swap: true });
+  randomSwipeStack.classList.remove('is-refilling');
+  void randomSwipeStack.offsetWidth;
+  randomSwipeStack.classList.add('is-refilling');
+  setTimeout(() => randomSwipeStack.classList.remove('is-refilling'), SWIPE_SETTLE_MS);
+}
+
+function randomSwipeVelocity(samples) {
+  const laatste = samples[samples.length - 1];
+  const eerste = samples.find(s => laatste.t - s.t <= 100) || samples[0];
+  const dt = laatste.t - eerste.t;
+  return dt > 0 ? (laatste.x - eerste.x) / dt : 0;
+}
+
+randomRecipePanel?.addEventListener('pointerdown', e => {
+  if (!canSwipeRandomRecipe()) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  if (e.target.closest('.modal-close, .recipe-export-dropdown, input, textarea, select')) return;
+  randomRecipePanel.classList.remove('is-nudging');
+  randomSwipe = {
+    id: e.pointerId,
+    x0: e.clientX,
+    y0: e.clientY,
+    dx: 0,
+    locked: false,
+    samples: [{ x: e.clientX, t: e.timeStamp }]
+  };
+});
+
+randomRecipePanel?.addEventListener('pointermove', e => {
+  if (!randomSwipe || e.pointerId !== randomSwipe.id) return;
+  const dx = e.clientX - randomSwipe.x0;
+  const dy = e.clientY - randomSwipe.y0;
+
+  if (!randomSwipe.locked) {
+    // Eerst verticaal? Dan is het scrollen en laten we het met rust.
+    if (Math.abs(dy) > SWIPE_LOCK_PX && Math.abs(dy) >= Math.abs(dx)) {
+      randomSwipe = null;
+      return;
+    }
+    if (Math.abs(dx) < SWIPE_LOCK_PX) return;
+    randomSwipe.locked = true;
+    try {
+      randomRecipePanel.setPointerCapture(e.pointerId);
+    } catch {
+      // Pointer al weg (of geen echte); slepen werkt ook zonder capture.
+    }
+    randomSwipeStack.classList.add('is-dragging');
+    window.getSelection?.()?.removeAllRanges();
+    closeAllRecipeExportMenus();
+  }
+
+  randomSwipe.dx = dx;
+  randomSwipe.samples.push({ x: e.clientX, t: e.timeStamp });
+  if (randomSwipe.samples.length > 8) randomSwipe.samples.shift();
+  setRandomSwipeOffset(dx);
+});
+
+function endRandomSwipe(e, geannuleerd) {
+  if (!randomSwipe || e.pointerId !== randomSwipe.id) return;
+  const swipe = randomSwipe;
+  randomSwipe = null;
+  if (!swipe.locked) return;
+
+  randomSwipeStack.classList.remove('is-dragging');
+  // De klik die na het loslaten volgt, mag geen link of knop op de kaart raken.
+  randomSwipeSuppressClick = true;
+  setTimeout(() => { randomSwipeSuppressClick = false; }, 80);
+
+  const breedte = randomRecipePanel.offsetWidth || 1;
+  const snelheid = randomSwipeVelocity(swipe.samples);
+  const verGenoeg = Math.abs(swipe.dx) > breedte * 0.28;
+  const snelGenoeg = Math.abs(snelheid) > 0.45 && Math.abs(swipe.dx) > 30
+    && Math.sign(snelheid) === Math.sign(swipe.dx);
+
+  if (!geannuleerd && (verGenoeg || snelGenoeg)) {
+    swipeToNextRandomRecipe(Math.sign(swipe.dx) || 1);
+  } else {
+    settleRandomSwipeBack();
+  }
+}
+
+randomRecipePanel?.addEventListener('pointerup', e => endRandomSwipe(e, false));
+randomRecipePanel?.addEventListener('pointercancel', e => endRandomSwipe(e, true));
+
+randomRecipePanel?.addEventListener('click', e => {
+  if (!randomSwipeSuppressClick) return;
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
+// Zonder dit sleept de browser op de computer de foto of link mee.
+randomRecipePanel?.addEventListener('dragstart', e => e.preventDefault());
+
+// Het hintje is ook een knop: voor wie niet kan of wil swipen.
+randomSwipeHint?.addEventListener('click', () => swipeToNextRandomRecipe(-1));
 
 async function fetchRecipeIngredients(recipeUrl) {
   // Bij een eigen recept staan de ingredienten al in onze eigen database; die
