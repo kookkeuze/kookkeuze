@@ -1,0 +1,63 @@
+<svg width="100%" height="100%" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="plank" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#e2a86d"/>
+            <stop offset="1" stop-color="#a6662f"/>
+        </linearGradient>
+        <linearGradient id="papier" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="1" stop-color="#edf0f2"/>
+        </linearGradient>
+        <linearGradient id="klem" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f4f6f8"/>
+            <stop offset="1" stop-color="#8b959d"/>
+        </linearGradient>
+        <linearGradient id="potlood" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#ffe066"/>
+            <stop offset="0.5" stop-color="#ffcc33"/>
+            <stop offset="1" stop-color="#e9a514"/>
+        </linearGradient>
+        <linearGradient id="vink" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7ee08a"/>
+            <stop offset="1" stop-color="#4ac858"/>
+        </linearGradient>
+        <radialGradient id="schaduw" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#000000" stop-opacity="0.26"/>
+            <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+        </radialGradient>
+    </defs>
+
+    <!-- Schaduw op de ondergrond -->
+    <ellipse cx="31" cy="58.5" rx="23" ry="4" fill="url(#schaduw)"/>
+
+    <!-- Klembord -->
+    <rect x="12" y="8.5" width="38" height="48.5" rx="5" fill="#8e5526"/>
+    <rect x="12" y="7" width="38" height="48.5" rx="5" fill="url(#plank)"/>
+    <rect x="16.5" y="13" width="29" height="38.5" rx="2.2" fill="url(#papier)"/>
+
+    <!-- Lijstje: twee vragen afgevinkt, één nog open -->
+    <rect x="20" y="18" width="6.4" height="6.4" rx="1.7" fill="url(#vink)"/>
+    <path d="M21.6 21.3l1.5 1.5 2.7-2.9" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="29" y="20.1" width="12.5" height="2.2" rx="1.1" fill="#cdd5da"/>
+
+    <rect x="20" y="28" width="6.4" height="6.4" rx="1.7" fill="url(#vink)"/>
+    <path d="M21.6 31.3l1.5 1.5 2.7-2.9" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="29" y="30.1" width="9.5" height="2.2" rx="1.1" fill="#cdd5da"/>
+
+    <rect x="20.6" y="38.6" width="5.2" height="5.2" rx="1.4" fill="#ffffff" stroke="#b7c0c6" stroke-width="1.2"/>
+    <rect x="29" y="40.1" width="11" height="2.2" rx="1.1" fill="#cdd5da"/>
+
+    <!-- Klem -->
+    <rect x="27.2" y="2.6" width="7.6" height="5.4" rx="2.7" fill="none" stroke="#8b959d" stroke-width="1.6"/>
+    <path d="M23 5.5h16a2 2 0 0 1 2 2v5.2a2 2 0 0 1-2 2H23a2 2 0 0 1-2-2V7.5a2 2 0 0 1 2-2Z" fill="url(#klem)"/>
+    <rect x="23" y="6.8" width="16" height="1.3" rx="0.65" fill="#ffffff" opacity="0.75"/>
+
+    <!-- Potlood -->
+    <g transform="rotate(40 46 44)">
+        <rect x="42.5" y="30.5" width="7" height="21.5" fill="url(#potlood)"/>
+        <rect x="42.5" y="27" width="7" height="3.8" rx="1.2" fill="#f4899a"/>
+        <rect x="42.5" y="29.8" width="7" height="2.2" fill="#c3cad0"/>
+        <path d="M42.5 52h7L46 58.5Z" fill="#f3d3a4"/>
+        <path d="M45.1 56.8h1.8L46 58.5Z" fill="#3b4045"/>
+    </g>
+</svg>

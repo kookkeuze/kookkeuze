@@ -9003,3 +9003,559 @@ h1, h2, h3,
 .modal-content.random-recipe-modal-content {
   scrollbar-gutter: stable both-edges;
 }
+
+
+/* =========================================================================
+   BEGINSCHERM: VERRAS ME OF HELP ME KIEZEN
+   Twee keuzes in plaats van een rij keuzelijsten. De filters worden in het
+   stappenvenster één voor één gevraagd; daaronder kun je nog gewoon zoeken.
+   De kaarten volgen de receptpakketten: wit, lichtgroene rand, een groen
+   rondje met een wit lijnicoon en een EatingPasta-kop.
+   ========================================================================= */
+
+/* Geen groen blok meer: alleen de titel in het knopgroen, de uitleg zwart. */
+#kiesRecept .hero-header {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 6px 0 0;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#kiesRecept .hero-header h1 {
+  color: var(--green);
+  font-size: 1.7rem;
+  line-height: 1.1;
+  letter-spacing: 1px;
+}
+
+#kiesRecept .hero-header p {
+  max-width: 40ch;
+  margin: 8px auto 0;
+  color: #2d3436;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+@media (min-width: 769px) {
+  #kiesRecept .hero-header h1 {
+    font-size: 2.1rem;
+  }
+
+  #kiesRecept .hero-header p {
+    font-size: 16px;
+  }
+}
+
+.finder-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 640px;
+  margin: 24px auto 0;
+}
+
+.finder-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 20px 12px 18px;
+  border: 1px solid #e6efe8;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  box-shadow:
+    0 2px 6px rgba(24, 32, 28, 0.06),
+    0 12px 28px rgba(47, 106, 55, 0.14);
+  color: #2f3a35;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.finder-choice:hover {
+  border-color: var(--green);
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 10px rgba(24, 32, 28, 0.07),
+    0 16px 34px rgba(47, 106, 55, 0.18);
+}
+
+.finder-choice:active {
+  transform: scale(0.98);
+}
+
+/* 'Verras me' is de hoofdactie: groen zoals de andere hoofdknoppen, met een
+   wit rondje om het icoon. */
+.finder-choice--random {
+  border-color: var(--green);
+  background: var(--green);
+  box-shadow:
+    0 2px 6px rgba(35, 91, 42, 0.12),
+    0 12px 28px rgba(74, 200, 88, 0.38);
+}
+
+.finder-choice--random:hover {
+  border-color: var(--green-hover);
+  background: var(--green-hover);
+  box-shadow:
+    0 4px 10px rgba(35, 91, 42, 0.14),
+    0 16px 34px rgba(74, 200, 88, 0.42);
+}
+
+.finder-choice--random .finder-choice-title,
+.finder-choice--random .finder-choice-sub {
+  color: #ffffff;
+}
+
+.finder-choice-icon {
+  display: block;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 6px;
+}
+
+.finder-choice-title {
+  font-family: 'EatingPasta', Arial, sans-serif;
+  font-size: 17px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #2f3a35;
+}
+
+.finder-choice-sub {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #5f6b63;
+}
+
+@media (max-width: 480px) {
+  .finder-choice {
+    padding: 18px 8px 16px;
+  }
+
+  .finder-choice-title {
+    font-size: 15px;
+    letter-spacing: 0.5px;
+  }
+
+  .finder-choice-sub {
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 769px) {
+  .finder-choice {
+    padding: 26px 18px 22px;
+  }
+
+  .finder-choice-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .finder-choice-title {
+    font-size: 19px;
+  }
+}
+
+/* Gekozen wensen */
+.finder-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 640px;
+  margin: 16px auto 0;
+}
+
+.finder-active-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #5f6b63;
+}
+
+.finder-active-chip,
+.finder-active-clear {
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.finder-active-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d7eadb;
+  background: #edf7ef;
+  color: var(--green-deep);
+}
+
+/* Zelfde kruisje als de sluitknoppen (icons/cross.svg), in de tekstkleur. */
+.finder-active-chip-x {
+  width: 9px;
+  height: 9px;
+  background-color: currentColor;
+  -webkit-mask: url("icons/cross.svg") center / contain no-repeat;
+  mask: url("icons/cross.svg") center / contain no-repeat;
+  opacity: 0.7;
+}
+
+.finder-active-clear {
+  background: transparent;
+  color: #5f6b63;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 'of zoek zelf' met een lijntje aan weerszijden */
+.finder-search-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 640px;
+  margin: 28px auto 0;
+  color: #5f6b63;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.finder-search-divider::before,
+.finder-search-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e6efe8;
+}
+
+#kiesRecept .hero-search {
+  margin-top: 14px;
+}
+
+/* -------- Het stappenvenster ------------------------------------------- */
+
+.modal-content.finder-wizard-content {
+  width: min(560px, 96vw);
+  max-width: min(560px, 96vw);
+  padding: 26px 24px 22px;
+}
+
+.finder-wizard-progress {
+  display: flex;
+  align-items: center;
+  margin: 6px 56px 0 0;
+}
+
+.finder-wizard-dot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--field-border);
+  background: #ffffff;
+  color: #9aa5a0;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.finder-wizard-dot.is-done,
+.finder-wizard-dot.is-current {
+  background: var(--green-deep);
+  border-color: var(--green-deep);
+  color: #ffffff;
+}
+
+/* De huidige vraag krijgt een zachte ring, zodat je ziet waar je bent. */
+.finder-wizard-dot.is-current {
+  box-shadow: 0 0 0 4px rgba(35, 91, 42, 0.16);
+}
+
+/* Het lijntje loopt van links naar rechts vol zodra een vraag af is, en
+   trekt zich andersom terug als je teruggaat. */
+.finder-wizard-line {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  margin: 0 4px;
+  border-radius: 999px;
+  background: #e6efe8;
+  overflow: hidden;
+}
+
+.finder-wizard-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--green-deep);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.finder-wizard-line.is-done::after {
+  transform: scaleX(1);
+}
+
+/* -------- Overgang tussen vragen ---------------------------------------
+   index.js (goToFinderStep) zet de klassen: eerst schuift de oude vraag weg
+   (is-leaving), dan staat de nieuwe onzichtbaar aan de andere kant klaar
+   (is-entering) en loopt die met de hoogte mee naar zijn plek.
+   --finder-dir is 1 bij verder, -1 bij terug. */
+.finder-wizard-body {
+  display: flow-root;
+  transition:
+    opacity 0.2s ease-out,
+    transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1),
+    height 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.finder-wizard-body.is-resizing {
+  overflow: hidden;
+}
+
+.finder-wizard-body.is-leaving {
+  opacity: 0;
+  transform: translateX(calc(var(--finder-dir, 1) * -18px));
+  transition:
+    opacity 0.14s ease-in,
+    transform 0.14s ease-in;
+}
+
+.finder-wizard-body.is-entering {
+  opacity: 0;
+  transform: translateX(calc(var(--finder-dir, 1) * 18px));
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finder-wizard-body,
+  .finder-wizard-body.is-leaving,
+  .finder-wizard-line::after {
+    transition: none;
+  }
+
+  .finder-wizard-body.is-leaving,
+  .finder-wizard-body.is-entering {
+    transform: none;
+  }
+}
+
+.finder-wizard-kicker {
+  margin: 22px 0 6px;
+  color: #5f6b63;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.finder-wizard-question {
+  margin: 0;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 1px;
+  line-height: 1.15;
+  color: #2f3a35;
+}
+
+.finder-wizard-hint {
+  margin: 6px 0 0;
+  color: #5f6b63;
+  font-size: 14px;
+}
+
+.finder-wizard-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 24px;
+}
+
+.finder-option {
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 15px;
+  border: 1.5px solid var(--field-border, #d7eadb);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #2f3a35;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  white-space: normal;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.finder-option:hover {
+  border-color: var(--green);
+}
+
+.finder-option[aria-pressed="true"] {
+  background: var(--green);
+  border-color: var(--green);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.finder-wizard-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.finder-wizard-nav button {
+  min-width: 0;
+}
+
+.finder-wizard-next {
+  flex: 1;
+  max-width: 260px;
+  margin-left: auto;
+}
+
+.finder-wizard-back.is-invisible {
+  visibility: hidden;
+}
+
+/* Samenvatting */
+.finder-wizard-summary {
+  display: block;
+  margin: 14px 0 20px;
+}
+
+.finder-summary-row {
+  display: grid;
+  grid-template-columns: 112px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 13px 4px;
+  border-radius: 0;
+  border-bottom: 1px solid #e6efe8;
+  background: transparent;
+  color: #2f3a35;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: normal;
+  text-align: left;
+}
+
+.finder-summary-label {
+  color: #5f6b63;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.finder-summary-any {
+  color: #9aa5a0;
+  font-weight: 500;
+}
+
+.finder-summary-chevron {
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border-top: 2px solid #b5beb9;
+  border-right: 2px solid #b5beb9;
+  transform: rotate(45deg);
+}
+
+.finder-wizard-finish {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.finder-wizard-finish button {
+  width: 100%;
+}
+
+/* Tweede keuze: alleen tekst, in donkergroen, onder de groene knop. */
+.finder-wizard-finish .ghost-btn {
+  border: none;
+  background: transparent;
+  color: var(--green-deep);
+  letter-spacing: 1px;
+}
+
+.finder-wizard-finish .ghost-btn:hover {
+  background: transparent;
+  color: var(--green-deep);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  transform: none;
+}
+
+/* 'Terug' in het gewone lettertype: rustiger dan een knop. */
+.finder-wizard-back,
+.finder-wizard-back:hover {
+  border: none;
+  background: transparent;
+  padding-left: 4px;
+  padding-right: 8px;
+  color: #5f6b63;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  transform: none;
+}
+
+.finder-wizard-back:hover {
+  color: #2f3a35;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .modal-content.finder-wizard-content {
+    padding: 22px 18px 18px;
+  }
+
+  .finder-wizard-question {
+    font-size: 1.3rem;
+  }
+
+  .finder-summary-row {
+    grid-template-columns: 96px 1fr auto;
+  }
+}
+
+@media (hover: none) {
+  .finder-choice:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finder-choice:hover,
+  .finder-choice:active {
+    transform: none;
+  }
+
+  .finder-option {
+    transition: none;
+  }
+}

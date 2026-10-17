@@ -347,8 +347,27 @@
         <p id="recipeFinderSubtitle">Niet meer nadenken over wat je gaat eten, laat hier je keuze aan de tool over!</p>
       </div>
 
-      <!-- Filter dropdowns -->
-      <div class="hero-filters">
+      <!-- Twee manieren om te kiezen: laten verrassen, of stap voor stap je
+           wensen opgeven. De filters zelf staan niet meer in beeld; die vraagt
+           het stappenvenster (#finderWizardModal) één voor één. -->
+      <div class="finder-choices">
+        <button id="randomBtn" type="button" class="finder-choice finder-choice--random">
+          <img src="icons/keuze-verras.svg" alt="" class="finder-choice-icon" aria-hidden="true" />
+          <span class="finder-choice-title">Verras me</span>
+          <span class="finder-choice-sub">Willekeurig recept</span>
+        </button>
+        <button id="openFinderWizardBtn" type="button" class="finder-choice finder-choice--wizard">
+          <img src="icons/keuze-samenstellen.svg" alt="" class="finder-choice-icon" aria-hidden="true" />
+          <span class="finder-choice-title">Help me kiezen</span>
+          <span class="finder-choice-sub">5 korte vragen</span>
+        </button>
+      </div>
+
+      <!-- Gekozen wensen, zodat zichtbaar blijft waarop gefilterd wordt -->
+      <div id="finderActiveFilters" class="finder-active-filters hidden" aria-live="polite"></div>
+
+      <!-- Filter dropdowns: verborgen, maar wel de bron van de filters -->
+      <div class="hero-filters hidden">
         <select id="dishType">
           <option>Soort gerecht</option>
           <option>Kip</option>
@@ -414,16 +433,13 @@
         </select>
       </div> <!-- /hero-filters -->
 
-      <!-- Zoekveld en knop -->
-      <div class="hero-search">
-        <input type="text" id="searchTerm" placeholder="Zoek bijvoorbeeld op 'asperges' of 'appeltaart'"/>
-        <button id="searchBtn" class="accent-btn">ZOEK RECEPTEN</button>
-      </div>
+      <p class="finder-search-divider"><span>of zoek zelf</span></p>
 
-      <!-- Random recept button -->
-      <div class="hero-random">
-        <button id="randomBtn" class="green-btn">RANDOM</button>
-      </div>
+      <!-- Zoekveld en knop -->
+      <form id="finderSearchForm" class="hero-search" role="search">
+        <input type="text" id="searchTerm" placeholder="Zoek bijvoorbeeld op 'asperges' of 'appeltaart'" enterkeyhint="search"/>
+        <button id="searchBtn" type="submit" class="accent-btn">ZOEK RECEPTEN</button>
+      </form>
 
       <!-- Resultaat van zoeken/random -->
       <div id="result"></div>
@@ -946,6 +962,31 @@
           <span class="random-swipe-hint-mouse">Sleep opzij voor een ander recept</span>
           <i class="fas fa-chevron-right" aria-hidden="true"></i>
         </button>
+      </div>
+    </div>
+
+    <!-- Help me kiezen: de filters als vragen, één voor één -->
+    <div id="finderWizardModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content finder-wizard-content" role="dialog" aria-modal="true" aria-labelledby="finderWizardQuestion">
+        <button id="closeFinderWizardModal" class="modal-close" aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="finder-wizard-progress" role="group" aria-label="Vragen"></div>
+        <!-- Alles wat per vraag wisselt; schuift bij een nieuwe vraag in beeld -->
+        <div class="finder-wizard-body">
+          <p id="finderWizardKicker" class="finder-wizard-kicker"></p>
+          <h3 id="finderWizardQuestion" class="finder-wizard-question"></h3>
+          <p id="finderWizardHint" class="finder-wizard-hint"></p>
+          <div id="finderWizardOptions" class="finder-wizard-options"></div>
+          <div class="finder-wizard-finish hidden">
+            <button id="finderWizardRandom" type="button" class="green-btn">Verras me</button>
+            <button id="finderWizardShow" type="button" class="ghost-btn">Toon recepten</button>
+          </div>
+        </div>
+        <div class="finder-wizard-nav">
+          <button id="finderWizardBack" type="button" class="ghost-btn finder-wizard-back">Terug</button>
+          <button id="finderWizardNext" type="button" class="green-btn finder-wizard-next">Maakt niet uit</button>
+        </div>
       </div>
     </div>
 

@@ -1725,7 +1725,15 @@ recipeSourceSwitchButtons.forEach(btn => {
 setRecipeSourceMode(recipeSourceMode);
 
 /* — Zoekknop — */
-document.getElementById('searchBtn').addEventListener('click', async () => {
+// Zoeken loopt via het formulier: Enter (of 'zoek' op het telefoontoetsenbord),
+// de knop en searchBtn.click() vanuit andere code komen allemaal hier uit.
+document.getElementById('finderSearchForm')?.addEventListener('submit', e => {
+  e.preventDefault();
+  document.getElementById('searchTerm')?.blur();
+  runRecipeSearch();
+});
+
+async function runRecipeSearch() {
   if (recipeSourceMode === 'internet') {
     if (getValidToken()) await ensureRecipeNotesLoaded();
     const params = buildRecipeToolParams({ includeSearch: true, includeDatabase: false });
@@ -1762,7 +1770,7 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
     .then(r => r.json())
     .then(showRecipes)
     .catch(console.error);
-});
+}
 
 /* — Random recept — */
 // Eén plek voor het trekken van een random recept, zodat de knop onder de
@@ -1848,6 +1856,295 @@ async function drawRandomRecipe() {
 }
 
 document.getElementById('randomBtn').addEventListener('click', () => drawRandomRecipe());
+
+/* — Help me kiezen —
+   De vijf filters staan niet meer als rij keuzelijsten op het beginscherm,
+   maar worden als vragen één voor één gesteld. De verborgen multi-selects
+   blijven de bron: het venster leest ze bij openen en schrijft ze bij het
+   afronden terug, zodat zoeken, random en de SEO-links gewoon blijven werken. */
+const FINDER_STEPS = [
+  { select: dishTypeSelect, placeholder: 'Soort gerecht', kicker: 'Soort gerecht', question: 'Waar heb je zin in?', multiple: true },
+  { select: mealCategorySelect, placeholder: 'Menugang', kicker: 'Menugang', question: 'Wat voor gang wordt het?', multiple: false },
+  { select: mealTypeSelect, placeholder: 'Doel gerecht', kicker: 'Doel gerecht', question: 'Wat past bij vandaag?', multiple: false },
+  { select: timeRequiredSelect, placeholder: 'Tijd', kicker: 'Tijd', question: 'Hoeveel tijd heb je?', multiple: true },
+  { select: calorieRangeSelect, placeholder: 'Calorieën', kicker: 'Calorieën', question: 'Hoeveel calorieën mag het zijn?', multiple: false, suffix: ' kcal' }
+];
+const finderWizardModal = document.getElementById('finderWizardModal');
+const finderWizardProgress = finderWizardModal?.querySelector('.finder-wizard-progress');
+const finderWizardKicker = document.getElementById('finderWizardKicker');
+const finderWizardQuestion = document.getElementById('finderWizardQuestion');
+const finderWizardHint = document.getElementById('finderWizardHint');
+const finderWizardOptions = document.getElementById('finderWizardOptions');
+const finderWizardBack = document.getElementById('finderWizardBack');
+const finderWizardNext = document.getElementById('finderWizardNext');
+const finderWizardFinish = finderWizardModal?.querySelector('.finder-wizard-finish');
+const finderActiveFilters = document.getElementById('finderActiveFilters');
+let finderDraft = [];
+let finderStepIndex = 0;
+
+function getFinderStepOptions(step) {
+  return Array.from(step.select?.options || [])
+    .map(opt => (opt.value || opt.textContent || '').trim())
+    .filter(text => text && text !== step.placeholder);
+}
+
+function finderValueLabel(step, value) {
+  return `${value}${step.suffix || ''}`;
+}
+
+function renderFinderWizard() {
+  if (!finderWizardModal) return;
+  const isSummary = finderStepIndex >= FINDER_STEPS.length;
+
+  renderFinderProgress(isSummary);
+  finderWizardBack.classList.toggle('is-invisible', finderStepIndex === 0);
+  finderWizardNext.classList.toggle('hidden', isSummary);
+  finderWizardFinish.classList.toggle('hidden', !isSummary);
+
+  if (isSummary) {
+    finderWizardKicker.textContent = 'Klaar';
+    finderWizardQuestion.textContent = 'Dit gaan we zoeken';
+    finderWizardHint.textContent = 'Tik op een regel om hem aan te passen.';
+    finderWizardOptions.className = 'finder-wizard-options finder-wizard-summary';
+    finderWizardOptions.innerHTML = FINDER_STEPS.map((step, i) => {
+      const values = finderDraft[i] || [];
+      const text = values.length
+        ? values.map(v => escapeHtml(finderValueLabel(step, v))).join(', ')
+        : '<span class="finder-summary-any">Maakt niet uit</span>';
+      return `
+        <button type="button" class="finder-summary-row" data-finder-goto="${i}">
+          <span class="finder-summary-label">${escapeHtml(step.kicker)}</span>
+          <span class="finder-summary-value">${text}</span>
+          <span class="finder-summary-chevron" aria-hidden="true"></span>
+        </button>`;
+    }).join('');
+    return;
+  }
+
+  const step = FINDER_STEPS[finderStepIndex];
+  const chosen = finderDraft[finderStepIndex] || [];
+  finderWizardKicker.textContent = step.kicker;
+  finderWizardQuestion.textContent = step.question;
+  finderWizardHint.textContent = step.multiple ? 'Kies er één of meer, of sla over.' : 'Kies er één, of sla over.';
+  finderWizardOptions.className = 'finder-wizard-options';
+  finderWizardOptions.innerHTML = getFinderStepOptions(step).map(value => `
+    <button type="button" class="finder-option" data-finder-value="${escapeAttr(value)}" aria-pressed="${chosen.includes(value) ? 'true' : 'false'}">
+      ${escapeHtml(finderValueLabel(step, value))}
+    </button>`).join('');
+  updateFinderNextLabel();
+}
+
+// Genummerde bolletjes zoals bij 'Voeg een recept toe', met een lijntje
+// ertussen dat vol loopt naarmate je verder bent. Eén keer opbouwen en daarna
+// alleen de klassen wisselen: dan lopen de kleur en het lijntje vloeiend over
+// in plaats van in één klap te verspringen. Tik op een bolletje om naar die
+// vraag te springen.
+function renderFinderProgress(isSummary) {
+  if (!finderWizardProgress.children.length) {
+    finderWizardProgress.innerHTML = FINDER_STEPS.map((step, i) => {
+      const dot = `<button type="button" class="finder-wizard-dot" data-finder-goto="${i}"
+        aria-label="Vraag ${i + 1}: ${escapeAttr(step.kicker)}">${i + 1}</button>`;
+      const line = i < FINDER_STEPS.length - 1
+        ? '<span class="finder-wizard-line" aria-hidden="true"></span>'
+        : '';
+      return dot + line;
+    }).join('');
+  }
+  finderWizardProgress.querySelectorAll('.finder-wizard-dot').forEach((dot, i) => {
+    const isCurrent = !isSummary && i === finderStepIndex;
+    dot.classList.toggle('is-done', isSummary || i < finderStepIndex);
+    dot.classList.toggle('is-current', isCurrent);
+    if (isCurrent) dot.setAttribute('aria-current', 'step');
+    else dot.removeAttribute('aria-current');
+  });
+  finderWizardProgress.querySelectorAll('.finder-wizard-line').forEach((line, i) => {
+    line.classList.toggle('is-done', isSummary || i < finderStepIndex);
+  });
+}
+
+function updateFinderNextLabel() {
+  const chosen = finderDraft[finderStepIndex] || [];
+  finderWizardNext.textContent = chosen.length ? 'Volgende' : 'Maakt niet uit';
+}
+
+function openFinderWizard(startStep = 0) {
+  if (!finderWizardModal) return;
+  clearTimeout(finderStepTimer);
+  if (finderWizardBody) {
+    finderWizardBody.classList.remove('is-leaving', 'is-entering', 'is-resizing');
+    finderWizardBody.style.height = '';
+  }
+  finderDraft = FINDER_STEPS.map(step => getSelectedValues(step.select));
+  finderStepIndex = startStep;
+  renderFinderWizard();
+  finderWizardModal.classList.remove('hidden');
+  finderWizardModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeFinderWizard() {
+  if (!finderWizardModal) return;
+  hideModal(finderWizardModal);
+  finderWizardModal.setAttribute('aria-hidden', 'true');
+}
+
+function applyFinderDraft() {
+  FINDER_STEPS.forEach((step, i) => {
+    step.select?._multiSelectApi?.setValues(finderDraft[i] || []);
+  });
+}
+
+// Van vraag naar vraag: de oude vraag schuift weg en vervaagt, de nieuwe komt
+// van de andere kant binnen (terug gaat andersom), en het venster groeit of
+// krimpt soepel mee naar de nieuwe hoogte in plaats van te verspringen.
+const finderWizardBody = finderWizardModal?.querySelector('.finder-wizard-body');
+const FINDER_LEAVE_MS = 140;
+const FINDER_RESIZE_MS = 300;
+let finderStepTimer = null;
+
+function goToFinderStep(index) {
+  const next = Math.max(0, Math.min(index, FINDER_STEPS.length));
+  if (next === finderStepIndex) return;
+  const richting = next > finderStepIndex ? 1 : -1;
+  const body = finderWizardBody;
+  const minderBeweging = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+  const toon = () => {
+    finderStepIndex = next;
+    renderFinderWizard();
+    finderWizardModal.querySelector('.modal-content')?.scrollTo({ top: 0 });
+  };
+
+  if (!body || minderBeweging) {
+    toon();
+    return;
+  }
+
+  clearTimeout(finderStepTimer);
+  const beginHoogte = body.offsetHeight;
+  body.style.setProperty('--finder-dir', richting);
+  body.classList.remove('is-entering');
+  body.classList.add('is-leaving');
+
+  finderStepTimer = setTimeout(() => {
+    toon();
+    // Nieuwe inhoud staat klaar aan de andere kant, nog onzichtbaar, op de
+    // oude hoogte. Daarna in één frame naar de eindstand laten lopen.
+    body.classList.remove('is-leaving');
+    body.classList.add('is-entering', 'is-resizing');
+    // Eerst de natuurlijke hoogte van de nieuwe vraag meten (scrollHeight
+    // werkt alleen bij groeien, niet bij krimpen), dan terug naar de oude.
+    body.style.height = 'auto';
+    const eindHoogte = body.offsetHeight;
+    body.style.height = `${beginHoogte}px`;
+    void body.offsetHeight;
+    body.classList.remove('is-entering');
+    body.style.height = `${eindHoogte}px`;
+    finderStepTimer = setTimeout(() => {
+      body.style.height = '';
+      body.classList.remove('is-resizing');
+    }, FINDER_RESIZE_MS);
+  }, FINDER_LEAVE_MS);
+}
+
+finderWizardOptions?.addEventListener('click', e => {
+  const goto = e.target.closest('[data-finder-goto]');
+  if (goto) {
+    goToFinderStep(Number(goto.dataset.finderGoto));
+    return;
+  }
+  const optionBtn = e.target.closest('.finder-option');
+  if (!optionBtn) return;
+  const step = FINDER_STEPS[finderStepIndex];
+  const value = optionBtn.dataset.finderValue;
+  const chosen = finderDraft[finderStepIndex] || [];
+  if (step.multiple) {
+    finderDraft[finderStepIndex] = chosen.includes(value)
+      ? chosen.filter(v => v !== value)
+      : [...chosen, value];
+  } else {
+    finderDraft[finderStepIndex] = chosen.includes(value) ? [] : [value];
+  }
+  finderWizardOptions.querySelectorAll('.finder-option').forEach(btn => {
+    btn.setAttribute('aria-pressed', finderDraft[finderStepIndex].includes(btn.dataset.finderValue) ? 'true' : 'false');
+  });
+  updateFinderNextLabel();
+});
+
+finderWizardNext?.addEventListener('click', () => goToFinderStep(finderStepIndex + 1));
+finderWizardProgress?.addEventListener('click', e => {
+  const dot = e.target.closest('[data-finder-goto]');
+  if (dot) goToFinderStep(Number(dot.dataset.finderGoto));
+});
+finderWizardBack?.addEventListener('click', () => goToFinderStep(finderStepIndex - 1));
+
+document.getElementById('finderWizardShow')?.addEventListener('click', () => {
+  applyFinderDraft();
+  closeFinderWizard();
+  document.getElementById('searchBtn')?.click();
+  setTimeout(() => resultDiv?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
+});
+
+document.getElementById('finderWizardRandom')?.addEventListener('click', () => {
+  applyFinderDraft();
+  closeFinderWizard();
+  drawRandomRecipe();
+});
+
+document.getElementById('openFinderWizardBtn')?.addEventListener('click', () => openFinderWizard(0));
+document.getElementById('closeFinderWizardModal')?.addEventListener('click', closeFinderWizard);
+finderWizardModal?.addEventListener('click', e => {
+  if (e.target === finderWizardModal) closeFinderWizard();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && finderWizardModal && !finderWizardModal.classList.contains('hidden')) {
+    closeFinderWizard();
+  }
+});
+
+// De gekozen wensen als labeltjes onder de twee knoppen. Zonder dit zou je
+// niet meer zien dat zoeken en random gefilterd zijn, want de keuzelijsten
+// zelf staan niet meer in beeld.
+function renderFinderActiveFilters() {
+  if (!finderActiveFilters) return;
+  const chips = [];
+  FINDER_STEPS.forEach((step, i) => {
+    getSelectedValues(step.select).forEach(value => {
+      chips.push(`
+        <button type="button" class="finder-active-chip" data-finder-step="${i}" data-finder-value="${escapeAttr(value)}" aria-label="${escapeAttr(`${finderValueLabel(step, value)} weghalen`)}">
+          ${escapeHtml(finderValueLabel(step, value))}
+          <span class="finder-active-chip-x" aria-hidden="true"></span>
+        </button>`);
+    });
+  });
+  const randomSub = document.querySelector('#randomBtn .finder-choice-sub');
+  if (randomSub) randomSub.textContent = chips.length ? 'Binnen je wensen' : 'Willekeurig recept';
+  finderActiveFilters.classList.toggle('hidden', chips.length === 0);
+  if (!chips.length) {
+    finderActiveFilters.innerHTML = '';
+    return;
+  }
+  finderActiveFilters.innerHTML = `
+    <span class="finder-active-label">Je wensen</span>
+    ${chips.join('')}
+    <button type="button" class="finder-active-clear">Wis alles</button>`;
+}
+
+finderActiveFilters?.addEventListener('click', e => {
+  if (e.target.closest('.finder-active-clear')) {
+    FINDER_STEPS.forEach(step => step.select?._multiSelectApi?.clear());
+    return;
+  }
+  const chip = e.target.closest('.finder-active-chip');
+  if (!chip) return;
+  const step = FINDER_STEPS[Number(chip.dataset.finderStep)];
+  if (!step?.select?._multiSelectApi) return;
+  step.select._multiSelectApi.setValues(
+    getSelectedValues(step.select).filter(v => v !== chip.dataset.finderValue)
+  );
+});
+
+FINDER_STEPS.forEach(step => step.select?.addEventListener('change', renderFinderActiveFilters));
+renderFinderActiveFilters();
 
 /* — Filters uit de URL overnemen —
    De SEO-pagina's (/wat-eten-we-vandaag, /recepten/...) linken hierheen met de
