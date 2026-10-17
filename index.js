@@ -742,7 +742,9 @@ function hydrateOverviewImages() {
 }
 
 function hydrateResultImages() {
-  const cells = document.querySelectorAll('.result-image-cell');
+  // Kaarten in de zoekcarrousel laden hun foto pas als ze in beeld komen
+  // (zie observeSearchCarouselImages); die slaan we hier over.
+  const cells = document.querySelectorAll('.result-image-cell:not(.is-lazy)');
   cells.forEach(cell => {
     const url = decodeURIComponent(cell.dataset.url || '');
     const title = cell.dataset.title || 'Recept';
@@ -2251,56 +2253,257 @@ function showRecipes(arr, options = {}) {
     return;
   }
   searchResults = { recipes: arr, options };
-  searchCurrentPage = 1;
   renderSearchResultsPage();
 }
 
-// Zoekresultaten van 'Kies een recept' per pagina, net als het receptoverzicht
-// (zelfde paginagrootte en nummering, zie buildPaginationHtml).
-const SEARCH_PAGE_SIZE = 9;
+// Zoekresultaten van 'Kies een recept' als horizontale carrousel: op
+// telefoon één kaart met een stukje van de volgende ernaast, op een breder
+// scherm twee of drie naast elkaar. Swipen (of de pijltjes) brengt je door de
+// lijst; dat scrollen en vastklikken op een kaart doet de browser zelf via
+// scroll-snap in de CSS. Eén resultaat blijft de brede losse kaart.
 let searchResults = { recipes: [], options: {} };
-let searchCurrentPage = 1;
+let searchCarouselObserver = null;
+let searchCarouselResize = null;
 
 function renderSearchResultsPage() {
   const { recipes, options } = searchResults;
-  const totalPages = Math.max(1, Math.ceil(recipes.length / SEARCH_PAGE_SIZE));
-  searchCurrentPage = Math.min(Math.max(searchCurrentPage, 1), totalPages);
+  searchCarouselObserver?.disconnect();
 
-  if (totalPages <= 1) {
+  if (recipes.length <= 1) {
     resultDiv.innerHTML = buildRecipeCardsHtml(recipes, options);
     hydrateResultImages();
     return;
   }
 
-  const startIdx = (searchCurrentPage - 1) * SEARCH_PAGE_SIZE;
-  const pageRecipes = recipes.slice(startIdx, startIdx + SEARCH_PAGE_SIZE);
-  resultDiv.innerHTML = buildRecipeCardsHtml(pageRecipes, { ...options, forceGrid: true })
-    + '<nav class="overview-pagination search-pagination" aria-label="Paginanummering zoekresultaten"></nav>';
-  hydrateResultImages();
-  renderSearchPagination(totalPages);
-}
-
-function renderSearchPagination(totalPages) {
-  const nav = resultDiv.querySelector('.search-pagination');
-  if (!nav) return;
-  nav.innerHTML = buildPaginationHtml(searchCurrentPage, totalPages);
-  nav.querySelectorAll('.overview-page-btn[data-page]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      searchCurrentPage = Number(btn.dataset.page);
-      renderSearchResultsPage();
-      // De knoppen staan onder de recepten: terug naar het begin van de lijst.
-      const top = resultDiv.getBoundingClientRect().top;
-      if (top < 0) {
-        window.scrollTo({ top: window.scrollY + top - 90, behavior: 'smooth' });
-      }
-    });
+  const kaarten = buildRecipeCardsHtml(recipes, {
+    ...options,
+    forceGrid: true,
+    extraClass: 'search-carousel-track'
   });
+  resultDiv.innerHTML = `
+    <section class="search-carousel" aria-label="Zoekresultaten">
+      <div class="search-carousel-head">
+        <p class="search-carousel-count" aria-live="polite"></p>
+        <div class="search-carousel-arrows">
+          <button type="button" class="search-carousel-arrow" data-carousel-dir="-1" aria-label="Vorige recepten">
+            <span class="search-carousel-chevron is-prev" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="search-carousel-arrow" data-carousel-dir="1" aria-label="Volgende recepten">
+            <span class="search-carousel-chevron" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+      ${kaarten}
+      <p class="search-carousel-hint">
+        <span class="search-carousel-hint-chevron is-prev" aria-hidden="true"></span>
+        <span class="search-carousel-hint-touch">Swipe voor meer recepten</span>
+        <span class="search-carousel-hint-mouse">Sleep opzij of gebruik de pijltjes</span>
+        <span class="search-carousel-hint-chevron" aria-hidden="true"></span>
+      </p>
+    </section>`;
+
+  const track = resultDiv.querySelector('.search-carousel-track');
+  if (!track) return;
+  track.setAttribute('tabindex', '0');
+  track.querySelectorAll('.result-image-cell').forEach(cell => cell.classList.add('is-lazy'));
+  observeSearchCarouselImages(track);
+  bindSearchCarousel(track);
 }
 
-// Over de 600px-grens gekanteld: de nummering heeft dan meer of minder buren.
-window.matchMedia('(max-width: 600px)').addEventListener('change', () => {
-  renderSearchPagination(Math.ceil(searchResults.recipes.length / SEARCH_PAGE_SIZE));
-});
+// Alleen de foto's van kaarten die (bijna) in beeld zijn ophalen. Bij veel
+// resultaten scheelt dat tientallen verzoeken die je misschien nooit ziet.
+function observeSearchCarouselImages(track) {
+  const laad = cell => {
+    if (!cell.classList.contains('is-lazy')) return;
+    cell.classList.remove('is-lazy');
+    const url = decodeURIComponent(cell.dataset.url || '');
+    fetchRecipeImage(url).then(imageUrl => setResultCardImage(cell, imageUrl, cell.dataset.title || 'Recept'));
+  };
+  if (!('IntersectionObserver' in window)) {
+    track.querySelectorAll('.result-image-cell.is-lazy').forEach(laad);
+    return;
+  }
+  searchCarouselObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      laad(entry.target);
+      searchCarouselObserver?.unobserve(entry.target);
+    });
+  }, { root: track, rootMargin: '0px 100% 0px 100%' });
+  track.querySelectorAll('.result-image-cell.is-lazy').forEach(cell => searchCarouselObserver.observe(cell));
+}
+
+function bindSearchCarousel(track) {
+  const carousel = track.closest('.search-carousel');
+  const teller = carousel.querySelector('.search-carousel-count');
+  const [vorige, volgende] = carousel.querySelectorAll('.search-carousel-arrow');
+  const kaarten = Array.from(track.querySelectorAll('.recipe-card'));
+  const totaal = kaarten.length;
+
+  const stap = () => {
+    if (kaarten.length < 2) return track.clientWidth || 1;
+    return kaarten[1].offsetLeft - kaarten[0].offsetLeft || 1;
+  };
+  // Hoeveel kaarten er volledig in beeld staan. De rij loopt door tot in de
+  // witruimte van het kader en de volgende kaart steekt een stukje uit; die
+  // tellen dus niet mee.
+  const zichtbaar = () => {
+    const stijl = getComputedStyle(track);
+    const binnen = track.clientWidth - parseFloat(stijl.paddingLeft) - parseFloat(stijl.paddingRight);
+    const gat = parseFloat(stijl.columnGap) || 0;
+    return Math.max(1, Math.floor((binnen + gat) / stap()));
+  };
+
+  const werkBij = () => {
+    const perScherm = zichtbaar();
+    const maxScroll = track.scrollWidth - track.clientWidth;
+    const aanEind = track.scrollLeft >= maxScroll - 4;
+    let eerste = Math.round(track.scrollLeft / stap()) + 1;
+    if (aanEind) eerste = Math.max(1, totaal - perScherm + 1);
+    eerste = Math.min(Math.max(eerste, 1), totaal);
+    const laatste = Math.min(totaal, eerste + perScherm - 1);
+    teller.textContent = perScherm > 1
+      ? `${eerste}–${laatste} van ${totaal} recepten`
+      : `${eerste} van ${totaal} recepten`;
+    vorige.disabled = track.scrollLeft <= 4;
+    volgende.disabled = aanEind;
+  };
+
+  let gepland = false;
+  track.addEventListener('scroll', () => {
+    if (gepland) return;
+    gepland = true;
+    requestAnimationFrame(() => {
+      gepland = false;
+      werkBij();
+    });
+  }, { passive: true });
+
+  [vorige, volgende].forEach(knop => knop.addEventListener('click', () => {
+    closeAllRecipeExportMenus();
+    track.scrollBy({ left: Number(knop.dataset.carouselDir) * stap() * zichtbaar(), behavior: 'smooth' });
+  }));
+
+  // Met het toetsenbord door de kaarten, zoals met de pijltjes.
+  track.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    if (e.target !== track) return;
+    e.preventDefault();
+    track.scrollBy({ left: (e.key === 'ArrowLeft' ? -1 : 1) * stap(), behavior: 'smooth' });
+  });
+
+  bindSearchCarouselDrag(track, stap);
+  nudgeSearchCarouselOnce(track);
+
+  werkBij();
+  // Eén resize-luisteraar tegelijk: een nieuwe zoekopdracht vervangt de vorige.
+  if (searchCarouselResize) window.removeEventListener('resize', searchCarouselResize);
+  searchCarouselResize = werkBij;
+  window.addEventListener('resize', searchCarouselResize, { passive: true });
+}
+
+// Met de muis kun je de rij ook slepen, zoals met een vinger. Tijdens het
+// slepen staat het vastklikken (scroll-snap) uit; bij loslaten schuift de rij
+// naar de dichtstbijzijnde kaart, met de vaart van je beweging erbij. Een klik
+// die eigenlijk het einde van een sleepbeweging was, opent geen recept.
+function bindSearchCarouselDrag(track, stap) {
+  let sleep = null;
+  let negeerKlik = false;
+
+  track.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    if (e.target.closest('input, select, textarea, .recipe-export-dropdown')) return;
+    sleep = { id: e.pointerId, x: e.clientX, begin: track.scrollLeft, bewogen: false, punten: [{ x: e.clientX, t: e.timeStamp }] };
+  });
+
+  track.addEventListener('pointermove', e => {
+    if (!sleep || e.pointerId !== sleep.id) return;
+    const dx = e.clientX - sleep.x;
+    if (!sleep.bewogen) {
+      if (Math.abs(dx) < 6) return;
+      sleep.bewogen = true;
+      track.classList.add('is-dragging');
+      try {
+        track.setPointerCapture(e.pointerId);
+      } catch {
+        // Pointer al weg; slepen werkt ook zonder capture.
+      }
+      closeAllRecipeExportMenus();
+    }
+    track.scrollLeft = sleep.begin - dx;
+    sleep.punten.push({ x: e.clientX, t: e.timeStamp });
+    if (sleep.punten.length > 6) sleep.punten.shift();
+  });
+
+  const stop = e => {
+    if (!sleep || e.pointerId !== sleep.id) return;
+    const klaar = sleep;
+    sleep = null;
+    if (!klaar.bewogen) return;
+    negeerKlik = true;
+    setTimeout(() => { negeerKlik = false; }, 80);
+
+    // Een snelle veeg gaat naar de volgende kaart in die richting, een
+    // langzame sleep klikt vast op de dichtstbijzijnde. Nooit verder dan één
+    // kaart voorbij waar je losliet, hoe hard je ook veegt.
+    const eerste = klaar.punten[0];
+    const laatste = klaar.punten[klaar.punten.length - 1];
+    const dt = Math.max(16, laatste.t - eerste.t);
+    const snelheid = (laatste.x - eerste.x) / dt; // px per ms
+    const positie = track.scrollLeft / stap();
+    let index = Math.round(positie);
+    if (snelheid < -0.3) index = Math.ceil(positie);
+    else if (snelheid > 0.3) index = Math.floor(positie);
+    index = Math.max(0, index);
+    track.classList.remove('is-dragging');
+    track.scrollTo({ left: index * stap(), behavior: 'smooth' });
+  };
+  track.addEventListener('pointerup', stop);
+  track.addEventListener('pointercancel', stop);
+
+  track.addEventListener('click', e => {
+    if (!negeerKlik) return;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+  // Anders sleept de browser de foto of link mee in plaats van de rij.
+  track.addEventListener('dragstart', e => e.preventDefault());
+}
+
+// De eerste keer dat je zoekresultaten ziet, schuift de rij even kort opzij
+// en terug: zo zie je dat je erdoorheen kunt swipen. Daarna niet meer.
+const SEARCH_CAROUSEL_SEEN_KEY = 'kookkeuze-search-carousel-seen';
+
+function nudgeSearchCarouselOnce(track) {
+  let gezien = false;
+  try {
+    gezien = localStorage.getItem(SEARCH_CAROUSEL_SEEN_KEY) === '1';
+  } catch {
+    gezien = true;
+  }
+  const markeer = () => {
+    try {
+      localStorage.setItem(SEARCH_CAROUSEL_SEEN_KEY, '1');
+    } catch {
+      // Geen opslag (privévenster): dan wiebelt hij de volgende keer weer.
+    }
+  };
+  // Zelf gescrold of gesleept? Dan weet je het al.
+  track.addEventListener('scroll', markeer, { once: true, passive: true });
+  if (gezien) return;
+  setTimeout(() => {
+    if (track.scrollLeft > 0 || !track.isConnected) return;
+    track.classList.add('is-nudging');
+    // Alleen het einde van het wiebelen telt, niet dat van een foto die
+    // binnen een kaart invaagt (die animationend borrelt ook op).
+    const klaar = e => {
+      if (!e.target.classList?.contains('recipe-card')) return;
+      track.classList.remove('is-nudging');
+      track.removeEventListener('animationend', klaar);
+    };
+    track.addEventListener('animationend', klaar);
+  }, 700);
+}
 
 function buildRecipeCardsHtml(arr, options = {}) {
   const isInternetMode = options.mode === 'internet';
