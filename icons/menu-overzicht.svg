@@ -1,0 +1,55 @@
+<svg width="100%" height="100%" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="kaft" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#3a8a44"/>
+            <stop offset="1" stop-color="#235b2a"/>
+        </linearGradient>
+        <linearGradient id="linkerblad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="1" stop-color="#e3e8eb"/>
+        </linearGradient>
+        <linearGradient id="rechterblad" x1="1" y1="0" x2="0" y2="0">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="1" stop-color="#e3e8eb"/>
+        </linearGradient>
+        <linearGradient id="foto" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ffe7c2"/>
+            <stop offset="1" stop-color="#ffcf8f"/>
+        </linearGradient>
+        <radialGradient id="schaduw" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#000000" stop-opacity="0.24"/>
+            <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+        </radialGradient>
+    </defs>
+
+    <ellipse cx="32" cy="58.5" rx="28" ry="3.8" fill="url(#schaduw)"/>
+
+    <!-- Lintje als bladwijzer -->
+    <path d="M44 14h4.5v43l-2.25-2.6L44 57Z" fill="#d97a45"/>
+
+    <!-- Kaft -->
+    <path d="M4 16.5v35c10-1.8 19-1.2 28 3 9-4.2 18-4.8 28-3v-35c-10-1.8-19-1.2-28 3-9-4.2-18-4.8-28-3Z" fill="url(#kaft)"/>
+
+    <!-- Bladzijden -->
+    <path d="M32 18.2c-7.6-4-15.6-4.9-24-3.6v34c8.4-1.3 16.4-.4 24 3.6Z" fill="url(#linkerblad)"/>
+    <path d="M32 18.2c7.6-4 15.6-4.9 24-3.6v34c-8.4-1.3-16.4-.4-24 3.6Z" fill="url(#rechterblad)"/>
+    <path d="M32 18.2v34" stroke="#c4ccd2" stroke-width="1.2"/>
+
+    <!-- Tekst links -->
+    <g fill="none" stroke="#c9d1d6" stroke-width="1.8" stroke-linecap="round">
+        <path d="M12 22c5-.7 10-.3 15 1.2" stroke="#9aa6ad" stroke-width="2.2"/>
+        <path d="M12 28c5-.7 10-.3 15 1.2"/>
+        <path d="M12 33c5-.7 10-.3 15 1.2"/>
+        <path d="M12 38c5-.7 10-.3 15 1.2"/>
+        <path d="M12 43c4-.6 7-.4 10 .3"/>
+    </g>
+
+    <!-- Foto en tekst rechts -->
+    <path d="M36.5 22c4.8-1.6 10-2 15-1.4v10.6c-5-.6-10.2-.2-15 1.4Z" fill="url(#foto)"/>
+    <path d="M40 26.6h8.5a4.25 4.25 0 0 1-8.5 0Z" fill="#d97a45"/>
+    <ellipse cx="44.25" cy="26.6" rx="4.25" ry="1" fill="#8be496"/>
+    <g fill="none" stroke="#c9d1d6" stroke-width="1.8" stroke-linecap="round">
+        <path d="M37 38.2c5-1.5 10-1.9 15-1.2"/>
+        <path d="M37 43.2c5-1.5 10-1.9 15-1.2"/>
+    </g>
+</svg>

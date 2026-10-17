@@ -4323,13 +4323,16 @@ body.mobile-menu-open .mobile-nav-header {
   display: block;
 }
 
-/* Iconen in het mobiele uitklapmenu, op tekstregelhoogte. */
+/* Iconen in het mobiele uitklapmenu: dezelfde gedetailleerde stijl als de
+   twee keuzekaarten op het beginscherm, dus iets groter dan tekstregelhoogte
+   zodat de details zichtbaar blijven. */
 .mobile-menu-icon-img {
-  width: 22px;
-  height: 22px;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
-  vertical-align: -4px;
-  margin-right: 8px;
+  vertical-align: middle;
+  margin-right: 12px;
 }
 
 /* Eigen iconen op de receptenkaart (Soort/Menugang/Doel/Tijd/Kcal). */

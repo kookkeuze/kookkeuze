@@ -1,0 +1,51 @@
+<svg width="100%" height="100%" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="kaart" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="1" stop-color="#e9edf0"/>
+        </linearGradient>
+        <linearGradient id="foto" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ffe7c2"/>
+            <stop offset="1" stop-color="#ffcf8f"/>
+        </linearGradient>
+        <linearGradient id="kom" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ec9a69"/>
+            <stop offset="1" stop-color="#c8622e"/>
+        </linearGradient>
+        <linearGradient id="plus" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7ee08a"/>
+            <stop offset="1" stop-color="#3fb64e"/>
+        </linearGradient>
+        <radialGradient id="schaduw" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#000000" stop-opacity="0.24"/>
+            <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+        </radialGradient>
+    </defs>
+
+    <ellipse cx="30" cy="58.5" rx="22" ry="3.8" fill="url(#schaduw)"/>
+
+    <!-- Receptkaart -->
+    <rect x="10" y="5" width="36" height="50" rx="4.5" fill="#c9d1d7"/>
+    <rect x="10" y="4" width="36" height="50" rx="4.5" fill="url(#kaart)"/>
+
+    <!-- Foto van het gerecht -->
+    <rect x="14" y="8.5" width="28" height="17" rx="2.5" fill="url(#foto)"/>
+    <path d="M20 17.5h16a8 8 0 0 1-16 0Z" fill="url(#kom)"/>
+    <ellipse cx="28" cy="17.5" rx="8" ry="1.8" fill="#8be496"/>
+    <circle cx="25" cy="16.6" r="1.6" fill="#e2412f"/>
+    <circle cx="30.5" cy="16.2" r="1.4" fill="#ffd23f"/>
+
+    <!-- Regels tekst -->
+    <g fill="#cdd5da">
+        <rect x="14" y="30" width="20" height="2.6" rx="1.3" fill="#9aa6ad"/>
+        <rect x="14" y="36" width="26" height="2" rx="1"/>
+        <rect x="14" y="40.5" width="22" height="2" rx="1"/>
+        <rect x="14" y="45" width="17" height="2" rx="1"/>
+    </g>
+
+    <!-- Groen plusje -->
+    <circle cx="46" cy="46" r="11.5" fill="#ffffff"/>
+    <circle cx="46" cy="46" r="9.5" fill="url(#plus)"/>
+    <path d="M46 41.2v9.6M41.2 46h9.6" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="M39.6 43a7 7 0 0 1 4-4" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.4" stroke-linecap="round"/>
+</svg>
