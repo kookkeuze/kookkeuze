@@ -3744,9 +3744,10 @@ async function assignRecipeToPlanner(recipeId, dayOfWeek, slot) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error) {
     showRecipeAddedToast(data.error || 'Opslaan in weekmenu mislukt.', 'error');
-    return;
+    return false;
   }
   await loadWeekMenu();
+  return true;
 }
 
 async function importRecipeBetweenDatabases(recipeId, targetDbOwnerId, successMessage) {
@@ -3885,7 +3886,20 @@ function bindWeekPlannerUi() {
     }
     const btn = e.target.closest('.weekmenu-assign-btn');
     if (btn) {
+      if (btn.disabled) return;
       closeAllRecipeExportMenus();
+      const day = Number(plannerSuggestedDay);
+      const slot = plannerSuggestedSlot;
+      // Via het plusje in de planner heb je dag en moment al gekozen; dan
+      // nog eens vragen is dubbelop. Meteen inplannen en de zoek-popup dicht.
+      if (day && slot) {
+        btn.disabled = true;
+        const gelukt = await assignRecipeToPlanner(Number(btn.dataset.recipeId), day, slot);
+        btn.disabled = false;
+        // Mislukt? Dan blijft de popup open, zodat je het meteen opnieuw kunt proberen.
+        if (gelukt !== false) closeWeekmenuSearchModalPanel();
+        return;
+      }
       // Sluit de zoek-popup zodat het inplanvenster op de kalender terugvalt.
       closeWeekmenuSearchModalPanel();
       openAssignModalForRecipe(btn.dataset.recipeId, btn.dataset.recipeTitle);
