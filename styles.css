@@ -9899,3 +9899,34 @@ h1, h2, h3,
     animation: none;
   }
 }
+
+
+/* =========================================================================
+   GEEN FOTO
+   Een grijs vlak met een leeg bord als icoon (zie photoFallbackHtml in
+   index.js), op de grote kaarten en in de kleine miniaturen. Het icoon
+   schaalt mee met het vlak, zodat het in een miniatuur niet te groot wordt.
+   ========================================================================= */
+
+.photo-fallback.recipe-card-image-fallback,
+.photo-fallback.recipe-thumb-fallback,
+.photo-fallback.weekmenu-slot-thumb-fallback,
+.photo-fallback.weekmenu-search-thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #f1f3f4 0%, #e3e7ea 100%);
+  border: 1px solid #e3e7ea;
+  color: transparent;
+  font-size: 0;
+  overflow: hidden;
+}
+
+.photo-fallback-icon {
+  display: block;
+  width: min(92px, 56%);
+  max-height: 64%;
+  height: auto;
+  object-fit: contain;
+  opacity: 0.95;
+}

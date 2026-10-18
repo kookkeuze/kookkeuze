@@ -602,7 +602,7 @@ function setOverviewImage(cell, imageUrl, title) {
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';
     img.addEventListener('error', () => {
-      renderImageFallback(cell, safeTitle);
+      renderImageFallback(cell);
     });
     img.src = imageUrl;
     if (!placeholder) cell.appendChild(img);
@@ -613,7 +613,7 @@ function setOverviewImage(cell, imageUrl, title) {
     return;
   }
 
-  renderImageFallback(cell, safeTitle);
+  renderImageFallback(cell);
 }
 
 // Leidt een nette bronvermelding (de originele site) af uit een recept-URL,
@@ -628,6 +628,16 @@ function getImageSourceLabel(rawUrl) {
   }
 }
 
+// Geen foto te vinden? Dan een grijs vlak met een eigen icoontje (leeg bord
+// met bestek) in plaats van de tekst 'Geen foto' of een gekleurde letter.
+// Eén plek voor alle kaarten en miniaturen, zodat ze er overal hetzelfde
+// uitzien. De tekst blijft er voor schermlezers bij.
+function photoFallbackHtml(className) {
+  return `<div class="${className} photo-fallback">`
+    + '<img src="icons/geen-foto.svg" alt="" class="photo-fallback-icon" aria-hidden="true" />'
+    + '<span class="sr-only">Geen foto</span></div>';
+}
+
 function setResultCardImage(container, imageUrl, title) {
   const safeTitle = (title || 'Recept').trim();
   const placeholder = keepOnlyPlaceholder(container, '.recipe-card-image-skeleton');
@@ -639,7 +649,7 @@ function setResultCardImage(container, imageUrl, title) {
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';
     img.addEventListener('error', () => {
-      container.innerHTML = '<div class="recipe-card-image-fallback">Geen foto</div>';
+      container.innerHTML = photoFallbackHtml('recipe-card-image-fallback');
     });
     img.src = imageUrl;
     if (!placeholder) container.appendChild(img);
@@ -662,7 +672,7 @@ function setResultCardImage(container, imageUrl, title) {
     return;
   }
 
-  container.innerHTML = '<div class="recipe-card-image-fallback">Geen foto</div>';
+  container.innerHTML = photoFallbackHtml('recipe-card-image-fallback');
 }
 
 function setWeekmenuSlotImage(container, imageUrl) {
@@ -676,13 +686,12 @@ function setWeekmenuSlotImage(container, imageUrl) {
     img.referrerPolicy = 'no-referrer';
     img.src = imageUrl;
     img.addEventListener('error', () => {
-      container.innerHTML = '<div class="weekmenu-slot-thumb-fallback"></div>';
+      container.innerHTML = photoFallbackHtml('weekmenu-slot-thumb-fallback');
     });
     container.appendChild(img);
     return;
   }
-  // Klein vlak: geen tekst, alleen een rustige tint als er geen foto is.
-  container.innerHTML = '<div class="weekmenu-slot-thumb-fallback"></div>';
+  container.innerHTML = photoFallbackHtml('weekmenu-slot-thumb-fallback');
 }
 
 function hydrateWeekmenuImages() {
@@ -704,12 +713,12 @@ function setWeekmenuSearchImage(container, imageUrl) {
     img.referrerPolicy = 'no-referrer';
     img.src = imageUrl;
     img.addEventListener('error', () => {
-      container.innerHTML = '<div class="weekmenu-search-thumb-fallback">Geen foto</div>';
+      container.innerHTML = photoFallbackHtml('weekmenu-search-thumb-fallback');
     });
     container.appendChild(img);
     return;
   }
-  container.innerHTML = '<div class="weekmenu-search-thumb-fallback">Geen foto</div>';
+  container.innerHTML = photoFallbackHtml('weekmenu-search-thumb-fallback');
 }
 
 function hydrateWeekmenuSearchImages() {
@@ -720,12 +729,8 @@ function hydrateWeekmenuSearchImages() {
   });
 }
 
-function renderImageFallback(cell, title) {
-  cell.innerHTML = '';
-  const fallback = document.createElement('div');
-  fallback.className = 'recipe-thumb-fallback';
-  fallback.textContent = title ? title[0].toUpperCase() : 'R';
-  cell.appendChild(fallback);
+function renderImageFallback(cell) {
+  cell.innerHTML = photoFallbackHtml('recipe-thumb-fallback');
   cell.classList.remove('is-loading');
   cell.classList.add('is-loaded');
 }
