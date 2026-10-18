@@ -2773,6 +2773,84 @@ function closeRandomRecipeModalPanel() {
   closeAllRecipeExportMenus();
 }
 
+// De kaart in de random-popup. Op telefoon moet die in één scherm passen,
+// dus compacter dan de kaart in de zoekresultaten: een plattere foto, de
+// gegevens als labeltjes en alle acties in één rij tegeltjes. De tegels
+// gebruiken dezelfde klassen en data-attributen als de gewone kaart, zodat
+// onRecipeCardClick ze zonder aanpassing afhandelt.
+function buildRandomRecipeCardHtml(r, options = {}) {
+  const isInternetMode = options.mode === 'internet';
+  const sharedTargets = getSharedDatabaseTargets();
+  const importMode = !isInternetMode && (isSharedDatabaseActive()
+    ? 'to-own'
+    : (sharedTargets.length ? 'to-shared' : null));
+  const guestBanner = (!isInternetMode && isGuestUser()) ? guestDemoBannerHtml() : '';
+
+  const recipeId = Number(r.id) > 0 ? Number(r.id) : '';
+  const safeUrl = encodeURIComponent(r.url || '');
+  const safeHref = safeRecipeHref(r.url);
+  const safeTitle = escapeAttr(r.title || 'Recept');
+  const isOwn = isOwnRecipeUrl(r.url);
+  const internetData = `
+    data-recipe-title="${safeTitle}"
+    data-recipe-url="${safeUrl}"
+    data-recipe-dish-type="${escapeAttr(r.dish_type || '')}"
+    data-recipe-meal-category="${escapeAttr(r.meal_category || '')}"
+    data-recipe-meal-type="${escapeAttr(r.meal_type || '')}"
+    data-recipe-time-required="${escapeAttr(r.time_required || '')}"
+    data-recipe-calories="${r.calories == null ? '' : escapeAttr(String(r.calories))}"`;
+
+  const labels = [
+    r.time_required,
+    r.calories == null || r.calories === '' ? '' : `${r.calories} kcal`,
+    r.meal_category,
+    r.meal_type,
+    r.dish_type
+  ].map(value => String(value || '').trim()).filter(Boolean);
+
+  const tegel = (klassen, icoon, tekst, extra = '') => `
+    <button type="button" class="random-card-action ${klassen}" ${extra}>
+      <img src="icons/${icoon}" alt="" class="random-card-action-icon" aria-hidden="true" />
+      <span class="random-card-action-label">${tekst}</span>
+    </button>`;
+
+  const hasNote = !!getRecipeNote(recipeId, r.url || '');
+  const tegels = [
+    isInternetMode
+      ? tegel('plan-internet-recipe-btn', 'menu-weekmenu.svg', 'Plannen', internetData)
+      : tegel('plan-recipe-btn', 'menu-weekmenu.svg', 'Plannen', `data-recipe-id="${r.id}" data-recipe-title="${safeTitle}"`),
+    tegel('shopping-list-option', 'menu-boodschappen.svg', 'Boodschappenlijst',
+      `data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}" aria-label="Ingrediënten van ${safeTitle} op je boodschappenlijst zetten"`),
+    isInternetMode
+      ? tegel('save-internet-recipe-btn', 'menu-recept-toevoegen.svg', 'Bewaren', internetData)
+      : tegel('notes-export-option', 'menu-delen.svg', 'Delen',
+        `data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}" aria-label="Ingrediënten van ${safeTitle} delen als notitie"`),
+    importMode
+      ? tegel('import-recipe-btn', 'menu-recept-toevoegen.svg', 'Importeren', `data-recipe-id="${r.id}" data-import-mode="${importMode}"`)
+      : '',
+    tegel(`random-card-note${hasNote ? ' has-note' : ''}`, 'menu-notitie.svg', 'Notitie',
+      `data-recipe-note-btn data-recipe-id="${recipeId}" data-recipe-url="${escapeAttr(safeUrl)}" data-recipe-title="${safeTitle}" aria-label="${hasNote ? 'Bewerk' : 'Voeg'} notitie ${hasNote ? 'voor' : 'toe aan'} ${safeTitle}"`)
+  ].filter(Boolean);
+
+  return `${guestBanner}
+    <div class="recipe-cards-container search-results single-result weekmenu-preview-cards">
+      <div class="recipe-card random-card">
+        <div class="result-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
+          <div class="recipe-card-image-skeleton"></div>
+        </div>
+        <div class="random-card-body">
+          <h3 class="random-card-title">${escapeHtml(r.title || 'Recept')}</h3>
+          ${labels.length ? `<ul class="random-card-labels">${labels.map(label => `<li>${escapeHtml(label)}</li>`).join('')}</ul>` : ''}
+          <p class="recipe-link random-card-link">${isOwn
+            ? `<a href="${safeHref}" class="ext-link own-recipe-link">Bekijk&nbsp;recept</a>`
+            : `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
+            Bekijk&nbsp;recept&nbsp;<img src="icons/externe-link.svg" alt="" class="recipe-link-ext-icon" /></a>`}</p>
+          <div class="random-card-actions" style="--tegels:${tegels.length}">${tegels.join('')}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
 function showRandomResult(recipe, options = {}) {
   // Geen modal in de DOM? Val terug op de oude inline-weergave.
   if (!randomRecipeModal || !randomRecipeBody) {
@@ -2780,10 +2858,7 @@ function showRandomResult(recipe, options = {}) {
     return;
   }
   const wasOpen = !randomRecipeModal.classList.contains('hidden');
-  randomRecipeBody.innerHTML = buildRecipeCardsHtml([recipe], {
-    ...options,
-    extraClass: 'weekmenu-preview-cards'
-  });
+  randomRecipeBody.innerHTML = buildRandomRecipeCardHtml(recipe, options);
   hydrateResultImages();
   setRandomSwipeEnabled(true);
 
