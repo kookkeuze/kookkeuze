@@ -1865,11 +1865,11 @@ document.getElementById('randomBtn').addEventListener('click', () => drawRandomR
    blijven de bron: het venster leest ze bij openen en schrijft ze bij het
    afronden terug, zodat zoeken, random en de SEO-links gewoon blijven werken. */
 const FINDER_STEPS = [
-  { select: dishTypeSelect, placeholder: 'Soort gerecht', kicker: 'Soort gerecht', question: 'Waar heb je zin in?', multiple: true },
-  { select: mealCategorySelect, placeholder: 'Menugang', kicker: 'Menugang', question: 'Wat voor gang wordt het?', multiple: false },
-  { select: mealTypeSelect, placeholder: 'Doel gerecht', kicker: 'Doel gerecht', question: 'Wat past bij vandaag?', multiple: false },
-  { select: timeRequiredSelect, placeholder: 'Tijd', kicker: 'Tijd', question: 'Hoeveel tijd heb je?', multiple: true },
-  { select: calorieRangeSelect, placeholder: 'Calorieën', kicker: 'Calorieën', question: 'Hoeveel calorieën mag het zijn?', multiple: false, suffix: ' kcal' }
+  { select: dishTypeSelect, param: 'dish_type', placeholder: 'Soort gerecht', kicker: 'Soort gerecht', question: 'Waar heb je zin in?', multiple: true },
+  { select: mealCategorySelect, param: 'meal_category', placeholder: 'Menugang', kicker: 'Menugang', question: 'Wat voor gang wordt het?', multiple: false },
+  { select: mealTypeSelect, param: 'meal_type', placeholder: 'Doel gerecht', kicker: 'Doel gerecht', question: 'Wat past bij vandaag?', multiple: false },
+  { select: timeRequiredSelect, param: 'time_required', placeholder: 'Tijd', kicker: 'Tijd', question: 'Hoeveel tijd heb je?', multiple: true },
+  { select: calorieRangeSelect, param: 'calorieRange', placeholder: 'Calorieën', kicker: 'Calorieën', question: 'Hoeveel calorieën mag het zijn?', multiple: false, suffix: ' kcal' }
 ];
 const finderWizardModal = document.getElementById('finderWizardModal');
 const finderWizardProgress = finderWizardModal?.querySelector('.finder-wizard-progress');
@@ -1927,13 +1927,92 @@ function renderFinderWizard() {
   const chosen = finderDraft[finderStepIndex] || [];
   finderWizardKicker.textContent = step.kicker;
   finderWizardQuestion.textContent = step.question;
-  finderWizardHint.textContent = step.multiple ? 'Kies er één of meer, of sla over.' : 'Kies er één, of sla over.';
   finderWizardOptions.className = 'finder-wizard-options';
-  finderWizardOptions.innerHTML = getFinderStepOptions(step).map(value => `
+  updateFinderNextLabel();
+
+  // Alleen keuzes tonen die samen met de eerdere antwoorden nog recepten
+  // opleveren. Nog niet binnen? Dan even lege plekjes en daarna opnieuw tekenen.
+  const beschikbaar = readyFinderOptions(finderStepIndex);
+  if (!beschikbaar) {
+    finderWizardHint.textContent = 'Even kijken wat er kan…';
+    finderWizardOptions.innerHTML = [72, 96, 64, 88, 110, 70]
+      .map(breedte => `<span class="finder-option is-skeleton" style="width:${breedte}px" aria-hidden="true"></span>`)
+      .join('');
+    const wachtStap = finderStepIndex;
+    prepareFinderStep(wachtStap).then(() => {
+      if (finderStepIndex === wachtStap && !finderWizardModal.classList.contains('hidden')) renderFinderWizard();
+    });
+    return;
+  }
+
+  if (!beschikbaar.length) {
+    finderWizardHint.textContent = 'Bij je eerdere antwoorden valt hier niets meer te kiezen. Ga gerust verder.';
+    finderWizardOptions.innerHTML = '';
+    return;
+  }
+
+  finderWizardHint.textContent = step.multiple ? 'Kies er één of meer, of sla over.' : 'Kies er één, of sla over.';
+  finderWizardOptions.innerHTML = beschikbaar.map(value => `
     <button type="button" class="finder-option" data-finder-value="${escapeAttr(value)}" aria-pressed="${chosen.includes(value) ? 'true' : 'false'}">
       ${escapeHtml(finderValueLabel(step, value))}
     </button>`).join('');
-  updateFinderNextLabel();
+}
+
+// --- Alleen keuzes die nog iets opleveren ---------------------------------
+// De server zegt per vraag welke opties, samen met de antwoorden op de
+// vragen ervoor, nog minstens één recept geven (/api/recipe-finder-options).
+// Per combinatie van eerdere antwoorden één keer vragen; het antwoord (of de
+// vraag die nog loopt) bewaren we in deze cache.
+const finderOptionsCache = new Map();
+
+function finderOptionsKey(stepIndex) {
+  const eerder = FINDER_STEPS.slice(0, stepIndex)
+    .map((s, i) => `${s.param}=${[...(finderDraft[i] || [])].sort().join('|')}`)
+    .join('&');
+  const kookboek = recipeSourceMode === 'internet' ? '' : String(getActiveDatabaseOwnerId() || '');
+  return `${recipeSourceMode}|${kookboek}|${getValidToken() ? 'in' : 'gast'}|${FINDER_STEPS[stepIndex].param}|${eerder}`;
+}
+
+function readyFinderOptions(stepIndex) {
+  const waarde = finderOptionsCache.get(finderOptionsKey(stepIndex));
+  return Array.isArray(waarde) ? waarde : null;
+}
+
+async function ensureFinderOptions(stepIndex) {
+  const key = finderOptionsKey(stepIndex);
+  const bekend = finderOptionsCache.get(key);
+  if (bekend) return bekend;
+
+  const step = FINDER_STEPS[stepIndex];
+  const alles = getFinderStepOptions(step);
+  const params = new URLSearchParams({ field: step.param });
+  if (recipeSourceMode === 'internet') params.set('source', 'internet');
+  else appendActiveDatabaseParam(params);
+  FINDER_STEPS.slice(0, stepIndex).forEach((s, i) => {
+    (finderDraft[i] || []).forEach(value => params.append(s.param, value));
+  });
+  alles.forEach(option => params.append('option', option));
+
+  const vraag = fetch(`${API_BASE}/api/recipe-finder-options?${params.toString()}`, { headers: authHeaders() })
+    .then(res => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+    .then(data => (Array.isArray(data?.options) ? data.options : alles))
+    // Lukt het niet, dan liever alle keuzes laten zien dan geen enkele.
+    .catch(() => alles);
+  finderOptionsCache.set(key, vraag);
+  const resultaat = await vraag;
+  if (finderOptionsCache.get(key) === vraag) finderOptionsCache.set(key, resultaat);
+  return resultaat;
+}
+
+// Loopt de vragen tot en met 'doel' langs en haalt bij elke vraag de keuzes
+// weg die door een eerder antwoord niet meer kunnen. Zo kan een oude keuze
+// (bijv. nadat je vraag 1 hebt aangepast) nooit een lege zoekopdracht geven.
+async function prepareFinderStep(doel) {
+  const laatste = Math.min(doel, FINDER_STEPS.length - 1);
+  for (let i = 0; i <= laatste; i++) {
+    const beschikbaar = await ensureFinderOptions(i);
+    finderDraft[i] = (finderDraft[i] || []).filter(value => beschikbaar.includes(value));
+  }
 }
 
 // Genummerde bolletjes zoals bij 'Voeg een recept toe', met een lijntje
@@ -1976,6 +2055,9 @@ function openFinderWizard(startStep = 0) {
     finderWizardBody.classList.remove('is-leaving', 'is-entering', 'is-resizing');
     finderWizardBody.style.height = '';
   }
+  // Je kookboek kan sinds de vorige keer veranderd zijn: opnieuw vragen.
+  finderOptionsCache.clear();
+  finderNavToken++;
   finderDraft = FINDER_STEPS.map(step => getSelectedValues(step.select));
   finderStepIndex = startStep;
   renderFinderWizard();
@@ -2002,10 +2084,16 @@ const finderWizardBody = finderWizardModal?.querySelector('.finder-wizard-body')
 const FINDER_LEAVE_MS = 140;
 const FINDER_RESIZE_MS = 300;
 let finderStepTimer = null;
+let finderNavToken = 0;
 
-function goToFinderStep(index) {
+async function goToFinderStep(index) {
   const next = Math.max(0, Math.min(index, FINDER_STEPS.length));
   if (next === finderStepIndex) return;
+  // Eerst weten welke keuzes er bij de volgende vraag nog zijn (meestal al
+  // binnen), dan pas de overgang; anders schuift er een lege vraag binnen.
+  const token = ++finderNavToken;
+  await prepareFinderStep(next);
+  if (token !== finderNavToken || finderWizardModal.classList.contains('hidden')) return;
   const richting = next > finderStepIndex ? 1 : -1;
   const body = finderWizardBody;
   const minderBeweging = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -2070,6 +2158,9 @@ finderWizardOptions?.addEventListener('click', e => {
     btn.setAttribute('aria-pressed', finderDraft[finderStepIndex].includes(btn.dataset.finderValue) ? 'true' : 'false');
   });
   updateFinderNextLabel();
+  // Alvast vragen wat er bij de volgende vraag kan, zodat 'Volgende' meteen
+  // doorloopt.
+  if (finderStepIndex + 1 < FINDER_STEPS.length) ensureFinderOptions(finderStepIndex + 1);
 });
 
 finderWizardNext?.addEventListener('click', () => goToFinderStep(finderStepIndex + 1));

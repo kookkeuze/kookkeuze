@@ -9470,6 +9470,26 @@ h1, h2, h3,
   border-color: var(--green);
 }
 
+/* Plekjes terwijl we vragen welke keuzes er nog kunnen. */
+@keyframes finder-option-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.finder-option.is-skeleton {
+  display: inline-block;
+  height: 42px;
+  border-color: transparent;
+  background: #eef2ef;
+  animation: finder-option-pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finder-option.is-skeleton {
+    animation: none;
+  }
+}
+
 .finder-option[aria-pressed="true"] {
   background: var(--green);
   border-color: var(--green);

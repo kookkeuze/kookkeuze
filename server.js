@@ -3709,6 +3709,84 @@ app.get('/api/internet-recipe-random', async (req, res) => {
   }
 });
 
+// --- Help me kiezen: welke keuzes leveren nog iets op? ---------------------
+// Het stappenvenster vraagt per vraag welke opties nog minstens één recept
+// geven, gegeven de antwoorden op de vragen ervoor. Zo kun je geen combinatie
+// kiezen die niets oplevert. We gebruiken dezelfde filterregels als zoeken en
+// random, anders zou een optie hier wel kunnen en daar niet.
+const FINDER_OPTION_FIELDS = {
+  dish_type: 'Soort gerecht',
+  meal_category: 'Menugang',
+  meal_type: 'Doel gerecht',
+  time_required: 'Tijd',
+  calorieRange: 'Calorieën'
+};
+
+// De internetrecepten opbouwen kost per stuk wat werk; per versie van de
+// index één keer is genoeg.
+let finderInternetCache = { pool: null, recipes: [] };
+
+function getFinderInternetRecipes() {
+  const pool = getCurrentInternetRecipePool();
+  if (finderInternetCache.pool === pool) return finderInternetCache.recipes;
+  const recipes = pool
+    .filter(candidate => !looksLikeRecipeRoundup(candidate))
+    .map(candidate => (candidate.crawler_site_key
+      ? buildIndexedInternetRecipeResult(candidate)
+      : buildInternetRecipeResult(candidate, null)))
+    .filter(recipe => !looksLikeRecipeRoundup(recipe))
+    .filter(recipe => recipe.dish_type || recipe.meal_category || recipe.meal_type || recipe.time_required);
+  finderInternetCache = { pool, recipes };
+  return recipes;
+}
+
+// Waarden uit de eigen database komen als 'Kip, Pasta' terug (zie
+// toDisplayValue in database.js). Niet op komma's splitsen: een optie als
+// 'Dressings, sauzen & dips' heeft er zelf een. Wel zoeken met ', ' als
+// grens aan beide kanten, zodat 'Kip' niet ook in 'Kipburger' past.
+function ownRecipeHasOption(row, field, option) {
+  if (field === 'calorieRange') {
+    const calories = row.calories == null || row.calories === '' ? null : Number(row.calories);
+    return Number.isFinite(calories) && matchesInternetCalorieRange(calories, option);
+  }
+  const waarde = String(row[field] || '').trim();
+  return Boolean(waarde) && `, ${waarde}, `.includes(`, ${option}, `);
+}
+
+app.get('/api/recipe-finder-options', async (req, res) => {
+  const field = String(req.query.field || '');
+  if (!FINDER_OPTION_FIELDS[field]) {
+    return res.status(400).json({ error: 'Onbekende vraag.' });
+  }
+  const options = normalizeInternetFilterArray(req.query.option, FINDER_OPTION_FIELDS[field]);
+  // Alleen de antwoorden op eerdere vragen tellen; de vraag zelf niet.
+  const previous = { ...req.query };
+  ['field', 'option', 'source', 'search', 'pin', field].forEach(key => delete previous[key]);
+
+  try {
+    if (req.query.source === 'internet') {
+      const filters = normalizeInternetRecipeFilters(previous);
+      const recipes = getFinderInternetRecipes().filter(recipe => matchesInternetRecipeFilters(recipe, filters));
+      const available = options.filter(option =>
+        recipes.some(recipe => matchesInternetRecipeFilters(recipe, { ...filters, [field]: [option] }))
+      );
+      return res.json({ options: available });
+    }
+
+    const ownerUserId = req.user
+      ? await resolveDatabaseOwnerId(req)
+      : await resolveDemoDatabaseId();
+    if (!ownerUserId) return res.json({ options: [] });
+    const rows = await dbCall(getRecipes, { ...previous, user_id: ownerUserId });
+    const available = options.filter(option => rows.some(row => ownRecipeHasOption(row, field, option)));
+    return res.json({ options: available });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    console.error('❌ recipe finder options error:', err);
+    return res.status(500).json({ error: 'Kon de keuzes niet ophalen.' });
+  }
+});
+
 // Eigen fouten uit database.js ('Recept niet gevonden…') zijn voor de
 // gebruiker bedoeld. Fouten van Postgres of het netwerk hebben een .code en
 // kunnen tabel-, kolomnamen of waarden bevatten: die niet doorgeven.
