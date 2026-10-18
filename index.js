@@ -2773,18 +2773,18 @@ function closeRandomRecipeModalPanel() {
   closeAllRecipeExportMenus();
 }
 
-// De kaart in de random-popup. Op telefoon moet die in één scherm passen,
-// dus compacter dan de kaart in de zoekresultaten: een plattere foto, de
-// gegevens als labeltjes en alle acties in één rij tegeltjes. De tegels
-// gebruiken dezelfde klassen en data-attributen als de gewone kaart, zodat
-// onRecipeCardClick ze zonder aanpassing afhandelt.
-function buildRandomRecipeCardHtml(r, options = {}) {
+// De compacte receptkaart: in de random-popup en in het raster van 'Overzicht
+// recepten'. Op telefoon moet hij in één scherm passen, dus compacter dan de
+// kaart in de zoekresultaten: een plattere foto, de gegevens als labeltjes en
+// de acties als tegels. De tegels gebruiken dezelfde klassen en
+// data-attributen als de gewone kaart, zodat onRecipeCardClick ze zonder
+// aanpassing afhandelt.
+function buildCompactRecipeCardHtml(r, options = {}) {
   const isInternetMode = options.mode === 'internet';
   const sharedTargets = getSharedDatabaseTargets();
   const importMode = !isInternetMode && (isSharedDatabaseActive()
     ? 'to-own'
     : (sharedTargets.length ? 'to-shared' : null));
-  const guestBanner = (!isInternetMode && isGuestUser()) ? guestDemoBannerHtml() : '';
 
   const recipeId = Number(r.id) > 0 ? Number(r.id) : '';
   const safeUrl = encodeURIComponent(r.url || '');
@@ -2809,9 +2809,9 @@ function buildRandomRecipeCardHtml(r, options = {}) {
   ].map(value => String(value || '').trim()).filter(Boolean);
 
   const tegel = (klassen, icoon, tekst, extra = '') => `
-    <button type="button" class="random-card-action ${klassen}" ${extra}>
-      <img src="icons/${icoon}" alt="" class="random-card-action-icon" aria-hidden="true" />
-      <span class="random-card-action-label">${tekst}</span>
+    <button type="button" class="compact-card-action ${klassen}" ${extra}>
+      <img src="icons/${icoon}" alt="" class="compact-card-action-icon" aria-hidden="true" />
+      <span class="compact-card-action-label">${tekst}</span>
     </button>`;
 
   const hasNote = !!getRecipeNote(recipeId, r.url || '');
@@ -2827,30 +2827,45 @@ function buildRandomRecipeCardHtml(r, options = {}) {
     importMode
       ? tegel('import-recipe-btn', 'menu-recept-toevoegen.svg', 'Importeren', `data-recipe-id="${r.id}" data-import-mode="${importMode}"`)
       : '',
-    tegel(`random-card-note${hasNote ? ' has-note' : ''}`, 'menu-notitie.svg', 'Notitie',
+    tegel(`compact-card-note${hasNote ? ' has-note' : ''}`, 'menu-notitie.svg', 'Notitie',
       `data-recipe-note-btn data-recipe-id="${recipeId}" data-recipe-url="${escapeAttr(safeUrl)}" data-recipe-title="${safeTitle}" aria-label="${hasNote ? 'Bewerk' : 'Voeg'} notitie ${hasNote ? 'voor' : 'toe aan'} ${safeTitle}"`)
   ].filter(Boolean);
   // Bij een oneven aantal wordt de laatste tegel breed (zie de CSS). Dat moet
   // Plannen zijn: die schuift dan naar achteren.
   if (tegels.length % 2 === 1) tegels.push(tegels.shift());
 
-  return `${guestBanner}
-    <div class="recipe-cards-container search-results single-result weekmenu-preview-cards">
-      <div class="recipe-card random-card">
+  return `
+      <div class="recipe-card compact-card">
         <div class="result-image-cell" data-url="${safeUrl}" data-title="${safeTitle}">
           <div class="recipe-card-image-skeleton"></div>
         </div>
-        <div class="random-card-body">
-          <h3 class="random-card-title">${escapeHtml(r.title || 'Recept')}</h3>
-          ${labels.length ? `<ul class="random-card-labels">${labels.map(label => `<li>${escapeHtml(label)}</li>`).join('')}</ul>` : ''}
-          <p class="recipe-link random-card-link">${isOwn
+        <div class="compact-card-body">
+          <h3 class="compact-card-title">${escapeHtml(r.title || 'Recept')}</h3>
+          ${labels.length ? `<ul class="compact-card-labels">${labels.map(label => `<li>${escapeHtml(label)}</li>`).join('')}</ul>` : ''}
+          <p class="recipe-link compact-card-link">${isOwn
             ? `<a href="${safeHref}" class="ext-link own-recipe-link">Bekijk&nbsp;recept</a>`
             : `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
             Bekijk&nbsp;recept&nbsp;<img src="icons/externe-link.svg" alt="" class="recipe-link-ext-icon" /></a>`}</p>
-          <div class="random-card-actions" style="--tegels:${tegels.length}">${tegels.join('')}</div>
+          <div class="compact-card-actions" style="--tegels:${tegels.length}">${tegels.join('')}</div>
         </div>
-      </div>
+      </div>`;
+}
+
+function buildRandomRecipeCardHtml(r, options = {}) {
+  const isInternetMode = options.mode === 'internet';
+  const guestBanner = (!isInternetMode && isGuestUser()) ? guestDemoBannerHtml() : '';
+  return `${guestBanner}
+    <div class="recipe-cards-container search-results single-result weekmenu-preview-cards">
+      ${buildCompactRecipeCardHtml(r, options)}
     </div>`;
+}
+
+// Het raster van 'Overzicht recepten': dezelfde compacte kaart, twee of drie
+// naast elkaar.
+function buildCompactRecipeGridHtml(arr, options = {}) {
+  return `<div class="recipe-cards-container search-results recipe-grid-cards compact-grid">
+    ${arr.map(r => buildCompactRecipeCardHtml(r, options)).join('')}
+  </div>`;
 }
 
 function showRandomResult(recipe, options = {}) {
@@ -6422,13 +6437,9 @@ function renderOverviewPage() {
     }
   });
 
-  // Dezelfde kaarten als bij 'Kies een recept', zodat het raster ook de
-  // notitie-knop en 'Toevoegen aan...' heeft. De guest-banner staat hier al
-  // boven het overzicht, dus die niet nog een keer.
-  const gridHtml = buildRecipeCardsHtml(pageRecipes, {
-    extraClass: 'recipe-grid-cards',
-    hideGuestBanner: true
-  });
+  // Dezelfde compacte kaart als in de random-popup. De guest-banner staat
+  // hier al boven het overzicht, dus die niet nog een keer.
+  const gridHtml = buildCompactRecipeGridHtml(pageRecipes);
 
   allRecipesDiv.innerHTML = html;
   if (overviewGridContainer) overviewGridContainer.innerHTML = gridHtml;

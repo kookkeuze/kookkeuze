@@ -9952,7 +9952,7 @@ h1, h2, h3,
    acties in één rij tegeltjes (zie buildRandomRecipeCardHtml).
    ========================================================================= */
 
-.random-recipe-modal-content .random-card .result-image-cell {
+.random-recipe-modal-content .compact-card .result-image-cell {
   overflow: hidden;
   border-radius: var(--radius-md);
 }
@@ -9962,23 +9962,23 @@ h1, h2, h3,
     padding: 14px;
   }
 
-  .random-recipe-modal-content .random-card .recipe-card-image,
-  .random-recipe-modal-content .random-card .recipe-card-image-skeleton,
-  .random-recipe-modal-content .random-card .recipe-card-image-fallback {
+  .random-recipe-modal-content .compact-card .recipe-card-image,
+  .random-recipe-modal-content .compact-card .recipe-card-image-skeleton,
+  .random-recipe-modal-content .compact-card .recipe-card-image-fallback {
     aspect-ratio: 16 / 10;
     height: auto;
     border-radius: var(--radius-md);
   }
 }
 
-.random-card-body {
+.compact-card-body {
   display: grid;
   gap: 12px;
   align-content: start;
   padding: 14px 2px 2px;
 }
 
-.random-recipe-modal-content .random-card .random-card-title {
+.random-recipe-modal-content .compact-card .compact-card-title {
   margin: 0;
   font-family: 'EatingPasta', Arial, sans-serif;
   font-size: 1.55rem;
@@ -9987,7 +9987,7 @@ h1, h2, h3,
   color: #2f3740;
 }
 
-.random-card .random-card-labels {
+.compact-card .compact-card-labels {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -9999,7 +9999,7 @@ h1, h2, h3,
 /* Zelfde vorm als de tags op de receptpagina (.own-recipe-tag), maar
    rustiger: bijna wit met een dun groengrijs randje en grijsgroene tekst, zodat
    ze niet concurreren met de titel en de groene knop. */
-.random-card .random-card-labels li {
+.compact-card .compact-card-labels li {
   display: block;
   padding: 4px 10px;
   border: 1px solid #e3ece6;
@@ -10012,23 +10012,23 @@ h1, h2, h3,
   line-height: 1.25;
 }
 
-.random-card-link {
+.compact-card-link {
   margin: 2px 0 0;
 }
 
-.random-card-link .ext-link {
+.compact-card-link .ext-link {
   width: 100%;
   justify-content: center;
 }
 
 /* Alle acties in één rij tegeltjes, even breed. --tegels zet de JS (4 of 5). */
-.random-card-actions {
+.compact-card-actions {
   display: grid;
   grid-template-columns: repeat(var(--tegels, 4), minmax(0, 1fr));
   gap: 8px;
 }
 
-.random-card-action {
+.compact-card-action {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -10051,36 +10051,36 @@ h1, h2, h3,
   -webkit-tap-highlight-color: transparent;
 }
 
-.random-card-action-icon {
+.compact-card-action-icon {
   display: block;
   width: 30px;
   height: 30px;
   object-fit: contain;
 }
 
-.random-card-action-label {
+.compact-card-action-label {
   /* Alleen afbreken op het zachte streepje in 'Boodschap-pen'. */
   hyphens: manual;
 }
 
-.random-card-action:active {
+.compact-card-action:active {
   transform: scale(0.96);
 }
 
 @media (hover: hover) {
-  .random-card-action:hover {
+  .compact-card-action:hover {
     border-color: var(--green);
     background: #f7fbf8;
   }
 }
 
 /* Er staat al een notitie bij dit recept. */
-.random-card-action.has-note {
+.compact-card-action.has-note {
   border-color: var(--green);
   background: #f3fbf4;
 }
 
-.random-card-action.has-note::after {
+.compact-card-action.has-note::after {
   content: '';
   position: absolute;
   top: 7px;
@@ -10095,42 +10095,42 @@ h1, h2, h3,
    voorheen); de tekstkolom krijgt wat lucht naar de foto. De foto is niet
    hoger dan nodig: hij volgt de tekstkolom, met een vaste bovengrens. */
 @media (min-width: 600px) {
-  .random-recipe-modal-content .recipe-card.random-card {
+  .random-recipe-modal-content .recipe-card.compact-card {
     align-items: center;
   }
 
-  .random-recipe-modal-content .random-card .result-image-cell {
+  .random-recipe-modal-content .compact-card .result-image-cell {
     height: 320px;
     min-height: 0;
     max-height: 320px;
   }
 
-  .random-recipe-modal-content .random-card .recipe-card-image,
-  .random-recipe-modal-content .random-card .recipe-card-image-skeleton,
-  .random-recipe-modal-content .random-card .recipe-card-image-fallback {
+  .random-recipe-modal-content .compact-card .recipe-card-image,
+  .random-recipe-modal-content .compact-card .recipe-card-image-skeleton,
+  .random-recipe-modal-content .compact-card .recipe-card-image-fallback {
     height: 320px;
     min-height: 0;
     max-height: 320px;
     border-radius: var(--radius-md);
   }
 
-  .random-card-body {
+  .compact-card-body {
     padding: 4px 4px 4px 22px;
     align-content: center;
   }
 
-  .random-recipe-modal-content .random-card .random-card-title {
+  .random-recipe-modal-content .compact-card .compact-card-title {
     font-size: 1.9rem;
   }
 
-  .random-card-action-icon {
+  .compact-card-action-icon {
     width: 34px;
     height: 34px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .random-card-action:active {
+  .compact-card-action:active {
     transform: none;
   }
 }
@@ -10140,13 +10140,13 @@ h1, h2, h3,
    scherm. Staat achteraan, zodat het de basisregels van de tegels hierboven
    overschrijft. */
 @media all {
-  .random-card-actions {
+  .compact-card-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   /* Icoon boven de tekst: zo krijgt 'Boodschappenlijst' de hele breedte van
      de tegel en past het ook op een smalle telefoon op één regel. */
-  .random-card-action {
+  .compact-card-action {
     flex-direction: column;
     justify-content: center;
     gap: 5px;
@@ -10155,19 +10155,64 @@ h1, h2, h3,
     text-align: center;
   }
 
-  .random-card-action-icon {
+  .compact-card-action-icon {
     width: 28px;
     height: 28px;
     flex: 0 0 auto;
   }
 
-  .random-card-action-label {
+  .compact-card-action-label {
     white-space: nowrap;
   }
 
   /* Bij een oneven aantal (bijv. drie in je eigen kookboek) neemt de laatste
      tegel de hele rij, zodat er geen gat overblijft. */
-  .random-card-action:last-child:nth-child(odd) {
+  .compact-card-action:last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
+}
+
+/* -------- Compacte kaart in het raster van 'Overzicht recepten' ----------
+   Zelfde kaart als in de random-popup, maar als losse witte kaart in een
+   raster. Het gewone raster deelt rijhoogtes tussen kaarten (subgrid, zes
+   rijen per kaart); deze kaart heeft maar twee delen, dus dat zetten we hier
+   uit. De knop en de tegels staan onderaan, zodat kaarten naast elkaar gelijk
+   uitlijnen, ook bij een korte en een lange titel. */
+
+.recipe-grid-cards .recipe-card.compact-card {
+  display: flex;
+  flex-direction: column;
+  grid-row: auto;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+}
+
+.recipe-grid-cards.compact-grid {
+  grid-auto-rows: auto;
+  align-items: stretch;
+}
+
+.recipe-grid-cards .compact-card .compact-card-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+.recipe-grid-cards .compact-card .compact-card-link {
+  margin-top: auto;
+}
+
+.recipe-grid-cards .compact-card .compact-card-title {
+  margin: 0;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  font-size: 1.45rem;
+  line-height: 1.12;
+  letter-spacing: 0.5px;
+  color: #2f3740;
+  min-height: 0;
+  max-height: none;
 }
