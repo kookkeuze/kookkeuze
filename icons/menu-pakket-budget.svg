@@ -1,0 +1,50 @@
+<svg width="100%" height="100%" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <radialGradient id="varken" cx="0.38" cy="0.32" r="0.8">
+            <stop offset="0" stop-color="#ffd1dc"/>
+            <stop offset="1" stop-color="#f08aa3"/>
+        </radialGradient>
+        <linearGradient id="snuit" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ffb8c8"/>
+            <stop offset="1" stop-color="#e2718d"/>
+        </linearGradient>
+        <radialGradient id="munt" cx="0.35" cy="0.35" r="0.75">
+            <stop offset="0" stop-color="#fff1a8"/>
+            <stop offset="1" stop-color="#e8a913"/>
+        </radialGradient>
+        <radialGradient id="schaduw" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
+            <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+        </radialGradient>
+    </defs>
+
+    <ellipse cx="31" cy="58.5" rx="24" ry="3.6" fill="url(#schaduw)"/>
+
+    <!-- Pootjes -->
+    <g fill="#e2718d">
+        <rect x="15" y="44" width="7" height="12" rx="3"/>
+        <rect x="37" y="44" width="7" height="12" rx="3"/>
+    </g>
+
+    <!-- Lijf -->
+    <ellipse cx="30" cy="36" rx="22" ry="17" fill="url(#varken)"/>
+    <!-- Oor -->
+    <path d="M17 21l-1-9 9 5Z" fill="#e2718d"/>
+    <!-- Staartje -->
+    <path d="M52 32c3-1 4 2 2 3s-1 4 2 3" fill="none" stroke="#e2718d" stroke-width="1.8" stroke-linecap="round"/>
+    <!-- Snuit -->
+    <ellipse cx="10.5" cy="37" rx="5" ry="6" fill="url(#snuit)"/>
+    <circle cx="9.3" cy="35.2" r="1" fill="#b24b66"/>
+    <circle cx="9.3" cy="38.8" r="1" fill="#b24b66"/>
+    <!-- Oog -->
+    <circle cx="19" cy="29" r="1.8" fill="#2f3740"/>
+    <!-- Gleuf -->
+    <rect x="26" y="20" width="12" height="2.6" rx="1.3" fill="#c2566f"/>
+    <!-- Glans -->
+    <path d="M24 25a18 18 0 0 1 14-4" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" opacity="0.6"/>
+
+    <!-- Munt die erin valt -->
+    <circle cx="32" cy="10" r="7.5" fill="url(#munt)"/>
+    <circle cx="32" cy="10" r="5.2" fill="none" stroke="#d4970e" stroke-width="1"/>
+    <path d="M30.5 7.5h3M30.5 12.5h3M32 6.5v7" stroke="#c98b0c" stroke-width="1.3" stroke-linecap="round"/>
+</svg>

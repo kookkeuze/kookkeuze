@@ -1,0 +1,40 @@
+<svg width="100%" height="100%" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="schijf" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7ee08a"/>
+            <stop offset="1" stop-color="#2f9f3f"/>
+        </linearGradient>
+        <linearGradient id="schijfRand" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#5fcf6c"/>
+            <stop offset="1" stop-color="#235b2a"/>
+        </linearGradient>
+        <linearGradient id="stang" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f4f6f8"/>
+            <stop offset="0.5" stop-color="#c3cbd1"/>
+            <stop offset="1" stop-color="#7f8a92"/>
+        </linearGradient>
+        <radialGradient id="schaduw" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#000000" stop-opacity="0.24"/>
+            <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+        </radialGradient>
+    </defs>
+
+    <ellipse cx="32" cy="52" rx="28" ry="3.8" fill="url(#schaduw)"/>
+
+    <!-- Stang -->
+    <rect x="12" y="29" width="40" height="6" rx="3" fill="url(#stang)"/>
+    <rect x="22" y="28" width="20" height="8" rx="2.5" fill="url(#stang)"/>
+    <g stroke="#9aa4ab" stroke-width="0.8" opacity="0.7">
+        <path d="M25 28.5v7"/><path d="M28 28.5v7"/><path d="M31 28.5v7"/><path d="M34 28.5v7"/><path d="M37 28.5v7"/><path d="M40 28.5v7"/>
+    </g>
+
+    <!-- Gewichten links -->
+    <rect x="4.5" y="22" width="5" height="20" rx="2.2" fill="url(#schijfRand)"/>
+    <rect x="9" y="17" width="7" height="30" rx="3" fill="url(#schijf)"/>
+    <rect x="10.2" y="19" width="1.6" height="26" rx="0.8" fill="#ffffff" opacity="0.45"/>
+
+    <!-- Gewichten rechts -->
+    <rect x="48" y="17" width="7" height="30" rx="3" fill="url(#schijf)"/>
+    <rect x="54.5" y="22" width="5" height="20" rx="2.2" fill="url(#schijfRand)"/>
+    <rect x="49.2" y="19" width="1.6" height="26" rx="0.8" fill="#ffffff" opacity="0.45"/>
+</svg>

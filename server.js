@@ -3039,7 +3039,7 @@ const RECIPE_PACKS = [
     title: 'Sporten',
     subtitle: 'Eiwitrijk en voedzaam',
     description: '8 recepten met focus op eiwitten en herstel.',
-    icon: 'pakket-sporten.svg',
+    icon: 'menu-pakket-sporten.svg',
     recipes: [
       ['Pasta met kip en romige spinazie', 'https://www.leukerecepten.nl/recepten/pasta-met-kip-en-romige-spinazie/'],
       ['Pasta met kip, tomaatjes en spinazie', 'https://www.leukerecepten.nl/recepten/pasta-met-kip-tomaatjes-en-spinazie/'],
@@ -3061,7 +3061,7 @@ const RECIPE_PACKS = [
     title: 'Snacks en toetjes',
     subtitle: 'Lekkere tussendoortjes',
     description: '8 snacks en desserts voor elk moment.',
-    icon: 'pakket-toetjes.svg',
+    icon: 'menu-pakket-toetjes.svg',
     recipes: [
       ['Basisrecept vanillecake', 'https://www.laurasbakery.nl/basisrecept-vanillecake/'],
       ['Basisrecept vanille cupcakes', 'https://www.laurasbakery.nl/basisrecept-vanille-cupcakes/'],
@@ -3083,7 +3083,7 @@ const RECIPE_PACKS = [
     title: 'Snel klaar',
     subtitle: 'Binnen 30 minuten op tafel',
     description: '8 snelle recepten voor drukke dagen.',
-    icon: 'pakket-snel-klaar.svg',
+    icon: 'menu-pakket-snel-klaar.svg',
     recipes: [
       ['Gezonde wrap', 'https://eatertainment.nl/recept/gezonde-wrap'],
       ['Wraps met tomaat en gehakt', 'https://eatertainment.nl/recept/wraps-met-tomaat-en-gehakt'],
@@ -3105,7 +3105,7 @@ const RECIPE_PACKS = [
     title: 'Budget',
     subtitle: 'Voordelig en vullend',
     description: '8 betaalbare recepten met simpele ingrediënten.',
-    icon: 'pakket-budget.svg',
+    icon: 'menu-pakket-budget.svg',
     recipes: [
       ['Traybake kip pesto', 'https://www.leukerecepten.nl/recepten/traybake-kip-pesto/'],
       ['Pasta met kip, tomaatjes en spinazie', 'https://www.leukerecepten.nl/recepten/pasta-met-kip-tomaatjes-en-spinazie/'],
@@ -3127,7 +3127,7 @@ const RECIPE_PACKS = [
     title: 'Vega',
     subtitle: 'Vol smaak, zonder vlees',
     description: '8 vegetarische recepten voor variatie in je week.',
-    icon: 'pakket-vega.svg',
+    icon: 'menu-pakket-vega.svg',
     recipes: [
       ['Halloumi wraps', 'https://eatertainment.nl/recept/halloumi-wraps'],
       ['Crispy halloumi wraps met gegrilde paprika', 'https://eatertainment.nl/recept/crispy-halloumi-wraps-met-gegrilde-paprika'],

@@ -1,0 +1,46 @@
+<svg width="100%" height="100%" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="kast" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7ee08a"/>
+            <stop offset="1" stop-color="#2f9f3f"/>
+        </linearGradient>
+        <radialGradient id="wijzerplaat" cx="0.4" cy="0.35" r="0.75">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="1" stop-color="#e3e8eb"/>
+        </radialGradient>
+        <linearGradient id="knop" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f4f6f8"/>
+            <stop offset="1" stop-color="#8b959d"/>
+        </linearGradient>
+        <radialGradient id="schaduw" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#000000" stop-opacity="0.24"/>
+            <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+        </radialGradient>
+    </defs>
+
+    <ellipse cx="32" cy="59" rx="20" ry="3.6" fill="url(#schaduw)"/>
+
+    <!-- Knoppen bovenop -->
+    <rect x="28" y="4" width="8" height="5" rx="1.8" fill="url(#knop)"/>
+    <rect x="30" y="8" width="4" height="4" fill="#9aa4ab"/>
+    <rect x="45.5" y="10.5" width="6" height="4" rx="1.5" transform="rotate(40 48.5 12.5)" fill="url(#knop)"/>
+
+    <!-- Stopwatch -->
+    <circle cx="32" cy="35" r="22" fill="url(#kast)"/>
+    <circle cx="32" cy="35" r="17.5" fill="url(#wijzerplaat)"/>
+
+    <!-- Al verstreken: een groen taartpunt tot ongeveer 'half' -->
+    <path d="M32 35V19.5A15.5 15.5 0 0 1 46.3 41Z" fill="#63d671" opacity="0.28"/>
+
+    <!-- Streepjes -->
+    <g stroke="#9aa6ad" stroke-width="1.6" stroke-linecap="round">
+        <path d="M32 19.5v3"/><path d="M47.5 35h-3"/><path d="M32 50.5v-3"/><path d="M16.5 35h3"/>
+    </g>
+
+    <!-- Wijzer -->
+    <path d="M32 35l9.5 5.5" stroke="#2f3740" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="32" cy="35" r="2.4" fill="#2f3740"/>
+
+    <!-- Glans -->
+    <path d="M17 26a17 17 0 0 1 8.5-9" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" opacity="0.8"/>
+</svg>
