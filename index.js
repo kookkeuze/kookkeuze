@@ -2823,8 +2823,7 @@ function buildRandomRecipeCardHtml(r, options = {}) {
       `data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}" aria-label="Ingrediënten van ${safeTitle} op je boodschappenlijst zetten"`),
     isInternetMode
       ? tegel('save-internet-recipe-btn', 'menu-recept-toevoegen.svg', 'Bewaren', internetData)
-      : tegel('notes-export-option', 'menu-delen.svg', 'Delen',
-        `data-recipe-url="${safeUrl}" data-recipe-title="${safeTitle}" aria-label="Ingrediënten van ${safeTitle} delen als notitie"`),
+      : '',
     importMode
       ? tegel('import-recipe-btn', 'menu-recept-toevoegen.svg', 'Importeren', `data-recipe-id="${r.id}" data-import-mode="${importMode}"`)
       : '',

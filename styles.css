@@ -10164,4 +10164,10 @@ h1, h2, h3,
   .random-card-action-label {
     white-space: nowrap;
   }
+
+  /* Bij een oneven aantal (bijv. drie in je eigen kookboek) neemt de laatste
+     tegel de hele rij, zodat er geen gat overblijft. */
+  .random-card-action:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
