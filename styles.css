@@ -2062,16 +2062,20 @@ select:focus {
   margin: 0;
 }
 
+/* Tijd en calorieën staan er net zo bij als Soort, Menugang en Doel: een
+   vetgedrukt label met de waarde erachter, zonder icoontjes (die maakten de
+   kaart te druk). */
 .recipe-meta-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 0;
   border: 0;
   background: transparent;
-  color: #4b5650;
+  color: #37403b;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 400;
+  line-height: 1.25;
 }
 
 .recipe-meta-pill i {

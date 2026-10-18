@@ -2707,13 +2707,13 @@ function buildRecipeCardsHtml(arr, options = {}) {
             </div>
           </div>
           <div class="recipe-meta-row">
-            <span class="recipe-meta-pill"><img src="icons/tijd.svg" alt="" class="recipe-meta-icon" /> ${escapeHtml(r.time_required || '-')}</span>
-            <span class="recipe-meta-pill"><img src="icons/kcal.svg" alt="" class="recipe-meta-icon" /> ${escapeHtml(r.calories ?? '-')} kcal</span>
+            <span class="recipe-meta-pill"><strong>Tijd:</strong> ${escapeHtml(r.time_required || '-')}</span>
+            <span class="recipe-meta-pill"><strong>Calorieën:</strong> ${r.calories == null || r.calories === '' ? '-' : `${escapeHtml(r.calories)} kcal`}</span>
           </div>
           <ul>
-            <li><img src="icons/soort.svg" alt="" class="recipe-meta-icon" /> <strong>Soort:</strong> ${escapeHtml(r.dish_type || '-')}</li>
-            <li><img src="icons/menugang.svg" alt="" class="recipe-meta-icon" /> <strong>Menugang:</strong> ${escapeHtml(r.meal_category || '-')}</li>
-            <li><img src="icons/doel.svg" alt="" class="recipe-meta-icon" /> <strong>Doel gerecht:</strong> ${escapeHtml(r.meal_type || '-')}</li>
+            <li><strong>Soort:</strong> ${escapeHtml(r.dish_type || '-')}</li>
+            <li><strong>Menugang:</strong> ${escapeHtml(r.meal_category || '-')}</li>
+            <li><strong>Doel gerecht:</strong> ${escapeHtml(r.meal_type || '-')}</li>
           </ul>
           <div class="recipe-shopping">
             <p class="recipe-shopping-label">Ingrediënten naar</p>
@@ -4302,13 +4302,13 @@ function openWeekmenuPreviewModal(recipeId, fallbackRecipe = null) {
             : `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ext-link">
             Bekijk&nbsp;recept&nbsp;<img src="icons/externe-link.svg" alt="" class="recipe-link-ext-icon" /></a>`}</p>
           <div class="recipe-meta-row">
-            <span class="recipe-meta-pill"><img src="icons/tijd.svg" alt="" class="recipe-meta-icon" /> ${escapeHtml(recipe.time_required || '-')}</span>
-            <span class="recipe-meta-pill"><img src="icons/kcal.svg" alt="" class="recipe-meta-icon" /> ${escapeHtml(recipe.calories ?? '-')} kcal</span>
+            <span class="recipe-meta-pill"><strong>Tijd:</strong> ${escapeHtml(recipe.time_required || '-')}</span>
+            <span class="recipe-meta-pill"><strong>Calorieën:</strong> ${recipe.calories == null || recipe.calories === '' ? '-' : `${escapeHtml(recipe.calories)} kcal`}</span>
           </div>
           <ul>
-            <li><img src="icons/soort.svg" alt="" class="recipe-meta-icon" /> <strong>Soort:</strong> ${escapeHtml(recipe.dish_type || '-')}</li>
-            <li><img src="icons/menugang.svg" alt="" class="recipe-meta-icon" /> <strong>Menugang:</strong> ${escapeHtml(recipe.meal_category || '-')}</li>
-            <li><img src="icons/doel.svg" alt="" class="recipe-meta-icon" /> <strong>Doel gerecht:</strong> ${escapeHtml(recipe.meal_type || '-')}</li>
+            <li><strong>Soort:</strong> ${escapeHtml(recipe.dish_type || '-')}</li>
+            <li><strong>Menugang:</strong> ${escapeHtml(recipe.meal_category || '-')}</li>
+            <li><strong>Doel gerecht:</strong> ${escapeHtml(recipe.meal_type || '-')}</li>
           </ul>
         </div>
       </div>
