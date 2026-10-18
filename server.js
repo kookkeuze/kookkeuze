@@ -1247,6 +1247,52 @@ function parseIngredientsFromCaption(caption) {
   return dedupeIngredients(items);
 }
 
+// De bereiding uit een caption, als losse stappen. Eerst een kopje als
+// "Bereiding:" of "Zo maak je het"; anders de eerste genummerde stap ("1.
+// Verhit…"). Hashtags, voedingswaarde en calls-to-action aan het eind horen
+// er niet bij.
+const STEPS_HEADER_RE = /^(bereiding|bereidingswijze|werkwijze|instructies?|instructions?|method|directions?|stappen|stappenplan|aan de slag|zo maak je (het|dit)|how to make|preparation)\b/i;
+const STEPS_STOP_RE = /^(#|nutrition|voedingswaarde|macro|per (serving|portie)|total per|calorie|kcal|eet smakelijk|smakelijk|enjoy|follow|link in bio|save this|sla dit|bewaar|deel (dit|het)|volg |tag\b|comment|dubbeltik|drop een)/i;
+
+function cleanStepLine(line) {
+  return stripLeadingBullet(line)
+    .replace(/^(stap|step)\s*\d{1,2}\s*[:.)-]?\s*/i, '')
+    .replace(/^\d{1,2}\s*[.)]\s+/, '')
+    .trim();
+}
+
+function parseInstructionsFromCaption(caption) {
+  const lines = caption.split(/\r?\n/).map(l => l.trim());
+  let start = lines.findIndex(l => STEPS_HEADER_RE.test(stripLeadingBullet(l)));
+  if (start >= 0) {
+    start += 1;
+  } else {
+    start = lines.findIndex(l => STEP_LINE_RE.test(l) || /^(stap|step)\s*\d/i.test(l));
+  }
+  if (start < 0) return [];
+
+  const steps = [];
+  for (let i = start; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
+    if (STEPS_STOP_RE.test(stripLeadingBullet(line))) break;
+    // Kopjes binnen de bereiding ("Saus:") slaan we over; de stappen eronder
+    // zeggen zelf al waar ze over gaan.
+    if (isIngredientSubHeader(line) && line.length < 40) continue;
+    const text = cleanStepLine(line);
+    if (!text) continue;
+    const isNumbered = STEP_LINE_RE.test(line) || /^(stap|step)\s*\d/i.test(line);
+    // Een vervolgregel zonder nummer, na een genummerde stap, hoort bij die
+    // stap (captions breken lange zinnen soms af).
+    if (!isNumbered && steps.length && /^[a-zà-ÿ]/.test(text)) {
+      steps[steps.length - 1] = `${steps[steps.length - 1]} ${text}`;
+    } else {
+      steps.push(text);
+    }
+  }
+  return steps.slice(0, 40);
+}
+
 function cleanCaptionTitle(text) {
   if (!text) return null;
   let name = text
@@ -3959,6 +4005,74 @@ app.get('/api/recipes/random', async (req, res) => {
   }
 });
 
+// Een foto van een andere site één keer ophalen en zelf bewaren. Nodig voor
+// Instagram: de links naar hun CDN verlopen na een paar dagen, en dan zou het
+// recept zijn foto kwijt zijn.
+async function snapshotRemoteImage(imageUrl, referer) {
+  try {
+    const response = await browserFetch(imageUrl, {
+      headers: {
+        'User-Agent': DEFAULT_HTML_HEADERS['User-Agent'],
+        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        ...(referer ? { Referer: referer } : {})
+      },
+      timeoutMs: 12000
+    });
+    if (!response.ok) return null;
+    const data = Buffer.from(await response.arrayBuffer());
+    const mimeType = sniffImageType(data);
+    if (!ALLOWED_PHOTO_MIME_TYPES.has(mimeType) || data.length > OWN_RECIPE_MAX_PHOTO_BYTES) return null;
+    return { mimeType, data };
+  } catch (err) {
+    console.warn('⚠️ foto-snapshot mislukt:', err.message);
+    return null;
+  }
+}
+
+// Een Instagram-recept wordt een eigen recept: ingrediënten en bereiding uit
+// de caption, de foto als snapshot en de post als bron. Zo hoef je voor het
+// recept niet meer naar Instagram. Titel en categorieën komen uit het
+// formulier (die heeft de gebruiker net gecontroleerd). Geeft null terug als
+// er niets bruikbaars in de caption staat; dan slaan we gewoon de link op.
+async function saveInstagramAsOwnRecipe(req, url, fields) {
+  const post = await fetchInstagramPost(url);
+  if (!post?.caption) return null;
+
+  const ingredients = parseIngredientsFromCaption(post.caption);
+  const steps = parseInstructionsFromCaption(post.caption);
+  if (!ingredients.length && !steps.length) return null;
+
+  const shortcode = extractInstagramShortcode(url);
+  const ownerUserId = await resolveDatabaseOwnerId(req);
+  const created = await dbCall(addOwnRecipe, {
+    title: trimToLength(fields.title, 255),
+    dish_type: normalizeRecipeField(fields.dish_type),
+    meal_category: normalizeRecipeField(fields.meal_category),
+    meal_type: normalizeRecipeField(fields.meal_type),
+    time_required: normalizeRecipeField(fields.time_required),
+    calories: parseOptionalPositiveInt(fields.calories, 100000),
+    ingredients: trimToLength(ingredients.join('\n'), 10000),
+    instructions: trimToLength(steps.join('\n'), 20000),
+    servings: null,
+    prep_minutes: parseCaptionMinutes(post.caption),
+    source_note: shortcode ? `https://www.instagram.com/p/${shortcode}/` : trimToLength(url, 255),
+    user_id: req.user.id,
+    database_id: ownerUserId
+  });
+
+  // Het recept staat er nu; een mislukte foto mag het niet meer tegenhouden,
+  // anders zou de aanroeper terugvallen op een link en staat het er dubbel.
+  if (created?.id && post.imageUrl) {
+    try {
+      const photo = await snapshotRemoteImage(post.imageUrl, 'https://www.instagram.com/');
+      if (photo) await dbCall(setRecipePhoto, created.id, photo.mimeType, photo.data);
+    } catch (photoErr) {
+      console.warn('⚠️ foto bij Instagram-recept niet opgeslagen:', photoErr.message);
+    }
+  }
+  return created;
+}
+
 // 3. Nieuw recept
 app.post('/api/recipes', async (req, res) => {
   if (!req.user) {
@@ -3980,6 +4094,20 @@ app.post('/api/recipes', async (req, res) => {
   const cleanTimeRequired = normalizeRecipeField(time_required);
 
   try {
+    if (isInstagramUrl(url)) {
+      try {
+        const own = await saveInstagramAsOwnRecipe(req, url, req.body);
+        if (own?.id) {
+          return res.json({ message: 'Recept toegevoegd!', id: own.id, url: own.url, own: true });
+        }
+      } catch (igErr) {
+        if (igErr.statusCode) throw igErr;
+        // Omzetten lukt niet (Instagram blokkeert, rare caption): dan gewoon
+        // als link opslaan, zoals voorheen.
+        console.warn('⚠️ Instagram-recept niet omgezet, opgeslagen als link:', igErr.message);
+      }
+    }
+
     const ownerUserId = await resolveDatabaseOwnerId(req);
     const result = await dbCall(addRecipe, {
       title,
@@ -4885,6 +5013,8 @@ module.exports = {
   fetchInstagramPost,
   parseCaptionMinutes,
   parseIngredientsFromCaption,
+  parseInstructionsFromCaption,
+  snapshotRemoteImage,
   parseTitleFromCaption,
   parseCaloriesFromCaption,
   buildInstagramPayload,

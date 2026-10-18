@@ -7172,6 +7172,18 @@ body.mobile-menu-open .mobile-nav-header {
   gap: 8px;
 }
 
+.own-recipe-source {
+  margin: 10px 0 0;
+  color: #5f6b63;
+  font-size: 14px;
+}
+
+.own-recipe-source a {
+  color: var(--green-deep);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
 .own-recipe-tag {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 12px;

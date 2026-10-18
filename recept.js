@@ -97,6 +97,26 @@
       .join('')}</div>`;
   }
 
+  // Waar het recept vandaan komt, bijvoorbeeld de Instagram-post waar het uit
+  // is overgenomen. Een link wordt klikbaar met de naam van de site.
+  function renderSource(recipe) {
+    const bron = String(recipe.source_note || '').trim();
+    if (!bron) return '';
+    let link = null;
+    try {
+      const url = new URL(bron);
+      if (url.protocol === 'https:' || url.protocol === 'http:') link = url;
+    } catch {
+      link = null;
+    }
+    if (!link) {
+      return `<p class="own-recipe-source">Bron: ${escapeHtml(bron)}</p>`;
+    }
+    const host = link.hostname.replace(/^www\./, '');
+    const naam = /(^|\.)instagram\.com$/i.test(host) ? 'Instagram' : host;
+    return `<p class="own-recipe-source">Bron: <a href="${escapeHtml(link.toString())}" target="_blank" rel="noopener noreferrer">${escapeHtml(naam)}</a></p>`;
+  }
+
   function renderRecipe(recipe) {
     const ingredients = toLines(recipe.ingredients);
     const steps = toLines(recipe.instructions);
@@ -143,6 +163,7 @@
           <h1>${escapeHtml(recipe.title || 'Recept')}</h1>
           ${renderMetaRow(recipe)}
           ${renderTags(recipe)}
+          ${renderSource(recipe)}
           <div class="own-recipe-actions">
             <button type="button" id="editRecipeBtn" class="own-recipe-secondary-btn">
               <i class="fas fa-pen" aria-hidden="true"></i> Bewerken
@@ -635,7 +656,12 @@
       time_required: readMultiSelect('editTimeRequired'),
       calories: leesGetal('editCalories'),
       ingredients: document.getElementById('editIngredients')?.value.trim() || '',
-      instructions: (stappen?.getValues() || []).join('\n')
+      instructions: (stappen?.getValues() || []).join('\n'),
+      // Niet in het formulier, maar wel bewaren: anders raakt een recept bij
+      // bewerken zijn bron (bijv. de Instagram-post) en porties kwijt.
+      source_note: vorigRecept?.source_note || '',
+      servings: vorigRecept?.servings ?? '',
+      prep_minutes: vorigRecept?.prep_minutes ?? ''
     };
     if (bewerkFoto) body.photo = bewerkFoto;
     else if (fotoVerwijderen) body.removePhoto = true;

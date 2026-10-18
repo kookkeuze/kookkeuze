@@ -5105,11 +5105,14 @@ addRecipeForm.addEventListener('submit', async e => {
       return;
     }
 
-    let toastMessage = 'Recept toegevoegd!';
+    // Een Instagram-link maakt de server om tot een eigen recept (met
+    // ingrediënten, stappen en foto); dan heeft het recept een eigen adres.
+    const savedUrl = d.url || bodyData.url;
+    let toastMessage = d.own ? 'Recept overgenomen van Instagram!' : 'Recept toegevoegd!';
     let inlineMessage = '';
     if (noteText && d.id) {
       try {
-        await saveRecipeNote(d.id, bodyData.url, noteText);
+        await saveRecipeNote(d.id, savedUrl, noteText);
         toastMessage = 'Recept en notitie toegevoegd!';
       } catch (noteErr) {
         console.error(noteErr);
@@ -5121,7 +5124,7 @@ addRecipeForm.addEventListener('submit', async e => {
     const addedRecipe = {
       id: d.id || '',
       title: bodyData.title || 'Recept',
-      url: bodyData.url || '',
+      url: savedUrl || '',
       dish_type: joinField(bodyData.dish_type),
       meal_category: joinField(bodyData.meal_category),
       meal_type: joinField(bodyData.meal_type),
@@ -5286,6 +5289,10 @@ bulkSelectIds.forEach(id => {
 // Vergelijkingssleutel voor 'staat dit recept er al in': geen hoofdletters,
 // geen 'www.' en geen slash aan het eind.
 function recipeUrlKey(url) {
+  // Dezelfde Instagram-post kan als /p/, /reel/ of met '?igsh=…' gedeeld
+  // worden; de code van de post is wat telt.
+  const instagram = /instagram\.com\/(?:[^/?#]+\/)?(?:p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i.exec(String(url || ''));
+  if (instagram) return `instagram:${instagram[1]}`;
   return String(url || '').trim().toLowerCase()
     .replace(/^https?:\/\/(www\.)?/, '')
     .replace(/\/+$/, '');
@@ -5343,7 +5350,13 @@ async function fetchExistingRecipeUrlKeys() {
   const res = await fetch(`${API_BASE}/api/recipes?${params.toString()}`, { headers: authHeaders() });
   if (!res.ok) throw new Error('Kon je recepten niet ophalen.');
   const recipes = await res.json();
-  return new Set((Array.isArray(recipes) ? recipes : []).map(recipe => recipeUrlKey(recipe.url)));
+  // Een Instagram-recept is een eigen recept geworden; de originele post
+  // staat dan als bron (source_note). Ook die telt, anders zou dezelfde post
+  // er nog een keer in kunnen.
+  return new Set((Array.isArray(recipes) ? recipes : [])
+    .flatMap(recipe => [recipe.url, recipe.source_note])
+    .filter(Boolean)
+    .map(recipeUrlKey));
 }
 
 function pumpBulkFetches() {
@@ -5650,10 +5663,10 @@ async function saveCurrentBulkItem() {
 
   bulkSaveBtn.disabled = true;
   try {
-    await postBulkRecipe(readBulkFormBody(item));
+    const saved = await postBulkRecipe(readBulkFormBody(item));
     item.result = 'saved';
     item.title = title;
-    showRecipeAddedToast('Recept toegevoegd!');
+    showRecipeAddedToast(saved?.own ? 'Recept overgenomen van Instagram!' : 'Recept toegevoegd!');
     goToNextBulkItem();
   } catch (err) {
     console.error(err);
