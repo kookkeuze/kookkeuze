@@ -2830,6 +2830,9 @@ function buildRandomRecipeCardHtml(r, options = {}) {
     tegel(`random-card-note${hasNote ? ' has-note' : ''}`, 'menu-notitie.svg', 'Notitie',
       `data-recipe-note-btn data-recipe-id="${recipeId}" data-recipe-url="${escapeAttr(safeUrl)}" data-recipe-title="${safeTitle}" aria-label="${hasNote ? 'Bewerk' : 'Voeg'} notitie ${hasNote ? 'voor' : 'toe aan'} ${safeTitle}"`)
   ].filter(Boolean);
+  // Bij een oneven aantal wordt de laatste tegel breed (zie de CSS). Dat moet
+  // Plannen zijn: die schuift dan naar achteren.
+  if (tegels.length % 2 === 1) tegels.push(tegels.shift());
 
   return `${guestBanner}
     <div class="recipe-cards-container search-results single-result weekmenu-preview-cards">
