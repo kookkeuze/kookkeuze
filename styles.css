@@ -4435,9 +4435,11 @@ body.mobile-menu-open .mobile-nav-header {
 }
 
 /* Stap-badges in 'Hoe werkt het' (groene cirkel met wit icoon). */
+/* Zelfde gedetailleerde icoontjes als het menu; iets groter zodat de
+   details zichtbaar blijven. */
 .hiw-icon-img {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
   flex: 0 0 auto;
   display: block;
