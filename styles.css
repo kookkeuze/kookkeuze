@@ -9097,7 +9097,8 @@ h1, h2, h3,
    rondje met een wit lijnicoon en een EatingPasta-kop.
    ========================================================================= */
 
-/* Geen groen blok meer: alleen de titel in het knopgroen, de uitleg zwart. */
+/* Geen groen blok meer: de titel in donkergrijs (#2f3740, zoals de iconen en
+   de sluitknoppen), de uitleg zwart. */
 #kiesRecept .hero-header {
   max-width: 640px;
   margin: 0 auto;
@@ -9108,7 +9109,7 @@ h1, h2, h3,
 }
 
 #kiesRecept .hero-header h1 {
-  color: var(--green);
+  color: #2f3740;
   font-size: 1.7rem;
   line-height: 1.1;
   letter-spacing: 1px;
