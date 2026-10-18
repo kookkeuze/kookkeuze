@@ -1414,6 +1414,24 @@ select:focus {
   flex: 0 0 auto;
 }
 
+/* De gedetailleerde icoontjes bij 'Raster', 'Recepten bewerken' en 'Recept
+   pakketten' zijn groter dan de oude lijn-icoontjes, anders gaan de details
+   verloren. */
+.overview-view-switch .overview-view-btn-icon,
+.recipe-packs-btn .recipe-pack-btn-icon {
+  width: 26px;
+  height: 26px;
+  margin-right: 8px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.overview-view-switch .overview-view-btn,
+.overview-view-btn.recipe-packs-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
 /* Actieve weergave alleen aan de donkergroene rand en tekst herkenbaar,
    zonder groene vulling. */
 .overview-view-btn.active {

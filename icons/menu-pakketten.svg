@@ -1,0 +1,61 @@
+<svg width="100%" height="100%" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="voorkant" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ecc996"/>
+            <stop offset="1" stop-color="#c3925a"/>
+        </linearGradient>
+        <linearGradient id="klep" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f3d6ab"/>
+            <stop offset="1" stop-color="#d6a76c"/>
+        </linearGradient>
+        <linearGradient id="blad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#86e391"/>
+            <stop offset="1" stop-color="#2f9f3f"/>
+        </linearGradient>
+        <radialGradient id="tomaat" cx="0.35" cy="0.35" r="0.7">
+            <stop offset="0" stop-color="#ff8a75"/>
+            <stop offset="1" stop-color="#e2412f"/>
+        </radialGradient>
+        <linearGradient id="stokbrood" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#f3c37c"/>
+            <stop offset="1" stop-color="#cf8c3e"/>
+        </linearGradient>
+        <radialGradient id="schaduw" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#000000" stop-opacity="0.26"/>
+            <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+        </radialGradient>
+    </defs>
+
+    <ellipse cx="32" cy="58.5" rx="26" ry="3.8" fill="url(#schaduw)"/>
+
+    <!-- Binnenkant van de doos -->
+    <path d="M10 28h44v4H10Z" fill="#9c6a37"/>
+
+    <!-- Boodschappen in de doos -->
+    <g transform="rotate(-16 38 18)">
+        <rect x="34" y="4" width="8" height="28" rx="4" fill="url(#stokbrood)"/>
+        <g fill="none" stroke="#b9772f" stroke-width="1.2" stroke-linecap="round">
+            <path d="M36 10l4-2"/>
+            <path d="M36 15.5l4-2"/>
+            <path d="M36 21l4-2"/>
+        </g>
+    </g>
+    <path d="M20 30c-4-6-4-14 0-20 2 6 3 13 2 20Z" fill="url(#blad)"/>
+    <path d="M23 30c-1-7 1-14 6-18 0 7-1 13-3 18Z" fill="url(#blad)"/>
+    <circle cx="47" cy="26" r="5.5" fill="url(#tomaat)"/>
+    <path d="M45 21l2 1.5 2-1.5-1 2.5" fill="#3fae4d"/>
+    <circle cx="45.3" cy="24.3" r="1.3" fill="#ffffff" opacity="0.6"/>
+
+    <!-- Kleppen -->
+    <path d="M10 29L3.5 21.5a1 1 0 0 1 .8-1.6L19 19l5 10Z" fill="url(#klep)"/>
+    <path d="M54 29l6.5-7.5a1 1 0 0 0-.8-1.6L45 19l-5 10Z" fill="url(#klep)"/>
+
+    <!-- Voorkant -->
+    <path d="M10 29h44v24a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3Z" fill="url(#voorkant)"/>
+    <path d="M10 29h44" stroke="#b9854b" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M15 34v17" stroke="#ffffff" stroke-opacity="0.3" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Groen etiket met een hartje: met liefde samengesteld -->
+    <rect x="22" y="36" width="20" height="13" rx="3" fill="#63d671"/>
+    <path d="M32 45.6c-2.6-1.7-4.6-3.4-4.6-5.3a2.3 2.3 0 0 1 4.6-.8 2.3 2.3 0 0 1 4.6.8c0 1.9-2 3.6-4.6 5.3Z" fill="#ffffff"/>
+</svg>
