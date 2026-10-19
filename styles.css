@@ -10298,6 +10298,15 @@ h1, h2, h3,
     flex: 1 1 auto;
   }
 
+  /* In een flex-kolom krimpen blokken met 'margin: auto' tot hun inhoud;
+     deze moeten de volle breedte houden, zoals voorheen. */
+  #kiesRecept .finder-choices,
+  #kiesRecept .finder-active-filters,
+  #kiesRecept .finder-search-divider {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
   /* Meer lucht tussen de onderdelen, in verhouding tot de schermhoogte: op
      een hoge telefoon ruim, op een kleine compacter. */
   #kiesRecept .recipe-source-switch {
