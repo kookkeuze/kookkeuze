@@ -4950,6 +4950,59 @@ body.mobile-menu-open .mobile-nav-header {
   display: block;
 }
 
+/* De knop is het icoon zelf: een glanzend rood rondje met een kruis en een
+   groen rondje met een vinkje, in de stijl van de andere icoontjes. Groter
+   dan voorheen, zodat je ze makkelijk raakt. */
+.recipe-pack-actions {
+  gap: 28px;
+}
+
+.recipe-pack-actions .recipe-pack-skip-btn,
+.recipe-pack-actions .recipe-pack-add-btn {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.recipe-pack-actions .recipe-pack-action-icon {
+  width: 64px;
+  height: 64px;
+}
+
+@media (hover: hover) {
+  .recipe-pack-actions .recipe-pack-skip-btn:hover,
+  .recipe-pack-actions .recipe-pack-add-btn:hover {
+    background: transparent;
+    transform: translateY(-2px) scale(1.04);
+  }
+}
+
+.recipe-pack-actions .recipe-pack-skip-btn:active,
+.recipe-pack-actions .recipe-pack-add-btn:active {
+  transform: scale(0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recipe-pack-actions .recipe-pack-skip-btn,
+  .recipe-pack-actions .recipe-pack-add-btn {
+    transition: none;
+  }
+
+  .recipe-pack-actions .recipe-pack-skip-btn:hover,
+  .recipe-pack-actions .recipe-pack-add-btn:hover,
+  .recipe-pack-actions .recipe-pack-skip-btn:active,
+  .recipe-pack-actions .recipe-pack-add-btn:active {
+    transform: none;
+  }
+}
+
 .recipe-pack-add-btn.is-loading {
   opacity: 0.7;
 }

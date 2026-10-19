@@ -1265,10 +1265,10 @@ function renderRecipePackStep() {
       <p class="recipe-pack-count">${pack.total_recipes || 0} recepten</p>
       <div class="recipe-pack-actions">
         <button id="recipePackSkipBtn" type="button" class="recipe-pack-skip-btn" aria-label="Pakket overslaan">
-          <img src="icons/pakket-overslaan.svg" alt="" class="recipe-pack-action-icon" />
+          <img src="icons/menu-pakket-overslaan.svg" alt="" class="recipe-pack-action-icon" />
         </button>
         <button id="recipePackAddBtn" type="button" class="recipe-pack-add-btn" aria-label="Pakket toevoegen">
-          <img src="icons/pakket-toevoegen.svg" alt="" class="recipe-pack-action-icon" />
+          <img src="icons/menu-pakket-toevoegen.svg" alt="" class="recipe-pack-action-icon" />
         </button>
       </div>
     </div>
