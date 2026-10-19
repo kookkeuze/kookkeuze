@@ -9162,8 +9162,8 @@ h1, h2, h3,
    rondje met een wit lijnicoon en een EatingPasta-kop.
    ========================================================================= */
 
-/* Geen groen blok meer: de titel in donkergrijs (#2f3740, zoals de iconen en
-   de sluitknoppen), de uitleg zwart. */
+/* Geen groen blok meer: de titel in hetzelfde zwart (#3a3a3a) en dezelfde
+   maat als 'Hoe werkt het?' eronder, de uitleg zwart. */
 #kiesRecept .hero-header {
   max-width: 640px;
   margin: 0 auto;
@@ -9174,7 +9174,7 @@ h1, h2, h3,
 }
 
 #kiesRecept .hero-header h1 {
-  color: #2f3740;
+  color: #3a3a3a;
   font-size: 1.7rem;
   line-height: 1.1;
   letter-spacing: 1px;
@@ -10268,4 +10268,159 @@ h1, h2, h3,
   color: #2f3740;
   min-height: 0;
   max-height: none;
+}
+
+/* =========================================================================
+   EERSTE SCHERM OP TELEFOON
+   De kiezer vult precies het eerste scherm (onder de zwevende topbar), met
+   wat meer lucht tussen de onderdelen. 'Hoe werkt het?' valt daardoor onder
+   de vouw; een rustig pijltje onderaan laat zien dat het er is.
+   82 px = de topbar (8 px van boven, 66 px hoog) plus 8 px marge erboven
+   en eronder tot het witte kader.
+   ========================================================================= */
+
+.home-scroll-cue {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .container:has(#kiesRecept.tab-content.active) {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 82px);
+    min-height: calc(100svh - 82px);
+    box-sizing: border-box;
+  }
+
+  #kiesRecept.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+  }
+
+  /* Meer lucht tussen de onderdelen, in verhouding tot de schermhoogte: op
+     een hoge telefoon ruim, op een kleine compacter. */
+  #kiesRecept .recipe-source-switch {
+    margin-top: clamp(4px, 1.6svh, 16px);
+  }
+
+  #kiesRecept .hero-header {
+    padding-top: clamp(18px, 4.2svh, 40px);
+  }
+
+  #kiesRecept .finder-choices {
+    margin-top: clamp(24px, 5.6svh, 50px);
+  }
+
+  #kiesRecept .finder-choice {
+    padding-top: 22px;
+    padding-bottom: 20px;
+  }
+
+  #kiesRecept .finder-active-filters {
+    margin-top: 20px;
+  }
+
+  #kiesRecept .finder-search-divider {
+    margin-top: clamp(28px, 6.8svh, 60px);
+  }
+
+  #kiesRecept .hero-search {
+    margin-top: 16px;
+  }
+
+  /* Het pijltje staat altijd onderaan het eerste scherm. */
+  /* Subtiel: kleine, lichte letters en een dun pijltje dat traag op en neer
+     beweegt. Het raakvlak blijft wel groot genoeg om op te tikken. */
+  .home-scroll-cue {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 44px;
+    min-height: 44px;
+    margin: auto auto 0;
+    padding: 18px 16px 2px;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: #b3bcb7;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .home-scroll-cue-chevron {
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(45deg);
+    animation: home-scroll-cue-bob 3s ease-in-out infinite;
+  }
+
+  /* Zodra er zoekresultaten staan, is het pijltje overbodig. */
+  #result:not(:empty) + .home-scroll-cue {
+    display: none;
+  }
+}
+
+/* Lage telefoons (zoals een iPhone SE): iets compacter, zodat het pijltje
+   nog net in het eerste scherm valt. */
+@media (max-width: 768px) and (max-height: 720px) {
+  #kiesRecept .hero-header {
+    padding-top: clamp(12px, 2.6svh, 24px);
+  }
+
+  #kiesRecept .finder-choices {
+    margin-top: clamp(16px, 3.4svh, 28px);
+  }
+
+  #kiesRecept .finder-choice {
+    padding-top: 16px;
+    padding-bottom: 14px;
+  }
+
+  #kiesRecept .finder-choice-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  #kiesRecept .finder-search-divider {
+    margin-top: clamp(18px, 4svh, 32px);
+  }
+
+  .home-scroll-cue {
+    padding-top: 10px;
+  }
+}
+
+/* Rustig op en neer; geen stuiter die om aandacht schreeuwt. */
+@keyframes home-scroll-cue-bob {
+  0%, 100% { transform: translateY(0) rotate(45deg); opacity: 0.6; }
+  50% { transform: translateY(2px) rotate(45deg); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-scroll-cue-chevron {
+    animation: none;
+  }
+}
+
+/* 'Hoe werkt het?' in dezelfde stijl en maat als 'Wat eten we vandaag?':
+   hoofdletters, 1,7 rem op telefoon en 2,1 rem vanaf tablet. */
+.how-works h2 {
+  color: #3a3a3a;
+  font-size: 1.7rem;
+  line-height: 1.1;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+@media (min-width: 769px) {
+  .how-works h2 {
+    font-size: 2.1rem;
+  }
 }

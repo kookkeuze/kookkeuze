@@ -1864,6 +1864,18 @@ async function drawRandomRecipe() {
 
 document.getElementById('randomBtn').addEventListener('click', () => drawRandomRecipe());
 
+// Het pijltje onderaan het eerste scherm (alleen op telefoon zichtbaar)
+// schuift soepel door naar 'Hoe werkt het?'.
+document.getElementById('homeScrollCue')?.addEventListener('click', () => {
+  const doel = document.getElementById('hoeWerktHet');
+  if (!doel) return;
+  const topbar = document.querySelector('.topbar');
+  const marge = (topbar ? topbar.getBoundingClientRect().bottom : 0) + 12;
+  const top = doel.getBoundingClientRect().top + window.scrollY - marge;
+  const minderBeweging = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top, behavior: minderBeweging ? 'auto' : 'smooth' });
+});
+
 /* — Help me kiezen —
    De vijf filters staan niet meer als rij keuzelijsten op het beginscherm,
    maar worden als vragen één voor één gesteld. De verborgen multi-selects
