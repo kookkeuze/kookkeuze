@@ -10465,3 +10465,116 @@ h1, h2, h3,
     animation: none;
   }
 }
+
+/* =========================================================================
+   FOOTER OP TELEFOON: RECEPTMENU'S ALS ÉÉN NETTE LIJST
+   In twee kolommen groeide bij het openklappen alleen de ene kolom en bleef
+   er ernaast een gat. Op telefoon nu één lijst over de volle breedte, zoals
+   een instellingenmenu: tekst links op één lijn, pijltje rechts (omlaag =
+   dicht, omhoog = open), dunne lijnen ertussen en submenu's iets ingesprongen
+   en lichter. Vanaf tablet blijven de drie kolommen.
+   ========================================================================= */
+@media (max-width: 767px) {
+  .footer-links {
+    gap: 6px 14px;
+  }
+
+  .footer-links a,
+  .footer-links .footer-current {
+    font-size: 0.875rem;
+  }
+
+  .footer-tree {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+    padding: 0 4px;
+    box-sizing: border-box;
+  }
+
+  .footer-tree > li {
+    border-bottom: 1px solid #eef2ef;
+  }
+
+  .footer-tree > li:first-child {
+    border-top: 1px solid #eef2ef;
+  }
+
+  /* Kopjes: tekst links, pijltje rechts. */
+  .footer-tree summary {
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    padding-right: 4px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4b5650;
+    transform-origin: center;
+  }
+
+  .footer-tree summary::before {
+    width: 6px;
+    height: 6px;
+    margin: 0 2px 3px 0;
+    transform: rotate(45deg);
+  }
+
+  .footer-tree:not(.is-enhanced) details[open] > summary::before,
+  .footer-tree.is-enhanced .footer-tree-node.is-open > summary::before {
+    margin-bottom: -3px;
+    transform: rotate(-135deg);
+  }
+
+  /* De losse link bovenaan oogt als dezelfde rij, met een pijltje naar rechts. */
+  .site-footer .footer-tree > li > a,
+  .site-footer .footer-tree > li > .footer-current {
+    display: flex;
+    width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    padding: 0 4px 0 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4b5650;
+    border-bottom: none;
+  }
+
+  .site-footer .footer-tree > li > a::after {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin-right: 3px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+  }
+
+  /* Submenu's: ingesprongen, lichter en compacter. */
+  .footer-tree ul {
+    padding-left: 14px;
+  }
+
+  .footer-tree ul summary {
+    min-height: 42px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #6f7a73;
+  }
+
+  .footer-tree ul li > a,
+  .footer-tree ul li > .footer-current {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding-left: 0;
+    font-size: 0.8125rem;
+  }
+
+  .footer-tree-panel > ul > li:last-child {
+    padding-bottom: 8px;
+  }
+}
