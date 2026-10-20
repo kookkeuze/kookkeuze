@@ -3522,9 +3522,16 @@ const shoppingListClearAllBtn = document.getElementById('shoppingListClearAllBtn
 let shoppingListItems = [];
 let shoppingListLoaded = false;
 let shoppingReorderTimer = null;
+// Meekijken met anderen op een gedeelde lijst (zie syncShoppingListFromServer).
+const SHOPPING_SYNC_MS = 3000;
+const SHOPPING_LOCAL_QUIET_MS = 1500;
+let shoppingSyncTimer = null;
+let shoppingSyncBusy = false;
+let shoppingLastLocalChange = 0;
 
 
 function clearShoppingListCache() {
+  stopShoppingListSync();
   shoppingListItems = [];
   shoppingListLoaded = false;
   hideModal(shoppingListModal);
@@ -3657,12 +3664,85 @@ async function openShoppingListModal() {
       shoppingListBody.innerHTML = '<p class="shopping-empty">Kon de lijst niet laden</p>';
     }
   }
+  startShoppingListSync();
 }
 
 function closeShoppingListModalPanel() {
+  stopShoppingListSync();
   hideModal(shoppingListModal);
   shoppingListModal?.setAttribute('aria-hidden', 'true');
 }
+
+/* — Meekijken met anderen —
+   Doe je samen boodschappen in een gedeeld kookboek, dan moet je zien wat de
+   ander afvinkt, weghaalt of toevoegt. Zolang de lijst openstaat en de app in
+   beeld is, halen we elke paar seconden de laatste stand op, en meteen als je
+   telefoon terugkomt uit de achtergrond. Alleen bij een echt verschil tekenen
+   we de lijst opnieuw, met behoud van je scrollpositie. Vlak na een eigen
+   aanpassing wachten we even, zodat je net gezette vinkje niet terugspringt
+   voordat de server het heeft. */
+
+function markShoppingLocalChange() {
+  shoppingLastLocalChange = Date.now();
+}
+
+function isShoppingListOpen() {
+  return !!shoppingListModal && !shoppingListModal.classList.contains('hidden')
+    && !shoppingListModal.classList.contains('closing');
+}
+
+function shoppingListSignature(items) {
+  return items
+    .map(item => `${item.id}:${item.is_checked ? 1 : 0}:${item.name}:${item.source_title || ''}`)
+    .join('|');
+}
+
+async function syncShoppingListFromServer() {
+  if (shoppingSyncBusy || !isShoppingListOpen() || document.hidden || !getValidToken()) return;
+  if (Date.now() - shoppingLastLocalChange < SHOPPING_LOCAL_QUIET_MS) return;
+  shoppingSyncBusy = true;
+  try {
+    const rows = await shoppingListRequest('/api/shopping-list');
+    const next = Array.isArray(rows) ? rows : [];
+    // Intussen zelf iets aangepast of de lijst gesloten? Dan deze ronde laten.
+    if (!isShoppingListOpen() || Date.now() - shoppingLastLocalChange < SHOPPING_LOCAL_QUIET_MS) return;
+    if (shoppingListSignature(next) === shoppingListSignature(shoppingListItems)) return;
+
+    const bekendeIds = new Set(shoppingListItems.map(item => Number(item.id)));
+    const scrollTop = shoppingListBody?.scrollTop || 0;
+    shoppingListItems = next;
+    shoppingListLoaded = true;
+    renderShoppingList();
+    if (shoppingListBody) shoppingListBody.scrollTop = scrollTop;
+
+    // Wat een ander net toevoegde, komt er zacht bij.
+    shoppingListBody?.querySelectorAll('[data-shopping-toggle]').forEach(btn => {
+      if (!bekendeIds.has(Number(btn.dataset.itemId))) {
+        btn.closest('.shopping-row')?.classList.add('is-arriving');
+      }
+    });
+  } catch (err) {
+    // Even geen verbinding: de volgende ronde proberen we het gewoon opnieuw.
+    console.warn('Boodschappenlijst bijwerken mislukt:', err.message);
+  } finally {
+    shoppingSyncBusy = false;
+  }
+}
+
+function startShoppingListSync() {
+  stopShoppingListSync();
+  shoppingSyncTimer = setInterval(syncShoppingListFromServer, SHOPPING_SYNC_MS);
+}
+
+function stopShoppingListSync() {
+  clearInterval(shoppingSyncTimer);
+  shoppingSyncTimer = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) syncShoppingListFromServer();
+});
+window.addEventListener('focus', syncShoppingListFromServer);
 
 async function openIngredientPickerForRecipe(recipeUrl, recipeTitle) {
   if (!getValidToken()) {
@@ -3690,6 +3770,7 @@ async function openIngredientPickerForRecipe(recipeUrl, recipeTitle) {
 // terug bij een fout, zodat het venster blijft staan en je het opnieuw kunt
 // proberen zonder je uitgevinkte regels kwijt te raken.
 async function addChosenIngredientsToList(chosen) {
+  markShoppingLocalChange();
   try {
     const data = await shoppingListRequest('/api/shopping-list', {
       method: 'POST',
@@ -3735,6 +3816,7 @@ shoppingListAddForm?.addEventListener('submit', async e => {
   e.preventDefault();
   const name = String(shoppingListAddInput?.value || '').trim();
   if (!name) return;
+  markShoppingLocalChange();
   try {
     const data = await shoppingListRequest('/api/shopping-list', {
       method: 'POST',
@@ -3763,6 +3845,7 @@ shoppingListBody?.addEventListener('click', async e => {
     if (!item) return;
     const nextChecked = !item.is_checked;
     item.is_checked = nextChecked;
+    markShoppingLocalChange();
 
     // Direct de rij zelf omzetten in plaats van de hele lijst opnieuw te tekenen:
     // je ziet het vinkje landen op het moment dat je tikt. Pas daarna verspringt
@@ -3778,6 +3861,8 @@ shoppingListBody?.addEventListener('click', async e => {
         method: 'PATCH',
         body: JSON.stringify({ is_checked: nextChecked })
       });
+      // Pas vanaf nu staat het ook op de server: dan pas weer meekijken.
+      markShoppingLocalChange();
     } catch (err) {
       console.error(err);
       item.is_checked = !nextChecked;
@@ -3791,11 +3876,13 @@ shoppingListBody?.addEventListener('click', async e => {
   const removeBtn = e.target.closest('[data-shopping-remove]');
   if (!removeBtn) return;
   const itemId = Number(removeBtn.dataset.itemId);
+  markShoppingLocalChange();
   const previous = shoppingListItems;
   shoppingListItems = shoppingListItems.filter(row => Number(row.id) !== itemId);
   renderShoppingList();
   try {
     await shoppingListRequest(`/api/shopping-list/${itemId}`, { method: 'DELETE' });
+    markShoppingLocalChange();
   } catch (err) {
     console.error(err);
     shoppingListItems = previous;
@@ -3805,6 +3892,7 @@ shoppingListBody?.addEventListener('click', async e => {
 });
 
 async function clearShoppingList(scope) {
+  markShoppingLocalChange();
   try {
     await shoppingListRequest('/api/shopping-list/clear', {
       method: 'POST',

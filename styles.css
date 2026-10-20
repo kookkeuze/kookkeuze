@@ -10448,3 +10448,20 @@ h1, h2, h3,
   grid-template-columns: minmax(0, 380px);
   justify-content: center;
 }
+
+/* Een product dat iemand anders net op de gedeelde boodschappenlijst zette,
+   komt er zacht bij (zie syncShoppingListFromServer). */
+@keyframes shopping-row-arrive {
+  from { opacity: 0; transform: translateY(-4px); background-color: #eef9f0; }
+  to   { opacity: 1; transform: none; background-color: transparent; }
+}
+
+.shopping-row.is-arriving {
+  animation: shopping-row-arrive 420ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shopping-row.is-arriving {
+    animation: none;
+  }
+}
