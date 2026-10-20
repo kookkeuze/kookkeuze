@@ -349,7 +349,7 @@ const PAGES = [
     path: '/recepten/avondeten/gezond',
     footerLabel: 'Gezond avondeten',
     footerOverviewLabel: 'Alle gezonde recepten',
-    title: 'Gezond avondeten: gezonde recepten voor het diner – Kookkeuze',
+    title: 'Gezond avondeten & diner: gezonde recepten – Kookkeuze',
     description:
       'Gezond avondeten zonder lang zoeken: gezonde recepten en gerechten voor het diner, van eiwitrijk hoofdgerecht tot maaltijdsalade. Filter op kcal en tijd.',
     h1: 'Gezond avondeten: gezonde recepten voor het diner',
@@ -569,7 +569,7 @@ const PAGES = [
     path: '/recepten/avondeten/lekker',
     footerLabel: 'Lekker avondeten',
     footerOverviewLabel: 'Alle lekkere recepten',
-    title: 'Lekkere recepten voor het avondeten – Kookkeuze',
+    title: 'Avondeten recepten: lekkere gerechten – Kookkeuze',
     description:
       'Lekkere recepten voor het avondeten, van pasta tot ovenschotel. Verzamel je favorieten in je eigen kookboek en laat Kookkeuze kiezen wat het vanavond wordt.',
     h1: 'Lekkere recepten voor het avondeten',
@@ -655,7 +655,7 @@ const PAGES = [
     path: '/gezonde-recepten-afvallen',
     footerLabel: 'Afvallen',
     footerOverviewLabel: 'Alle afvalrecepten',
-    title: 'Gezonde recepten om af te vallen: afvalrecepten – Kookkeuze',
+    title: 'Gezonde recepten & maaltijden om af te vallen – Kookkeuze',
     description:
       'Gezonde recepten om af te vallen: afvalrecepten die je filtert op calorieën, van onder de 300 tot onder de 700 kcal. Plan er meteen je weekmenu mee.',
     h1: 'Gezonde recepten om af te vallen',
