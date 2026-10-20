@@ -2377,18 +2377,21 @@ function renderSearchResultsPage() {
   const { recipes, options } = searchResults;
   searchCarouselObserver?.disconnect();
 
+  // Zelfde compacte kaart als in de random-popup en het overzicht. Guests in
+  // de kookboek-modus krijgen de voorbeeld-banner erboven, zoals voorheen.
+  const guestBanner = (options.mode !== 'internet' && isGuestUser()) ? guestDemoBannerHtml() : '';
+  const kaartenHtml = recipes.map(r => buildCompactRecipeCardHtml(r, options)).join('');
+
   if (recipes.length <= 1) {
-    resultDiv.innerHTML = buildRecipeCardsHtml(recipes, options);
+    resultDiv.innerHTML = `${guestBanner}
+      <div class="recipe-cards-container search-results recipe-grid-cards compact-grid compact-single">${kaartenHtml}</div>`;
     hydrateResultImages();
+    refreshRecipeNoteButtons();
     return;
   }
 
-  const kaarten = buildRecipeCardsHtml(recipes, {
-    ...options,
-    forceGrid: true,
-    extraClass: 'search-carousel-track'
-  });
-  resultDiv.innerHTML = `
+  const kaarten = `<div class="recipe-cards-container search-results recipe-grid-cards compact-grid search-carousel-track">${kaartenHtml}</div>`;
+  resultDiv.innerHTML = `${guestBanner}
     <section class="search-carousel" aria-label="Zoekresultaten">
       <div class="search-carousel-head">
         <p class="search-carousel-count" aria-live="polite"></p>

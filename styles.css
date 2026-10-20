@@ -10433,3 +10433,18 @@ h1, h2, h3,
     font-size: 2.1rem;
   }
 }
+
+/* -------- Compacte kaarten in de zoekresultaten --------------------------
+   De swipe-rij gebruikt nu ook de compacte kaart. Die heeft geen zes vaste
+   rijen nodig (subgrid van de oude kaart): met die rijen zou de rij de kaarten
+   onder elkaar zetten in plaats van naast elkaar. */
+.recipe-cards-container.recipe-grid-cards.search-carousel-track.compact-grid {
+  grid-template-rows: none;
+  grid-auto-rows: auto;
+}
+
+/* Eén resultaat: één kaart, gecentreerd, niet breder dan een kaart in de rij. */
+.recipe-cards-container.recipe-grid-cards.compact-single {
+  grid-template-columns: minmax(0, 380px);
+  justify-content: center;
+}
