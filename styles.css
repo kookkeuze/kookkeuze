@@ -10270,6 +10270,71 @@ h1, h2, h3,
   max-height: none;
 }
 
+/* Rustiger in de swipe-rij en het overzicht. De kaarten zijn even hoog, dus
+   de langste titel bepaalt de hoogte van allemaal: de titel is kleiner en
+   stopt na twee regels (de volledige titel staat in de tooltip). Twee regels
+   ruimte houdt hij altijd vrij, zodat de labeltjes naast elkaar gelijk
+   beginnen. Foto, labeltjes, knop en tegels gaan een maatje kleiner mee. */
+.recipe-grid-cards .compact-card .result-image-cell,
+.recipe-grid-cards .compact-card .recipe-card-image,
+.recipe-grid-cards .compact-card .recipe-card-image-skeleton,
+.recipe-grid-cards .compact-card .recipe-card-image-fallback {
+  height: 172px;
+  min-height: 172px;
+  max-height: 172px;
+}
+
+.recipe-grid-cards .compact-card .compact-card-body {
+  gap: 10px;
+  padding: 12px 14px 14px;
+}
+
+.recipe-grid-cards .compact-card .compact-card-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-size: 1.15rem;
+  line-height: 1.18;
+  letter-spacing: 0.3px;
+  min-height: calc(2 * 1.18em);
+  overflow-wrap: anywhere;
+}
+
+.recipe-grid-cards .compact-card .compact-card-labels {
+  gap: 4px;
+}
+
+.recipe-grid-cards .compact-card .compact-card-labels li {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.recipe-grid-cards .compact-card .compact-card-link .ext-link {
+  min-height: 38px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+.recipe-grid-cards .compact-card .compact-card-actions {
+  gap: 6px;
+}
+
+.recipe-grid-cards .compact-card .compact-card-action {
+  gap: 3px;
+  padding: 7px 6px 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.recipe-grid-cards .compact-card .compact-card-action-icon {
+  width: 22px;
+  height: 22px;
+}
+
 /* =========================================================================
    EERSTE SCHERM OP TELEFOON
    De kiezer vult precies het eerste scherm (onder de zwevende topbar), met

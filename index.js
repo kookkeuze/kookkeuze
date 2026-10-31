@@ -2870,7 +2870,7 @@ function buildCompactRecipeCardHtml(r, options = {}) {
           <div class="recipe-card-image-skeleton"></div>
         </div>
         <div class="compact-card-body">
-          <h3 class="compact-card-title">${escapeHtml(r.title || 'Recept')}</h3>
+          <h3 class="compact-card-title" title="${safeTitle}">${escapeHtml(r.title || 'Recept')}</h3>
           ${labels.length ? `<ul class="compact-card-labels">${labels.map(label => `<li>${escapeHtml(label)}</li>`).join('')}</ul>` : ''}
           <p class="recipe-link compact-card-link">${isOwn
             ? `<a href="${safeHref}" class="ext-link own-recipe-link">Bekijk&nbsp;recept</a>`
