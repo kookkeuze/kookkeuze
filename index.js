@@ -2364,29 +2364,35 @@ function showRecipes(arr, options = {}) {
 // lijst; dat scrollen en vastklikken op een kaart doet de browser zelf via
 // scroll-snap in de CSS. Eén resultaat blijft de brede losse kaart.
 let searchResults = { recipes: [], options: {} };
-let searchCarouselObserver = null;
-let searchCarouselResize = null;
+let searchCarouselCleanup = () => {};
 
 function renderSearchResultsPage() {
   const { recipes, options } = searchResults;
-  searchCarouselObserver?.disconnect();
+  searchCarouselCleanup();
 
   // Zelfde compacte kaart als in de random-popup en het overzicht. Guests in
   // de kookboek-modus krijgen de voorbeeld-banner erboven, zoals voorheen.
   const guestBanner = (options.mode !== 'internet' && isGuestUser()) ? guestDemoBannerHtml() : '';
-  const kaartenHtml = recipes.map(r => buildCompactRecipeCardHtml(r, options)).join('');
+  resultDiv.innerHTML = `${guestBanner}${buildRecipeCarouselHtml(recipes, options, 'Zoekresultaten')}`;
 
   if (recipes.length <= 1) {
-    resultDiv.innerHTML = `${guestBanner}
-      <div class="recipe-cards-container search-results recipe-grid-cards compact-grid compact-single">${kaartenHtml}</div>`;
     hydrateResultImages();
     refreshRecipeNoteButtons();
     return;
   }
+  searchCarouselCleanup = initRecipeCarousel(resultDiv);
+}
 
-  const kaarten = `<div class="recipe-cards-container search-results recipe-grid-cards compact-grid search-carousel-track">${kaartenHtml}</div>`;
-  resultDiv.innerHTML = `${guestBanner}
-    <section class="search-carousel" aria-label="Zoekresultaten">
+// De swipe-rij met compacte kaarten: de zoekresultaten en het raster van
+// 'Overzicht recepten'. Eén recept staat als losse kaart gecentreerd.
+function buildRecipeCarouselHtml(recipes, options, label) {
+  const kaartenHtml = recipes.map(r => buildCompactRecipeCardHtml(r, options)).join('');
+  if (recipes.length <= 1) {
+    return `<div class="recipe-cards-container search-results recipe-grid-cards compact-grid compact-single">${kaartenHtml}</div>`;
+  }
+
+  return `
+    <section class="search-carousel" aria-label="${escapeAttr(label)}">
       <div class="search-carousel-head">
         <p class="search-carousel-count" aria-live="polite"></p>
         <div class="search-carousel-arrows">
@@ -2398,7 +2404,7 @@ function renderSearchResultsPage() {
           </button>
         </div>
       </div>
-      ${kaarten}
+      <div class="recipe-cards-container search-results recipe-grid-cards compact-grid search-carousel-track">${kaartenHtml}</div>
       <p class="search-carousel-hint">
         <span class="search-carousel-hint-chevron is-prev" aria-hidden="true"></span>
         <span class="search-carousel-hint-touch">Swipe voor meer recepten</span>
@@ -2406,13 +2412,21 @@ function renderSearchResultsPage() {
         <span class="search-carousel-hint-chevron" aria-hidden="true"></span>
       </p>
     </section>`;
+}
 
-  const track = resultDiv.querySelector('.search-carousel-track');
-  if (!track) return;
+// Zet de rij uit buildRecipeCarouselHtml in `container` aan. Geeft een functie
+// terug die de luisteraars weer opruimt voordat de rij opnieuw wordt gebouwd.
+function initRecipeCarousel(container) {
+  const track = container.querySelector('.search-carousel-track');
+  if (!track) return () => {};
   track.setAttribute('tabindex', '0');
   track.querySelectorAll('.result-image-cell').forEach(cell => cell.classList.add('is-lazy'));
-  observeSearchCarouselImages(track);
-  bindSearchCarousel(track);
+  const observer = observeSearchCarouselImages(track);
+  const stopRij = bindSearchCarousel(track);
+  return () => {
+    observer?.disconnect();
+    stopRij();
+  };
 }
 
 // Alleen de foto's van kaarten die (bijna) in beeld zijn ophalen. Bij veel
@@ -2426,16 +2440,17 @@ function observeSearchCarouselImages(track) {
   };
   if (!('IntersectionObserver' in window)) {
     track.querySelectorAll('.result-image-cell.is-lazy').forEach(laad);
-    return;
+    return null;
   }
-  searchCarouselObserver = new IntersectionObserver(entries => {
+  const observer = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
       laad(entry.target);
-      searchCarouselObserver?.unobserve(entry.target);
+      observer.unobserve(entry.target);
     });
   }, { root: track, rootMargin: '0px 100% 0px 100%' });
-  track.querySelectorAll('.result-image-cell.is-lazy').forEach(cell => searchCarouselObserver.observe(cell));
+  track.querySelectorAll('.result-image-cell.is-lazy').forEach(cell => observer.observe(cell));
+  return observer;
 }
 
 function bindSearchCarousel(track) {
@@ -2501,10 +2516,16 @@ function bindSearchCarousel(track) {
   nudgeSearchCarouselOnce(track);
 
   werkBij();
-  // Eén resize-luisteraar tegelijk: een nieuwe zoekopdracht vervangt de vorige.
-  if (searchCarouselResize) window.removeEventListener('resize', searchCarouselResize);
-  searchCarouselResize = werkBij;
-  window.addEventListener('resize', searchCarouselResize, { passive: true });
+  // Opnieuw tellen als de rij van maat verandert: bij draaien of een smaller
+  // venster, maar ook als een verborgen tabblad (het overzicht wordt al bij het
+  // laden gebouwd) of de raster-weergave zichtbaar wordt.
+  if (!('ResizeObserver' in window)) {
+    window.addEventListener('resize', werkBij, { passive: true });
+    return () => window.removeEventListener('resize', werkBij);
+  }
+  const maat = new ResizeObserver(werkBij);
+  maat.observe(track);
+  return () => maat.disconnect();
 }
 
 // Met de muis kun je de rij ook slepen, zoals met een vinger. Tijdens het
@@ -2867,14 +2888,6 @@ function buildRandomRecipeCardHtml(r, options = {}) {
     <div class="recipe-cards-container search-results single-result weekmenu-preview-cards">
       ${buildCompactRecipeCardHtml(r, options)}
     </div>`;
-}
-
-// Het raster van 'Overzicht recepten': dezelfde compacte kaart, twee of drie
-// naast elkaar.
-function buildCompactRecipeGridHtml(arr, options = {}) {
-  return `<div class="recipe-cards-container search-results recipe-grid-cards compact-grid">
-    ${arr.map(r => buildCompactRecipeCardHtml(r, options)).join('')}
-  </div>`;
 }
 
 function showRandomResult(recipe, options = {}) {
@@ -6328,6 +6341,7 @@ let overviewCurrentPage = 1;
 // Raster is de standaardweergave; de lijst is er voor het bewerken.
 let overviewViewMode = 'grid';
 let overviewSearchTerm = '';
+let overviewCarouselCleanup = () => {};
 
 // Zelfde kaartacties (notitie, 'Toevoegen aan...') als bij 'Kies een recept'.
 overviewGridContainer?.addEventListener('click', onRecipeCardClick);
@@ -6380,6 +6394,8 @@ function applyOverviewViewMode() {
     overviewListContainer.style.visibility = isList ? '' : 'hidden';
   }
   if (overviewGridContainer) overviewGridContainer.classList.toggle('active', !isList);
+  // In het raster swipe je door alle recepten; bladeren is er alleen voor de lijst.
+  if (overviewPagination) overviewPagination.hidden = !isList;
 }
 
 // Paginanummering: vorige/volgende-pijlen, de eerste en laatste pagina, en
@@ -6452,6 +6468,8 @@ window.matchMedia('(max-width: 600px)').addEventListener('change', () => {
 });
 
 function renderOverviewPage() {
+  overviewCarouselCleanup();
+  overviewCarouselCleanup = () => {};
   allRecipesDiv.innerHTML = '';
   if (overviewGridContainer) overviewGridContainer.innerHTML = '';
 
@@ -6534,12 +6552,14 @@ function renderOverviewPage() {
     }
   });
 
-  // Dezelfde compacte kaart als in de random-popup. De guest-banner staat
-  // hier al boven het overzicht, dus die niet nog een keer.
-  const gridHtml = buildCompactRecipeGridHtml(pageRecipes);
-
+  // Dezelfde swipe-rij als bij de zoekresultaten, met alle recepten erin; de
+  // paginanummers horen alleen bij de bewerklijst. De guest-banner staat hier
+  // al boven het overzicht, dus die niet nog een keer.
   allRecipesDiv.innerHTML = html;
-  if (overviewGridContainer) overviewGridContainer.innerHTML = gridHtml;
+  if (overviewGridContainer) {
+    overviewGridContainer.innerHTML = buildRecipeCarouselHtml(filteredRecipes, {}, 'Je recepten');
+    overviewCarouselCleanup = initRecipeCarousel(overviewGridContainer);
+  }
 
   hydrateOverviewImages();
   hydrateResultImages();

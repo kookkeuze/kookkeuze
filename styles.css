@@ -10443,6 +10443,16 @@ h1, h2, h3,
   grid-auto-rows: auto;
 }
 
+/* 'Overzicht recepten' gebruikt dezelfde rij. Het raster heeft al ruimte
+   boven zich, en de paginanummers horen daar niet bij (alleen bij de lijst). */
+.overview-grid-container .search-carousel {
+  margin-top: 0;
+}
+
+.overview-pagination[hidden] {
+  display: none;
+}
+
 /* Eén resultaat: één kaart, gecentreerd, niet breder dan een kaart in de rij. */
 .recipe-cards-container.recipe-grid-cards.compact-single {
   grid-template-columns: minmax(0, 380px);
