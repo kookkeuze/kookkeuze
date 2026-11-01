@@ -1135,6 +1135,14 @@ const INSTAGRAM_POST_TTL_MS = 60 * 60 * 1000;
 const INSTAGRAM_POST_FAIL_TTL_MS = 2 * 60 * 1000;
 const instagramPostCache = new Map();
 
+// Makers schrijven kopjes vaak in "sierletters" (𝘐𝘯𝘨𝘳𝘦𝘥𝘪𝘦𝘯𝘵𝘦𝘯, 𝗕𝗲𝗿𝗲𝗶𝗱𝗶𝗻𝗴):
+// Unicode-wiskundesymbolen die op letters lijken. Die zetten we om naar gewone
+// letters, anders herkent de parser geen enkel kopje. Alleen dat blok, want
+// NFKC op de hele tekst zou ook ½ in 1⁄2 veranderen.
+function normalizeFancyText(text) {
+  return String(text || '').replace(/[\u{1D400}-\u{1D7FF}]/gu, ch => ch.normalize('NFKC'));
+}
+
 async function loadInstagramPost(url) {
   const shortcode = extractInstagramShortcode(url);
   const attempts = shortcode
@@ -1144,7 +1152,7 @@ async function loadInstagramPost(url) {
   for (const attempt of attempts) {
     try {
       const result = await attempt();
-      if (result && result.caption) return result;
+      if (result && result.caption) return { ...result, caption: normalizeFancyText(result.caption) };
       failures.push(result?.failed || 'leeg');
     } catch (err) {
       failures.push(err.message);
@@ -1200,6 +1208,8 @@ const INGREDIENTS_HEADER_RE = /^(ingredi[eë]nten?|ingredients?|wat (je |heb je 
 const SECTION_STOP_RE = /^(bereiding|bereidingswijze|werkwijze|instructie|instructions?|method|directions?|stappen|stap\b|aanpak|how to|preparation|voorbereiding|nutrition|voedingswaarde|macro|per (serving|portie|burrito)|total per|total\b|smakelijk|eet smakelijk|enjoy)\b/i;
 // Regels die we binnen de lijst overslaan: hashtags, voedingswaarde, calls-to-action.
 const INGREDIENT_SKIP_RE = /^(#|calorie|protein|eiwit|carb|koolhydr|fats?\b|vet\b|kcal|follow|link in bio|tag\b|save this|comment|sla dit|deel (dit|het)|volg |bewaar)/i;
+// Een regel macro's zonder kopje erboven ("648 kcal, 61 khd, 63 eiwit, 17 vet").
+const NUTRITION_LINE_RE = /\d\s*k?cal\b.*\b(eiwit|prote|khd|koolh|carb|vet|fat)/i;
 // Genummerde bereidingsstap ("1. Verhit olie…", "2) Voeg…"): de bereiding is
 // begonnen, ook als er geen "Bereiding"-kopje boven staat. "1.5 kg" valt hier
 // niet onder (geen spatie + letter na de punt).
@@ -1226,7 +1236,7 @@ function parseIngredientsFromCaption(caption) {
       const line = lines[i];
       if (!line) continue;
       if (SECTION_STOP_RE.test(line) || STEP_LINE_RE.test(line)) break;
-      if (isIngredientSubHeader(line) || INGREDIENT_SKIP_RE.test(line)) continue;
+      if (isIngredientSubHeader(line) || INGREDIENT_SKIP_RE.test(line) || NUTRITION_LINE_RE.test(line)) continue;
       const cleaned = normalizeIngredientText(stripLeadingBullet(line));
       if (cleaned) items.push(cleaned);
     }
@@ -1239,7 +1249,7 @@ function parseIngredientsFromCaption(caption) {
   for (const line of lines) {
     if (!line) continue;
     if (SECTION_STOP_RE.test(line) || STEP_LINE_RE.test(line)) { stopped = true; continue; }
-    if (stopped || INGREDIENT_SKIP_RE.test(line)) continue;
+    if (stopped || INGREDIENT_SKIP_RE.test(line) || NUTRITION_LINE_RE.test(line)) continue;
     if (!looksLikeIngredientLine(line)) continue;
     const cleaned = normalizeIngredientText(stripLeadingBullet(line));
     if (cleaned) items.push(cleaned);
@@ -1299,7 +1309,14 @@ function cleanCaptionTitle(text) {
     .replace(/\s*\(\s*(voor\s*)?\d+\s*(à|-|tot)?\s*\d*\s*persone?n?\s*\)\s*$/i, '') // "(2 personen)" eraf
     .replace(/^[^\p{L}\p{N}]+/u, '')
     .replace(/[^\p{L}\p{N})]+$/u, '')
+    // Advertentielabel achteraan ("… 💛 ad", "(ad)", "#gesponsord").
+    .replace(/\s+[#(\[]?(ad|adv|advertentie|reclame|sponsored|gesponsord)[)\]]?$/i, '')
+    .replace(/[^\p{L}\p{N})]+$/u, '')
     .trim();
+  // Een titel in hoofdletters ("VANILLE SKYR CHEESECAKE") wordt gewone zinsopbouw.
+  if (/\p{Lu}{3}/u.test(name) && !/\p{Ll}/u.test(name)) {
+    name = name.charAt(0) + name.slice(1).toLowerCase();
+  }
   if (name.length < 3) return null;
   if (name.length > 90) name = name.slice(0, 90).replace(/\s+\S*$/, '').trim();
   return normalizeIngredientText(name) || null;
@@ -5009,6 +5026,7 @@ module.exports = {
   buildPinterestDescriptionPayload,
   buildPinterestPayload,
   cleanInstagramCaption,
+  normalizeFancyText,
   extractInstagramShortcode,
   fetchInstagramPost,
   parseCaptionMinutes,
