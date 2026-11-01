@@ -1201,9 +1201,9 @@ function renderRecipePackSummary() {
   if (!recipePackModalBody) return;
   recipePackModalBody.innerHTML = `
     <div class="recipe-pack-summary">
-      <h4>Klaar! Je pakketten zijn verwerkt.</h4>
+      <h4>Klaar!</h4>
       <p>Toegevoegd: <strong>${recipePackStats.inserted}</strong> recepten</p>
-      <p>Overgeslagen (bestond al): <strong>${recipePackStats.duplicates}</strong></p>
+      <p>Stonden er al: <strong>${recipePackStats.duplicates}</strong></p>
       <button id="recipePackDoneBtn" type="button" class="green-btn">Sluiten</button>
     </div>
   `;
@@ -1957,7 +1957,7 @@ function renderFinderWizard() {
   }
 
   if (!beschikbaar.length) {
-    finderWizardHint.textContent = 'Bij je eerdere antwoorden valt hier niets meer te kiezen. Ga gerust verder.';
+    finderWizardHint.textContent = 'Met je eerdere antwoorden valt hier niets te kiezen.';
     finderWizardOptions.innerHTML = '';
     return;
   }
@@ -2316,7 +2316,6 @@ function emptyDatabaseHtml() {
   return `
     <div class="empty-state">
       <p class="empty-state-title">Je kookboek is nog leeg</p>
-      <p class="empty-state-sub">Kies hoe je wilt beginnen. Later toevoegen kan altijd.</p>
       <div class="empty-state-actions">
         <button type="button" class="green-btn" data-empty-action="links">Links plakken</button>
         <button type="button" class="ghost-btn" data-empty-action="packs">Recept pakketten</button>

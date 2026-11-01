@@ -382,13 +382,6 @@ html {
   width: 100%;
 }
 
-.database-setting-hint {
-  margin: 0;
-  color: #6d7a74;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
 .database-bar > .overview-view-btn {
   align-self: start;
   margin-top: 36px;
@@ -3148,14 +3141,6 @@ select:focus {
   justify-content: space-between;
 }
 
-.recipe-note-label {
-  display: inline-block;
-  margin-bottom: 8px;
-  color: #30403a;
-  font-weight: 700;
-  font-size: 14px;
-}
-
 .recipe-note-textarea {
   width: 100%;
   min-height: 150px;
@@ -3173,13 +3158,6 @@ select:focus {
   outline: none;
   border-color: var(--green);
   box-shadow: var(--field-focus-ring);
-}
-
-.recipe-note-help {
-  margin: 10px 0 0;
-  color: #6e7b74;
-  font-size: 13px;
-  line-height: 1.45;
 }
 
 /* Modal-footer: acties rechts uitgelijnd (secundair links van primair),
@@ -5870,11 +5848,6 @@ body.mobile-menu-open .mobile-nav-header {
   font-weight: 700;
   color: #28372f;
   margin: 0;
-}
-.empty-state-sub {
-  color: #708178;
-  margin: 0;
-  max-width: 340px;
 }
 .empty-state-add-btn {
   margin-top: 0.5rem;

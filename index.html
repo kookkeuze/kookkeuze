@@ -918,7 +918,7 @@
         <h3 class="weekmenu-search-modal-title">Kies een recept</h3>
         <p id="weekmenuSearchModalSub" class="weekmenu-search-modal-sub"></p>
         <div class="weekmenu-search">
-          <input id="weekmenuSearchInput" type="text" placeholder="Zoek in je recepten om te plannen..." />
+          <input id="weekmenuSearchInput" type="text" placeholder="Zoek in je recepten" />
           <div id="weekmenuSearchResults" class="weekmenu-search-results"></div>
           <div id="weekmenuSearchPagination" class="overview-pagination"></div>
         </div>
@@ -998,13 +998,11 @@
           <i class="fas fa-times"></i>
         </button>
         <div class="recipe-note-modal-header">
-          <p class="recipe-note-modal-kicker">Eigen twist</p>
           <h3 class="assign-modal-title">Notitie bij recept</h3>
           <p id="recipeNoteModalRecipeTitle" class="assign-modal-sub"></p>
         </div>
-        <label for="recipeNoteTextarea" class="recipe-note-label">Notitie</label>
-        <textarea id="recipeNoteTextarea" class="recipe-note-textarea" placeholder="Bijvoorbeeld: kip toevoegen, extra knoflook, meer chili..." maxlength="500"></textarea>
-        <p class="recipe-note-help">Voeg hier je eigen aanpassing of extra ingrediënt toe voor dit recept.</p>
+        <label for="recipeNoteTextarea" class="sr-only">Notitie</label>
+        <textarea id="recipeNoteTextarea" class="recipe-note-textarea" placeholder="Bijv. extra knoflook, meer chili" maxlength="500"></textarea>
         <div class="recipe-note-actions">
           <button id="recipeNoteDeleteBtn" type="button" class="danger-btn hidden">Verwijder notitie</button>
           <button id="recipeNoteSaveBtn" type="button" class="green-btn">Opslaan</button>
@@ -1019,7 +1017,6 @@
         </button>
         <p class="recipe-note-modal-kicker">Recept opslaan</p>
         <h3 class="assign-modal-title" id="saveInternetRecipeModalTitle"></h3>
-        <p class="assign-modal-sub">Vul de ontbrekende gegevens aan voordat je opslaat.</p>
         <div class="save-internet-recipe-fields">
           <div class="save-internet-field-row">
             <label>Soort gerecht</label>
@@ -1074,7 +1071,7 @@
           <i class="fas fa-times"></i>
         </button>
         <h3 class="assign-modal-title">Samen koken</h3>
-        <p class="database-modal-sub">Deel je kookboek met huisgenoten of vrienden, of wissel naar een kookboek dat met jou gedeeld is.</p>
+        <p class="database-modal-sub">Deel je kookboek, of wissel naar een kookboek dat met jou gedeeld is.</p>
         <div id="databaseBar" class="database-bar">
           <div class="database-bar-settings">
             <div class="database-bar-main">
@@ -1084,7 +1081,6 @@
             <div class="database-bar-main">
               <label for="defaultDatabaseSelect">Standaard bij inloggen</label>
               <select id="defaultDatabaseSelect"></select>
-              <p class="database-setting-hint">Dit kookboek openen we automatisch zodra je inlogt.</p>
             </div>
           </div>
           <button id="toggleSharePanelBtn" type="button" class="overview-view-btn">Delen beheren</button>
@@ -1163,7 +1159,7 @@
         </button>
         <div class="recipe-pack-modal-header">
           <h3 class="assign-modal-title">Recept pakketten</h3>
-          <p class="recipe-pack-modal-sub">Voeg in 1 klik complete sets recepten toe aan je kookboek.</p>
+          <p class="recipe-pack-modal-sub">Complete sets recepten in één klik.</p>
         </div>
         <div id="recipePackModalBody"></div>
       </div>
