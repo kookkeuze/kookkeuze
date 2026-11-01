@@ -189,7 +189,7 @@ function guestAccountPromptHtml() {
 function guestDemoBannerHtml() {
   return `
     <div class="guest-demo-banner" role="note">
-      <span class="guest-demo-banner-text">Dit zijn voorbeeldrecepten. Maak een gratis account aan om je eigen kookboek op te bouwen.</span>
+      <span class="guest-demo-banner-text">Dit zijn voorbeeldrecepten. Met een gratis account maak je je eigen kookboek.</span>
       <button type="button" class="guest-demo-banner-cta" data-guest-register>Gratis account</button>
     </div>`;
 }
@@ -1387,8 +1387,8 @@ let recipeSourceMode = 'database';
 // het recept dat iemand op een SEO-pagina aanklikte (zie applyFiltersFromUrl).
 let pinnedInternetRecipeUrl = null;
 const recipeFinderSubtitles = {
-  database: 'Laat de tool iets lekkers uit je eigen recepten kiezen, zonder lang te hoeven twijfelen.',
-  internet: 'Laat de tool iets lekkers van bekende receptenwebsites kiezen, zonder lang te hoeven twijfelen.'
+  database: 'Uit je eigen recepten',
+  internet: 'Uit recepten van bekende receptensites'
 };
 
 function getSelectedValues(select) {
