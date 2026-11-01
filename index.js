@@ -5168,7 +5168,7 @@ if (fetchInfoBtn) {
     const urlValue = urlInput.value.trim();
     clearMissingState();
     if (!urlValue) {
-      setMissingState(urlInput, 'URL is verplicht om informatie op te halen.');
+      setMissingState(urlInput, 'Plak eerst een link.');
       addMessageDiv.innerHTML = '';
       return;
     }
@@ -5245,16 +5245,16 @@ if (fetchInfoBtn) {
           if (!fieldId) return;
           const input = document.getElementById(fieldId);
           if (!isFilled(input)) {
-            setMissingState(input, `${fieldName} is niet automatisch gevonden. Je kunt dit nu invullen, of later aanpassen.`);
+            setMissingState(input, 'Niet gevonden, vul zelf in.');
           }
         });
         addMessageDiv.innerHTML = bronNotitie;
       } else {
-        addMessageDiv.innerHTML = `<p style="color:green;">Informatie opgehaald en ingevuld.</p>${bronNotitie}`;
+        addMessageDiv.innerHTML = `<p style="color:green;">Ingevuld.</p>${bronNotitie}`;
       }
     } catch (err) {
       console.error(err);
-      addMessageDiv.innerHTML = `<p style="color:red;">Kon geen informatie ophalen. Probeer later opnieuw.</p>`;
+      addMessageDiv.innerHTML = `<p style="color:red;">Ophalen lukte niet. Probeer het later opnieuw.</p>`;
     } finally {
       fetchInfoBtn.disabled = false;
       fetchInfoBtn.textContent = originalText;
@@ -5532,7 +5532,7 @@ function updateBulkUrlCount() {
   } else if (!links.length) {
     bulkUrlCount.textContent = 'Nog geen links gevonden.';
   } else if (links.length > BULK_MAX_LINKS) {
-    bulkUrlCount.textContent = `${links.length} links gevonden. We nemen de eerste ${BULK_MAX_LINKS}; de rest kun je daarna plakken.`;
+    bulkUrlCount.textContent = `${links.length} links gevonden. We nemen de eerste ${BULK_MAX_LINKS}.`;
   } else {
     bulkUrlCount.textContent = links.length === 1 ? '1 link gevonden.' : `${links.length} links gevonden.`;
   }
@@ -5764,7 +5764,7 @@ function finishBulk() {
     ? '1 recept toegevoegd'
     : `${saved.length} recepten toegevoegd`;
   document.getElementById('bulkDoneSubtitle').textContent = saved.length
-    ? 'Ze staan nu in je overzicht en doen mee bij het kiezen en plannen.'
+    ? 'Ze staan in je overzicht.'
     : 'Er is deze keer niets nieuws bij gekomen.';
   document.getElementById('bulkDoneList').innerHTML = bulkItems.map(item => {
     const state = item.result || 'open';
