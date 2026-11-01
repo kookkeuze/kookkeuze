@@ -64,19 +64,6 @@
       .filter(Boolean);
   }
 
-  function renderMetaRow(recipe) {
-    // Alleen de calorieen; de tijd staat bewust niet meer op de pagina.
-    const items = [];
-    if (recipe.calories != null) items.push(['kcal.svg', `${recipe.calories} kcal`]);
-    if (!items.length) return '';
-
-    return `<div class="own-recipe-meta">${items.map(([icon, label]) => `
-      <span class="own-recipe-meta-item">
-        <img src="/icons/${icon}" alt="" class="recipe-meta-icon" />
-        ${escapeHtml(label)}
-      </span>`).join('')}</div>`;
-  }
-
   // Meerdere keuzes komen als "Kip, Vis" terug; elk stuk krijgt zijn eigen label.
   function splitField(value) {
     return String(value || '')
@@ -85,8 +72,11 @@
       .filter(Boolean);
   }
 
+  // De calorieën staan als eerste label, net als op de receptkaarten; de tijd
+  // staat bewust niet op de pagina.
   function renderTags(recipe) {
     const tags = [
+      ...(recipe.calories != null ? [`${recipe.calories} kcal`] : []),
       ...splitField(recipe.dish_type),
       ...splitField(recipe.meal_category),
       ...splitField(recipe.meal_type)
@@ -161,7 +151,6 @@
         </div>
         <div class="own-recipe-intro">
           <h1>${escapeHtml(recipe.title || 'Recept')}</h1>
-          ${renderMetaRow(recipe)}
           ${renderTags(recipe)}
           ${renderSource(recipe)}
           <div class="own-recipe-actions">
@@ -730,6 +719,22 @@
       showStatus('Geen verbinding met de server. Probeer het later nog eens.');
     }
   }
+
+  // Terug naar waar je vandaan kwam (de kaart in het overzicht, met de
+  // filters en scrollpositie nog intact). Kwam je via een gedeelde link of een
+  // nieuw tabblad binnen, dan is er geen vorige Kookkeuze-pagina en ga je naar home.
+  document.getElementById('ownRecipeBackBtn')?.addEventListener('click', e => {
+    let fromKookkeuze = false;
+    try {
+      fromKookkeuze = new URL(document.referrer).origin === window.location.origin;
+    } catch (_err) {
+      fromKookkeuze = false;
+    }
+    if (fromKookkeuze && window.history.length > 1) {
+      e.preventDefault();
+      window.history.back();
+    }
+  });
 
   load();
 })();

@@ -7176,20 +7176,49 @@ body.mobile-menu-open .mobile-nav-header {
   line-height: 1.15;
 }
 
-.own-recipe-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
+/* Menubalk van de receptpagina: terugknop links, logo in het midden. */
+.topbar--recipe .topbar-inner {
+  min-height: 44px;
 }
 
-.own-recipe-meta-item {
+.own-recipe-back {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px 0 4px;
+  margin-left: -4px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--green-deep);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.own-recipe-back .fa-chevron-left {
   font-size: 14px;
-  font-weight: 600;
-  color: #4b5650;
+  transition: transform .15s ease;
+}
+
+.own-recipe-back:hover .fa-chevron-left {
+  transform: translateX(-2px);
+}
+
+.own-recipe-back:active {
+  opacity: .6;
+}
+
+.own-recipe-back:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.topbar--recipe .own-recipe-logo {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .own-recipe-tags {
@@ -7416,7 +7445,7 @@ body.mobile-menu-open .mobile-nav-header {
   height: 26px;
   margin-top: 1px;
   border-radius: 50%;
-  background: #43FD68;
+  background: var(--green);
   color: #ffffff;
   font-size: 13px;
   font-weight: 800;

@@ -18,18 +18,19 @@
   <script defer src="https://cloud.umami.is/script.js" data-website-id="b57021f2-91b0-4ba7-bd2c-19278aefe4d5"></script>
 </head>
 <body>
-  <header class="topbar">
+  <!-- Op deze pagina staat links een terugknop en het logo in het midden, zoals
+       een detailscherm in een app. Alleen het logo liet op mobiel niet zien
+       hoe je terugkwam. -->
+  <header class="topbar topbar--recipe">
     <div class="topbar-inner">
-      <a href="/" aria-label="Ga naar home">
-        <img src="/Logo/Kookkeuze-logo.svg" alt="Kookkeuze-logo" class="logo-img" />
+      <a href="/" id="ownRecipeBackBtn" class="own-recipe-back">
+        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+        <span>Terug</span>
       </a>
 
-      <div class="topbar-actions">
-        <a href="/" class="topbar-action-btn install-app-btn" aria-label="Terug naar home">
-          <span class="action-icon-shell"><img src="/icons/app.svg" alt="" width="24" height="24" class="topbar-icon-img" /></span>
-          <span class="install-text">Naar Kookkeuze</span>
-        </a>
-      </div>
+      <a href="/" class="own-recipe-logo" aria-label="Ga naar home">
+        <img src="/Logo/Kookkeuze-logo.svg" alt="Kookkeuze-logo" class="logo-img" />
+      </a>
     </div>
   </header>
 
