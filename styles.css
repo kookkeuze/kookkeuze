@@ -10453,23 +10453,6 @@ h1, h2, h3,
   40% { transform: scale(1.12); }
 }
 
-.recipe-swipe-bar {
-  height: 4px;
-  margin-top: 8px;
-  border-radius: 999px;
-  background: #e6efe8;
-  overflow: hidden;
-}
-
-.recipe-swipe-bar span {
-  display: block;
-  height: 100%;
-  background: var(--green);
-  transform-origin: left center;
-  transform: scaleX(0);
-  transition: transform var(--duration-base) var(--ease-standard);
-}
-
 /* De stapel neemt alle ruimte die over is; de kaarten liggen erin op elkaar.
    --drag (0 tot 1) zegt hoe ver de bovenste kaart al weggesleept is. */
 .recipe-swipe-stack {
@@ -10650,25 +10633,6 @@ h1, h2, h3,
   height: 16px;
 }
 
-/* Naar de bron, voor wie het hele recept eerst wil zien. Raakvlak van 44
-   hoog zonder dat de regel groter oogt. */
-.swipe-card-link {
-  margin: -12px 0 -12px auto;
-  padding: 12px 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--green-deep);
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.swipe-card-link img {
-  width: 14px;
-  height: 14px;
-}
-
 .recipe-swipe-actions {
   display: flex;
   justify-content: center;
@@ -10712,7 +10676,7 @@ h1, h2, h3,
   }
 
   .recipe-swipe-done:hover {
-    background: #f1faf3;
+    color: var(--green-deep);
   }
 
   .recipe-swipe-done.is-primary:hover {
@@ -10725,17 +10689,22 @@ h1, h2, h3,
 }
 
 .recipe-swipe-done {
-  width: 100%;
-  min-height: 48px;
-  margin-top: 12px;
-  border: 1px solid #d9e5dd;
-  background: #ffffff;
-  color: var(--green-deep);
-  font-size: 15px;
+  align-self: center;
+  width: auto;
+  min-width: 0;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  color: var(--green-hover);
+  font-size: 14px;
 }
 
 .recipe-swipe-done.is-primary {
-  border-color: var(--green);
+  align-self: stretch;
+  min-height: 48px;
+  margin-top: 12px;
   background: var(--green);
   color: #ffffff;
 }
@@ -10792,7 +10761,6 @@ h1, h2, h3,
   .swipe-card,
   .swipe-card.is-behind,
   .swipe-card.is-leaving,
-  .recipe-swipe-bar span,
   .recipe-swipe-btn {
     transition: none;
   }

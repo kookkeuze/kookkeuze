@@ -1184,7 +1184,6 @@ const recipeSwipeTitle = document.getElementById('recipeSwipeTitle');
 const recipeSwipeSub = document.getElementById('recipeSwipeSub');
 const recipeSwipeLiked = document.getElementById('recipeSwipeLiked');
 const recipeSwipeCount = document.getElementById('recipeSwipeCount');
-const recipeSwipeBarFill = document.getElementById('recipeSwipeBarFill');
 const recipeSwipeActions = document.getElementById('recipeSwipeActions');
 const recipeSwipeNopeBtn = document.getElementById('recipeSwipeNopeBtn');
 const recipeSwipeLikeBtn = document.getElementById('recipeSwipeLikeBtn');
@@ -1276,10 +1275,6 @@ function createSwipeCard(recipe) {
       <h4 class="swipe-card-title">${escapeHtml(recipe.title)}</h4>
       <div class="swipe-card-meta">
         ${chips}
-        <a class="swipe-card-link" href="${escapeHtml(recipe.url)}" target="_blank" rel="noopener noreferrer">
-          ${escapeHtml(recipe.source || 'Bekijk recept')}
-          <img src="icons/externe-link.svg" alt="" />
-        </a>
       </div>
     </div>
   `;
@@ -1390,9 +1385,6 @@ function updateSwipeMeta() {
   if (recipeSwipeLiked) {
     recipeSwipeLiked.textContent = `${swipeLikedCount} toegevoegd`;
     recipeSwipeLiked.classList.toggle('has-likes', swipeLikedCount > 0);
-  }
-  if (recipeSwipeBarFill) {
-    recipeSwipeBarFill.style.transform = `scaleX(${total ? swipeIndex / total : 0})`;
   }
 }
 
