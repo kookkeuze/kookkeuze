@@ -809,17 +809,11 @@ const shareMembersList = document.getElementById('shareMembersList');
 const shareInvitesList = document.getElementById('shareInvitesList');
 const shoppingListMenuBtn = document.getElementById('shoppingListMenuBtn');
 const mobileShoppingListMenuBtn = document.getElementById('mobileShoppingListMenuBtn');
-const recipePackModal = document.getElementById('recipePackModal');
-const closeRecipePackModalBtn = document.getElementById('closeRecipePackModal');
-const recipePackModalBody = document.getElementById('recipePackModalBody');
+const recipeSwipeModal = document.getElementById('recipeSwipeModal');
 let deferredInstallPrompt = null;
 let accessibleDatabases = [];
-let recipePackList = [];
-let recipePackIndex = 0;
-let recipePackFromOnboarding = false;
-let recipePackStats = { added: 0, skipped: 0, inserted: 0, duplicates: 0 };
-let recipePackOnboardingCheckedForUserId = null;
-let recipePackOnboardingMarkedDone = false;
+let recipeSwipeOnboardingCheckedForUserId = null;
+let recipeSwipeOnboardingMarkedDone = false;
 
 // Modals sluiten met een korte fade/schaal-uitgang in plaats van in één klap
 // verdwijnen (voorheen: classList.add('hidden') meteen, dus display:none
@@ -1180,174 +1174,402 @@ sharePanel?.addEventListener('click', async e => {
   }
 });
 
-async function fetchRecipePacks() {
-  if (!getValidToken()) return [];
-  const res = await fetch(`${API_BASE}/api/recipe-packs`, { headers: authHeaders() });
-  const data = await res.json().catch(() => []);
-  if (!res.ok) return [];
-  return Array.isArray(data) ? data : [];
+/* ========= RECEPTEN SWIPEN =========
+   Bij een nieuw account (en via 'Recepten ontdekken') krijg je een stapel
+   startrecepten, zoals bij Tinder: naar rechts slepen of op het vinkje is
+   toevoegen, naar links of op het kruis is overslaan. Elk geliket recept gaat
+   meteen naar de database; met 'Ik heb genoeg' stop je wanneer je wilt. */
+const recipeSwipeStack = document.getElementById('recipeSwipeStack');
+const recipeSwipeTitle = document.getElementById('recipeSwipeTitle');
+const recipeSwipeSub = document.getElementById('recipeSwipeSub');
+const recipeSwipeLiked = document.getElementById('recipeSwipeLiked');
+const recipeSwipeCount = document.getElementById('recipeSwipeCount');
+const recipeSwipeBarFill = document.getElementById('recipeSwipeBarFill');
+const recipeSwipeActions = document.getElementById('recipeSwipeActions');
+const recipeSwipeNopeBtn = document.getElementById('recipeSwipeNopeBtn');
+const recipeSwipeLikeBtn = document.getElementById('recipeSwipeLikeBtn');
+const recipeSwipeDoneBtn = document.getElementById('recipeSwipeDoneBtn');
+const closeRecipeSwipeModalBtn = document.getElementById('closeRecipeSwipeModal');
+
+let swipeDeck = [];
+let swipeIndex = 0;
+let swipeLikedCount = 0;
+let swipeBusy = false;
+let swipeFromOnboarding = false;
+const swipePendingSaves = new Set();
+
+const SWIPE_TIME_LABELS = {
+  'Onder de 30 minuten': '< 30 min',
+  '30 - 45 minuten': '30-45 min',
+  '45 minuten - 1 uur': '45-60 min',
+  '1 - 2 uur': '1-2 uur',
+  'langer dan 2 uur': '2+ uur'
+};
+
+function swipeCourseLabel(recipe) {
+  if (recipe.meal_category === 'Hoofdgerecht') return 'Avondeten';
+  if (recipe.meal_category === 'Dessert') return 'Toetje';
+  return 'Lunch';
 }
 
-async function markRecipePackOnboardingComplete() {
-  if (!getValidToken() || recipePackOnboardingMarkedDone) return;
-  recipePackOnboardingMarkedDone = true;
+function swipePrefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+async function markRecipeSwipeOnboardingComplete() {
+  if (!getValidToken() || recipeSwipeOnboardingMarkedDone) return;
+  recipeSwipeOnboardingMarkedDone = true;
   await fetch(`${API_BASE}/api/recipe-packs/onboarding-complete`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() }
   }).catch(() => {});
 }
 
-function renderRecipePackSummary() {
-  if (!recipePackModalBody) return;
-  recipePackModalBody.innerHTML = `
-    <div class="recipe-pack-summary">
-      <h4>Klaar!</h4>
-      <p>Toegevoegd: <strong>${recipePackStats.inserted}</strong> recepten</p>
-      <p>Stonden er al: <strong>${recipePackStats.duplicates}</strong></p>
-      <button id="recipePackDoneBtn" type="button" class="green-btn">Sluiten</button>
-    </div>
-  `;
-  document.getElementById('recipePackDoneBtn')?.addEventListener('click', closeRecipePackModal);
+async function fetchSwipeDeck() {
+  const params = new URLSearchParams();
+  appendActiveDatabaseParam(params);
+  const res = await fetch(`${API_BASE}/api/swipe-recipes?${params.toString()}`, { headers: authHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !Array.isArray(data.recipes)) return null;
+  return data.recipes;
 }
 
-// Laat de kaart naar links (overslaan) of rechts (toevoegen) wegvliegen en
-// wacht tot dat klaar is, zodat de volgende kaart er niet doorheen springt.
-function flyOutRecipePackCard(direction) {
-  const card = recipePackModalBody?.querySelector('.recipe-pack-card');
-  if (!card) return Promise.resolve();
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return Promise.resolve();
-
-  card.classList.add(direction === 'right' ? 'is-leaving-right' : 'is-leaving-left');
-
-  return new Promise(resolve => {
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      resolve();
-    };
-    card.addEventListener('animationend', finish, { once: true });
-    // Vangnet: als de animatie niet draait (bv. tabblad op de achtergrond)
-    // blijft de flow anders hangen.
-    setTimeout(finish, 600);
+// Foto van een kaart: van de server meegegeven als die hem al kende, anders
+// via dezelfde route als de rest van de app. null = geen foto te vinden.
+function getSwipeRecipeImage(recipe) {
+  if (recipe.image_url !== undefined) return Promise.resolve(recipe.image_url);
+  return fetchRecipeImage(recipe.url).then(imageUrl => {
+    recipe.image_url = imageUrl || null;
+    return recipe.image_url;
   });
 }
 
-function setRecipePackActionsDisabled(disabled) {
-  ['recipePackSkipBtn', 'recipePackAddBtn'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) btn.disabled = disabled;
-  });
-}
-
-function renderRecipePackStep() {
-  if (!recipePackModalBody) return;
-  if (!recipePackList.length || recipePackIndex >= recipePackList.length) {
-    renderRecipePackSummary();
-    return;
-  }
-
-  const pack = recipePackList[recipePackIndex];
-  const progress = `${recipePackIndex + 1} / ${recipePackList.length}`;
-  recipePackModalBody.innerHTML = `
-    <div class="recipe-pack-card">
-      <p class="recipe-pack-progress">${progress}</p>
-      <div class="recipe-pack-head">
-        <div class="recipe-pack-icon">
-          <img src="icons/${pack.icon || 'menu-pakketten.svg'}" alt="" class="recipe-pack-icon-img" />
-        </div>
-        <div class="recipe-pack-head-text">
-          <h4>${pack.title}</h4>
-          <p class="recipe-pack-subtitle">${pack.subtitle || ''}</p>
-        </div>
-      </div>
-      <p class="recipe-pack-description">${pack.description || ''}</p>
-      <p class="recipe-pack-count">${pack.total_recipes || 0} recepten</p>
-      <div class="recipe-pack-actions">
-        <button id="recipePackSkipBtn" type="button" class="recipe-pack-skip-btn" aria-label="Pakket overslaan">
-          <img src="icons/menu-pakket-overslaan.svg" alt="" class="recipe-pack-action-icon" />
-        </button>
-        <button id="recipePackAddBtn" type="button" class="recipe-pack-add-btn" aria-label="Pakket toevoegen">
-          <img src="icons/menu-pakket-toevoegen.svg" alt="" class="recipe-pack-action-icon" />
-        </button>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('recipePackSkipBtn')?.addEventListener('click', async () => {
-    setRecipePackActionsDisabled(true);
-    await flyOutRecipePackCard('left');
-    recipePackStats.skipped += 1;
-    recipePackIndex += 1;
-    renderRecipePackStep();
-  });
-
-  document.getElementById('recipePackAddBtn')?.addEventListener('click', async (e) => {
-    const addBtn = e.currentTarget;
-    setRecipePackActionsDisabled(true);
-    addBtn.classList.add('is-loading');
-    // Meteen laten wegvliegen; het opslaan loopt ondertussen door.
-    const flying = flyOutRecipePackCard('right');
-    try {
-      const res = await fetch(`${API_BASE}/api/recipe-packs/apply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify(withActiveDatabaseBody({ packKey: pack.key }))
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        showRecipeAddedToast(data.error || 'Pakket toevoegen mislukt.', 'error');
-      } else {
-        recipePackStats.added += 1;
-        recipePackStats.inserted += Number(data.inserted || 0);
-        recipePackStats.duplicates += Number(data.skipped || 0);
-        showRecipeAddedToast(`${pack.title}: ${data.inserted || 0} toegevoegd`);
-        fetchAllRecipes();
-        renderPlannerSearchResults();
+// De foto's van de volgende kaarten alvast laden, zodat ze er bij het swipen
+// meteen staan.
+function prefetchSwipeImages() {
+  swipeDeck.slice(swipeIndex + 2, swipeIndex + 5).forEach(recipe => {
+    getSwipeRecipeImage(recipe).then(src => {
+      if (src) {
+        const img = new Image();
+        img.referrerPolicy = 'no-referrer';
+        img.src = src;
       }
-    } catch (_err) {
-      showRecipeAddedToast('Pakket toevoegen mislukt.', 'error');
-    } finally {
-      await flying;
-      recipePackIndex += 1;
-      renderRecipePackStep();
-    }
+    });
   });
 }
 
-function closeRecipePackModal() {
-  hideModal(recipePackModal);
-  if (recipePackFromOnboarding) {
-    recipePackFromOnboarding = false;
-    activateTab('#kiesRecept');
+function createSwipeCard(recipe) {
+  const card = document.createElement('article');
+  card.className = 'swipe-card';
+  const time = SWIPE_TIME_LABELS[recipe.time_required] || '';
+  const chips = [
+    time ? `<span class="swipe-chip"><img src="icons/tijd.svg" alt="" />${escapeHtml(time)}</span>` : '',
+    recipe.calories ? `<span class="swipe-chip"><img src="icons/kcal.svg" alt="" />${Number(recipe.calories)} kcal</span>` : ''
+  ].join('');
+  card.innerHTML = `
+    <div class="swipe-card-photo">
+      <span class="swipe-stamp is-like" aria-hidden="true">Toevoegen</span>
+      <span class="swipe-stamp is-nope" aria-hidden="true">Overslaan</span>
+    </div>
+    <div class="swipe-card-body">
+      <p class="swipe-card-kicker">${escapeHtml(swipeCourseLabel(recipe))} · ${escapeHtml(recipe.dish_type || '')}</p>
+      <h4 class="swipe-card-title">${escapeHtml(recipe.title)}</h4>
+      <div class="swipe-card-meta">
+        ${chips}
+        <a class="swipe-card-link" href="${escapeHtml(recipe.url)}" target="_blank" rel="noopener noreferrer">
+          ${escapeHtml(recipe.source || 'Bekijk recept')}
+          <img src="icons/externe-link.svg" alt="" />
+        </a>
+      </div>
+    </div>
+  `;
+
+  const photo = card.querySelector('.swipe-card-photo');
+  getSwipeRecipeImage(recipe).then(src => {
+    if (!src) {
+      photo.classList.add('is-empty');
+      return;
+    }
+    const img = document.createElement('img');
+    img.className = 'swipe-card-img';
+    img.alt = '';
+    img.draggable = false;
+    img.referrerPolicy = 'no-referrer';
+    img.decoding = 'async';
+    img.addEventListener('load', () => photo.classList.add('is-loaded'), { once: true });
+    img.addEventListener('error', () => {
+      img.remove();
+      photo.classList.add('is-empty');
+    }, { once: true });
+    img.src = src;
+    photo.prepend(img);
+  });
+
+  attachSwipeDrag(card);
+  return card;
+}
+
+function setSwipeDragVisual(card, dx, dy) {
+  const width = card.offsetWidth || 320;
+  const strength = Math.min(Math.abs(dx) / (width * 0.3), 1);
+  card.style.transform = `translate(${dx}px, ${dy * 0.25}px) rotate(${dx * 0.05}deg)`;
+  card.style.setProperty('--like', dx > 0 ? strength : 0);
+  card.style.setProperty('--nope', dx < 0 ? strength : 0);
+  recipeSwipeStack?.style.setProperty('--drag', strength);
+}
+
+function attachSwipeDrag(card) {
+  let pointerId = null;
+  let startX = 0;
+  let startY = 0;
+  let dx = 0;
+  let dy = 0;
+  let lastX = 0;
+  let lastT = 0;
+  let velocity = 0;
+
+  card.addEventListener('pointerdown', e => {
+    if (swipeBusy || pointerId !== null || e.button > 0) return;
+    if (!card.classList.contains('is-top') || e.target.closest('a, button')) return;
+    pointerId = e.pointerId;
+    startX = lastX = e.clientX;
+    startY = e.clientY;
+    dx = dy = velocity = 0;
+    lastT = performance.now();
+    card.setPointerCapture(pointerId);
+    card.classList.remove('is-hint');
+    card.classList.add('is-dragging');
+  });
+
+  card.addEventListener('pointermove', e => {
+    if (e.pointerId !== pointerId) return;
+    dx = e.clientX - startX;
+    dy = e.clientY - startY;
+    const now = performance.now();
+    if (now - lastT > 0) velocity = (e.clientX - lastX) / (now - lastT);
+    lastX = e.clientX;
+    lastT = now;
+    setSwipeDragVisual(card, dx, dy);
+  });
+
+  const release = e => {
+    if (e.pointerId !== pointerId) return;
+    pointerId = null;
+    card.classList.remove('is-dragging');
+    const width = card.offsetWidth || 320;
+    // Een snelle veeg telt ook, maar niet een klein tikje opzij.
+    const flick = Math.abs(velocity) > 0.6 && Math.abs(dx) > 70 && Math.sign(velocity) === Math.sign(dx);
+    if (Math.abs(dx) > width * 0.3 || flick) {
+      commitSwipe(dx > 0 ? 'like' : 'nope', { dy });
+      return;
+    }
+    // Niet ver genoeg: terugveren naar het midden.
+    card.style.transform = '';
+    card.style.setProperty('--like', 0);
+    card.style.setProperty('--nope', 0);
+    recipeSwipeStack?.style.setProperty('--drag', 0);
+  };
+  card.addEventListener('pointerup', release);
+  card.addEventListener('pointercancel', release);
+}
+
+function flyOutSwipeCard(card, direction, dy = 0) {
+  const sign = direction === 'like' ? 1 : -1;
+  card.style.setProperty(direction === 'like' ? '--like' : '--nope', 1);
+  if (swipePrefersReducedMotion()) return Promise.resolve();
+  card.classList.add('is-leaving');
+  const x = sign * (window.innerWidth / 2 + card.offsetWidth * 1.2);
+  card.style.transform = `translate(${x}px, ${dy * 0.25 + 40}px) rotate(${sign * 22}deg)`;
+  return new Promise(resolve => setTimeout(resolve, 300));
+}
+
+function updateSwipeMeta() {
+  const total = swipeDeck.length;
+  const shown = Math.min(swipeIndex + 1, total);
+  if (recipeSwipeCount) recipeSwipeCount.textContent = total ? `${shown} / ${total}` : '';
+  if (recipeSwipeLiked) {
+    recipeSwipeLiked.textContent = `${swipeLikedCount} toegevoegd`;
+    recipeSwipeLiked.classList.toggle('has-likes', swipeLikedCount > 0);
+  }
+  if (recipeSwipeBarFill) {
+    recipeSwipeBarFill.style.transform = `scaleX(${total ? swipeIndex / total : 0})`;
   }
 }
 
-async function openRecipePackFlow(options = {}) {
-  if (!getValidToken()) return;
-  const { fromOnboarding = false } = options;
-  recipePackFromOnboarding = !!fromOnboarding;
-  if (recipePackFromOnboarding) {
-    await markRecipePackOnboardingComplete();
+function bumpSwipeLikedCounter() {
+  if (!recipeSwipeLiked || swipePrefersReducedMotion()) return;
+  recipeSwipeLiked.classList.remove('is-bump');
+  void recipeSwipeLiked.offsetWidth;
+  recipeSwipeLiked.classList.add('is-bump');
+}
+
+function saveSwipeLike(recipe) {
+  const save = fetch(`${API_BASE}/api/swipe-recipes/like`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(withActiveDatabaseBody({ id: recipe.id }))
+  })
+    .then(res => {
+      if (!res.ok) throw new Error('like mislukt');
+    })
+    .catch(() => {
+      swipeLikedCount = Math.max(0, swipeLikedCount - 1);
+      updateSwipeMeta();
+      showRecipeAddedToast(`"${recipe.title}" toevoegen mislukt.`, 'error');
+    })
+    .finally(() => swipePendingSaves.delete(save));
+  swipePendingSaves.add(save);
+}
+
+// Zet de kaart achter de bovenste klaar, zodat er altijd een volgende
+// zichtbaar is terwijl je sleept.
+function fillSwipeStack() {
+  if (!recipeSwipeStack) return;
+  let top = recipeSwipeStack.querySelector('.swipe-card.is-top');
+  if (!top) {
+    const next = recipeSwipeStack.querySelector('.swipe-card.is-behind');
+    if (next) {
+      next.classList.remove('is-behind');
+      next.classList.add('is-top');
+      top = next;
+    } else if (swipeDeck[swipeIndex]) {
+      top = createSwipeCard(swipeDeck[swipeIndex]);
+      top.classList.add('is-top');
+      recipeSwipeStack.appendChild(top);
+    }
   }
-  recipePackList = await fetchRecipePacks();
-  if (!recipePackList.length) {
-    showRecipeAddedToast('Er zijn nu geen pakketten beschikbaar.', 'error');
+  if (top) top.setAttribute('aria-label', swipeDeck[swipeIndex]?.title || '');
+  if (!recipeSwipeStack.querySelector('.swipe-card.is-behind') && swipeDeck[swipeIndex + 1]) {
+    const behind = createSwipeCard(swipeDeck[swipeIndex + 1]);
+    behind.classList.add('is-behind');
+    behind.setAttribute('aria-hidden', 'true');
+    recipeSwipeStack.prepend(behind);
+  }
+  recipeSwipeStack.querySelector('.swipe-card.is-top')?.removeAttribute('aria-hidden');
+  recipeSwipeStack.style.setProperty('--drag', 0);
+  prefetchSwipeImages();
+}
+
+async function commitSwipe(direction, options = {}) {
+  if (swipeBusy) return;
+  const recipe = swipeDeck[swipeIndex];
+  const card = recipeSwipeStack?.querySelector('.swipe-card.is-top');
+  if (!recipe || !card) return;
+  swipeBusy = true;
+  setSwipeButtonsDisabled(true);
+  card.classList.remove('is-hint');
+
+  if (direction === 'like') {
+    swipeLikedCount += 1;
+    saveSwipeLike(recipe);
+    updateSwipeMeta();
+    bumpSwipeLikedCounter();
+  }
+
+  // Tijdens het wegvliegen groeit de volgende kaart alvast naar voren.
+  recipeSwipeStack.style.setProperty('--drag', 1);
+  await flyOutSwipeCard(card, direction, options.dy || 0);
+  card.remove();
+  swipeIndex += 1;
+  updateSwipeMeta();
+
+  if (swipeIndex >= swipeDeck.length) {
+    renderSwipeFinished();
+  } else {
+    fillSwipeStack();
+  }
+  swipeBusy = false;
+  setSwipeButtonsDisabled(swipeIndex >= swipeDeck.length);
+}
+
+function setSwipeButtonsDisabled(disabled) {
+  if (recipeSwipeNopeBtn) recipeSwipeNopeBtn.disabled = disabled;
+  if (recipeSwipeLikeBtn) recipeSwipeLikeBtn.disabled = disabled;
+}
+
+function renderSwipeFinished() {
+  if (!recipeSwipeStack) return;
+  const n = swipeLikedCount;
+  recipeSwipeStack.innerHTML = `
+    <div class="swipe-finished">
+      <img src="icons/check.svg" alt="" class="swipe-finished-icon" />
+      <h4>Dat waren ze allemaal!</h4>
+      <p>${n === 1 ? '1 recept' : `${n} recepten`} toegevoegd aan je kookboek.</p>
+    </div>
+  `;
+  recipeSwipeActions?.classList.add('hidden');
+  if (recipeSwipeDoneBtn) {
+    recipeSwipeDoneBtn.textContent = 'Naar de app';
+    recipeSwipeDoneBtn.classList.add('is-primary');
+  }
+}
+
+async function finishRecipeSwipe() {
+  if (!recipeSwipeModal || recipeSwipeModal.classList.contains('hidden')) return;
+  hideModal(recipeSwipeModal);
+  recipeSwipeModal.setAttribute('aria-hidden', 'true');
+  const wasOnboarding = swipeFromOnboarding;
+  swipeFromOnboarding = false;
+  if (wasOnboarding) activateTab('#kiesRecept');
+
+  // Even wachten tot de laatste likes binnen zijn, anders mist de lijst ze.
+  await Promise.allSettled([...swipePendingSaves]);
+  if (swipeLikedCount > 0) {
+    showRecipeAddedToast(swipeLikedCount === 1 ? '1 recept toegevoegd' : `${swipeLikedCount} recepten toegevoegd`);
+    fetchAllRecipes();
+    renderPlannerSearchResults();
+  }
+}
+
+async function openRecipeSwipeFlow(options = {}) {
+  if (!getValidToken() || !recipeSwipeModal) return;
+  const { fromOnboarding = false } = options;
+  if (fromOnboarding) await markRecipeSwipeOnboardingComplete();
+
+  const deck = await fetchSwipeDeck();
+  if (!deck) {
+    showRecipeAddedToast('Kon de recepten niet ophalen.', 'error');
     return;
   }
-  recipePackIndex = 0;
-  recipePackStats = { added: 0, skipped: 0, inserted: 0, duplicates: 0 };
-  recipePackModal?.classList.remove('hidden');
-  renderRecipePackStep();
+  if (!deck.length) {
+    showRecipeAddedToast('Je hebt alle startrecepten al.');
+    return;
+  }
+
+  swipeFromOnboarding = !!fromOnboarding;
+  swipeDeck = deck;
+  swipeIndex = 0;
+  swipeLikedCount = 0;
+  swipeBusy = false;
+
+  if (recipeSwipeTitle) recipeSwipeTitle.textContent = fromOnboarding ? 'Kies je eerste recepten' : 'Recepten ontdekken';
+  if (recipeSwipeSub) recipeSwipeSub.textContent = 'Swipe naar rechts om toe te voegen, naar links om over te slaan.';
+  if (recipeSwipeDoneBtn) {
+    recipeSwipeDoneBtn.textContent = 'Ik heb genoeg, naar de app';
+    recipeSwipeDoneBtn.classList.remove('is-primary');
+  }
+  recipeSwipeActions?.classList.remove('hidden');
+  setSwipeButtonsDisabled(false);
+  if (recipeSwipeStack) recipeSwipeStack.innerHTML = '';
+
+  recipeSwipeModal.classList.remove('hidden');
+  recipeSwipeModal.setAttribute('aria-hidden', 'false');
+  updateSwipeMeta();
+  fillSwipeStack();
+
+  // Bij de eerste keer even laten zien dat de kaart heen en weer kan.
+  if (fromOnboarding && !swipePrefersReducedMotion()) {
+    recipeSwipeStack?.querySelector('.swipe-card.is-top')?.classList.add('is-hint');
+  }
 }
 
-async function maybeStartRecipePackOnboarding() {
+async function maybeStartRecipeSwipeOnboarding() {
   const token = getValidToken();
   if (!token) return;
   const userId = getCurrentUserId();
-  if (!userId || recipePackOnboardingCheckedForUserId === userId) return;
-  recipePackOnboardingCheckedForUserId = userId;
-  recipePackOnboardingMarkedDone = false;
+  if (!userId || recipeSwipeOnboardingCheckedForUserId === userId) return;
+  recipeSwipeOnboardingCheckedForUserId = userId;
+  recipeSwipeOnboardingMarkedDone = false;
 
   try {
     const res = await fetch(`${API_BASE}/api/recipe-packs/onboarding-status`, {
@@ -1356,19 +1578,24 @@ async function maybeStartRecipePackOnboarding() {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return;
     if (data.shouldShow) {
-      activateTab('#overzichtRecepten');
-      await openRecipePackFlow({ fromOnboarding: true });
+      await openRecipeSwipeFlow({ fromOnboarding: true });
     } else if (data.seen) {
-      recipePackOnboardingMarkedDone = true;
+      recipeSwipeOnboardingMarkedDone = true;
     }
   } catch (_err) {
     // onboarding check is best effort
   }
 }
 
-closeRecipePackModalBtn?.addEventListener('click', closeRecipePackModal);
-recipePackModal?.addEventListener('click', e => {
-  if (e.target === recipePackModal) closeRecipePackModal();
+recipeSwipeNopeBtn?.addEventListener('click', () => commitSwipe('nope'));
+recipeSwipeLikeBtn?.addEventListener('click', () => commitSwipe('like'));
+recipeSwipeDoneBtn?.addEventListener('click', finishRecipeSwipe);
+closeRecipeSwipeModalBtn?.addEventListener('click', finishRecipeSwipe);
+document.addEventListener('keydown', e => {
+  if (!recipeSwipeModal || recipeSwipeModal.classList.contains('hidden')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); commitSwipe('like'); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); commitSwipe('nope'); }
+  else if (e.key === 'Escape') finishRecipeSwipe();
 });
 
 /* ========= FILTERS & ZOEKEN (TAB 1) ========= */
@@ -6367,7 +6594,7 @@ function getOverviewFilteredRecipes() {
   return overviewAllRecipes.filter(r => (r.title || '').toLowerCase().includes(overviewSearchTerm));
 }
 openRecipePacksBtn?.addEventListener('click', () => {
-  openRecipePackFlow({ fromOnboarding: false });
+  openRecipeSwipeFlow({ fromOnboarding: false });
 });
 
 if (overviewListBtn && overviewGridBtn) {
@@ -6715,7 +6942,7 @@ function updateAuthUI(){
       .then(async () => {
         await ensureRecipeNotesLoaded(true);
         refreshDatabaseDrivenViews();
-        return maybeStartRecipePackOnboarding();
+        return maybeStartRecipeSwipeOnboarding();
       })
       .catch(() => {});
     // Pas na het laden van de databases, zodat het ophalen weet in welke
@@ -6725,9 +6952,9 @@ function updateAuthUI(){
     setAuthPane(loggedInPane);
   } else {
     clearRecipeNotesCache();
-    recipePackOnboardingCheckedForUserId = null;
-    recipePackOnboardingMarkedDone = false;
-    hideModal(recipePackModal);
+    recipeSwipeOnboardingCheckedForUserId = null;
+    recipeSwipeOnboardingMarkedDone = false;
+    hideModal(recipeSwipeModal);
     localStorage.removeItem('activeDatabaseOwnerId');
     if (databaseMenuBtn) databaseMenuBtn.classList.add('hidden');
     if (mobileDatabaseMenuBtn) mobileDatabaseMenuBtn.classList.add('hidden');

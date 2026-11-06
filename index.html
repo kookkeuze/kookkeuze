@@ -458,7 +458,7 @@
         <h2>Nieuw recept toevoegen</h2>
       </div>
       <!-- Links de twee manieren om toe te voegen (een link van een andere site,
-           of een recept dat je zelf uitschrijft). De receptpakketten staan er los
+           of een recept dat je zelf uitschrijft). 'Recepten ontdekken' staat er los
            van, vandaar de extra ruimte en het streepje ertussen. -->
       <div class="add-recipe-toolbar">
         <div class="add-recipe-mode-switch" role="group" aria-label="Manier van toevoegen kiezen" data-active-mode="link">
@@ -469,7 +469,7 @@
         <span class="add-recipe-toolbar-divider" aria-hidden="true"></span>
 
         <button id="openRecipePacksBtn" type="button" class="overview-view-btn recipe-packs-btn">
-          <img src="icons/menu-pakketten.svg" alt="" class="recipe-pack-btn-icon" /> Recept pakketten
+          <img src="icons/menu-pakketten.svg" alt="" class="recipe-pack-btn-icon" /> Recepten ontdekken
         </button>
       </div>
 
@@ -1152,16 +1152,30 @@
       </div>
     </div>
 
-    <div id="recipePackModal" class="modal hidden" aria-hidden="true">
-      <div class="modal-content recipe-pack-modal-content">
-        <button id="closeRecipePackModal" class="modal-close" aria-label="Sluiten">
+    <div id="recipeSwipeModal" class="modal hidden recipe-swipe-modal" aria-hidden="true">
+      <div class="modal-content recipe-swipe-modal-content" role="dialog" aria-modal="true" aria-labelledby="recipeSwipeTitle">
+        <button id="closeRecipeSwipeModal" class="modal-close" aria-label="Sluiten">
           <i class="fas fa-times"></i>
         </button>
-        <div class="recipe-pack-modal-header">
-          <h3 class="assign-modal-title">Recept pakketten</h3>
-          <p class="recipe-pack-modal-sub">Complete sets recepten in één klik.</p>
+        <header class="recipe-swipe-header">
+          <h3 id="recipeSwipeTitle" class="assign-modal-title">Kies je eerste recepten</h3>
+          <p id="recipeSwipeSub" class="recipe-swipe-sub">Swipe naar rechts om toe te voegen, naar links om over te slaan.</p>
+        </header>
+        <div class="recipe-swipe-meta">
+          <span id="recipeSwipeLiked" class="recipe-swipe-liked">0 toegevoegd</span>
+          <span id="recipeSwipeCount" class="recipe-swipe-count"></span>
         </div>
-        <div id="recipePackModalBody"></div>
+        <div class="recipe-swipe-bar" aria-hidden="true"><span id="recipeSwipeBarFill"></span></div>
+        <div id="recipeSwipeStack" class="recipe-swipe-stack"></div>
+        <div id="recipeSwipeActions" class="recipe-swipe-actions">
+          <button id="recipeSwipeNopeBtn" type="button" class="recipe-swipe-btn" aria-label="Overslaan">
+            <img src="icons/menu-pakket-overslaan.svg" alt="" />
+          </button>
+          <button id="recipeSwipeLikeBtn" type="button" class="recipe-swipe-btn" aria-label="Toevoegen">
+            <img src="icons/menu-pakket-toevoegen.svg" alt="" />
+          </button>
+        </div>
+        <button id="recipeSwipeDoneBtn" type="button" class="recipe-swipe-done">Ik heb genoeg, naar de app</button>
       </div>
     </div>
 
@@ -1203,7 +1217,7 @@
               <img src="icons/menu-recept-toevoegen.svg" alt="" class="hiw-icon-img" aria-hidden="true" />
               <div class="step-number">2</div>
             </div>
-            <p>Plak bij <em>Voeg een recept toe</em> de link van een recept; wij vullen de rest zo veel mogelijk in. Een eigen recept of receptpakket kan ook.</p>
+            <p>Plak bij <em>Voeg een recept toe</em> de link van een recept; wij vullen de rest zo veel mogelijk in. Een eigen recept kan ook, of swipe door onze startrecepten via <em>Recepten ontdekken</em>.</p>
           </div>
         </div>
 

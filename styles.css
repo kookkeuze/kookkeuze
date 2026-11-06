@@ -4739,272 +4739,6 @@ body.mobile-menu-open .mobile-nav-header {
   background: none;
 }
 
-.modal-content.recipe-pack-modal-content {
-  width: min(560px, 96vw);
-  max-width: min(560px, 96vw);
-  padding: 26px 24px;
-  /* Grijze achtergrond zodat de witte kaart eruit springt. */
-  background: #f8f9fa;
-  /* .modal-content reserveert ruimte voor de scrollbalk aan één kant, waardoor
-     de kaart 15px links van het midden uitkwam. Aan beide kanten reserveren
-     houdt hem gecentreerd en voorkomt nog steeds het verspringen. */
-  scrollbar-gutter: stable both-edges;
-}
-
-.recipe-pack-modal-header {
-  margin-bottom: 16px;
-}
-
-.recipe-pack-modal-sub {
-  margin: 8px 0 0;
-  color: #6f7f76;
-  font-size: 15px;
-}
-
-/* Zelfde kaartstijl als de stappen bij 'Voeg een recept toe': wit met een
-   zachte schaduw. Inhoud gecentreerd, met het icoon groot bovenaan. */
-.recipe-pack-card {
-  border: 1px solid #e6efe8;
-  border-radius: var(--radius-md);
-  padding: 24px 22px;
-  background: #ffffff;
-  box-shadow: 0 4px 16px rgba(47, 106, 55, 0.07);
-  text-align: center;
-  animation: recipePackIn 260ms cubic-bezier(.22, .61, .36, 1) both;
-}
-
-/* Weg-swipen naar links (overslaan) of rechts (toevoegen), zoals bij Tinder. */
-.recipe-pack-card.is-leaving-left {
-  animation: recipePackOutLeft 380ms cubic-bezier(.4, 0, .7, .3) forwards;
-}
-
-.recipe-pack-card.is-leaving-right {
-  animation: recipePackOutRight 380ms cubic-bezier(.4, 0, .7, .3) forwards;
-}
-
-@keyframes recipePackIn {
-  from { opacity: 0; transform: translateY(14px) scale(.97); }
-  to   { opacity: 1; transform: none; }
-}
-
-@keyframes recipePackOutLeft {
-  to { opacity: 0; transform: translateX(-115%) rotate(-13deg); }
-}
-
-@keyframes recipePackOutRight {
-  to { opacity: 0; transform: translateX(115%) rotate(13deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .recipe-pack-card,
-  .recipe-pack-card.is-leaving-left,
-  .recipe-pack-card.is-leaving-right {
-    animation: none;
-  }
-}
-
-/* Houdt de wegvliegende kaart binnen de modal, zodat er geen horizontale
-   scrollbalk verschijnt tijdens de animatie. */
-#recipePackModalBody {
-  overflow-x: clip;
-}
-
-.recipe-pack-progress {
-  margin: 0 0 16px;
-  color: #7a8a80;
-  font-weight: 600;
-  font-size: 13px;
-}
-
-.recipe-pack-head {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 13px;
-}
-
-/* Het lichtgroene rondje zit al in de SVG zelf, dus hier geen achtergrond. */
-.recipe-pack-icon {
-  flex: 0 0 auto;
-  width: 76px;
-  height: 76px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.recipe-pack-icon-img {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.recipe-pack-head-text {
-  min-width: 0;
-}
-
-.recipe-pack-card h4 {
-  margin: 0;
-  font-size: 1.25rem;
-  color: #2f3a35;
-}
-
-.recipe-pack-subtitle {
-  margin: 3px 0 0;
-  color: #5f6b63;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.recipe-pack-description {
-  margin: 14px 0 0;
-  color: #58685f;
-  font-size: 14px;
-  line-height: 1.55;
-}
-
-/* Aantal recepten als rustig groen pilletje. */
-.recipe-pack-count {
-  margin: 12px 0 0;
-  display: inline-block;
-  color: var(--green-deep);
-  background: #f1faf3;
-  border-radius: 999px;
-  padding: 4px 11px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-/* Moet ná de basisregels hierboven staan, anders wint de bredere variant. */
-@media (max-width: 767px) {
-  .recipe-pack-card {
-    padding: 18px 16px;
-  }
-
-  .recipe-pack-card h4 {
-    font-size: 1.15rem;
-  }
-
-  .recipe-pack-icon {
-    width: 64px;
-    height: 64px;
-  }
-}
-
-.recipe-pack-actions {
-  margin-top: 20px;
-  padding-top: 18px;
-  border-top: 1px solid #eef4f0;
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-}
-
-.recipe-pack-skip-btn,
-.recipe-pack-add-btn {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  border-radius: 999px;
-  border: 1px solid #d9e5dd;
-  background: #fff;
-  font-size: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.recipe-pack-skip-btn {
-  color: #cc4c4c;
-}
-
-.recipe-pack-add-btn {
-  color: #2c8e45;
-}
-
-.recipe-pack-action-icon {
-  width: 22px;
-  height: 22px;
-  display: block;
-}
-
-/* De knop is het icoon zelf: een glanzend rood rondje met een kruis en een
-   groen rondje met een vinkje, in de stijl van de andere icoontjes. Groter
-   dan voorheen, zodat je ze makkelijk raakt. */
-.recipe-pack-actions {
-  gap: 28px;
-}
-
-.recipe-pack-actions .recipe-pack-skip-btn,
-.recipe-pack-actions .recipe-pack-add-btn {
-  width: 64px;
-  height: 64px;
-  min-width: 64px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  box-shadow: none;
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.recipe-pack-actions .recipe-pack-action-icon {
-  width: 64px;
-  height: 64px;
-}
-
-@media (hover: hover) {
-  .recipe-pack-actions .recipe-pack-skip-btn:hover,
-  .recipe-pack-actions .recipe-pack-add-btn:hover {
-    background: transparent;
-    transform: translateY(-2px) scale(1.04);
-  }
-}
-
-.recipe-pack-actions .recipe-pack-skip-btn:active,
-.recipe-pack-actions .recipe-pack-add-btn:active {
-  transform: scale(0.92);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .recipe-pack-actions .recipe-pack-skip-btn,
-  .recipe-pack-actions .recipe-pack-add-btn {
-    transition: none;
-  }
-
-  .recipe-pack-actions .recipe-pack-skip-btn:hover,
-  .recipe-pack-actions .recipe-pack-add-btn:hover,
-  .recipe-pack-actions .recipe-pack-skip-btn:active,
-  .recipe-pack-actions .recipe-pack-add-btn:active {
-    transform: none;
-  }
-}
-
-.recipe-pack-add-btn.is-loading {
-  opacity: 0.7;
-}
-
-.recipe-pack-summary {
-  border: 1px solid #e6efe8;
-  border-radius: var(--radius-md);
-  padding: 22px;
-  background: #ffffff;
-  box-shadow: 0 4px 16px rgba(47, 106, 55, 0.07);
-}
-
-.recipe-pack-summary h4 {
-  margin: 0 0 10px;
-}
-
-.recipe-pack-summary p {
-  margin: 6px 0;
-}
-
-.recipe-pack-summary .green-btn {
-  margin-top: 14px;
-}
-
 .weekmenu-preview-cards {
   margin-top: 0;
 }
@@ -10653,5 +10387,417 @@ h1, h2, h3,
 
   .footer-tree-panel > ul > li:last-child {
     padding-bottom: 8px;
+  }
+}
+
+
+/* =========================================================================
+   RECEPTEN SWIPEN
+   Een stapel receptkaarten zoals bij Tinder: rechts slepen is toevoegen,
+   links is overslaan. Op de telefoon vult het venster het hele scherm, zodat
+   de foto groot is en de knoppen onder je duim zitten.
+   ========================================================================= */
+
+.modal-content.recipe-swipe-modal-content {
+  width: min(440px, 96vw);
+  max-width: min(440px, 96vw);
+  height: min(780px, calc(100dvh - 40px));
+  max-height: none;
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f8f9fa;
+  scrollbar-gutter: auto;
+}
+
+.recipe-swipe-header .assign-modal-title {
+  margin: 0;
+}
+
+.recipe-swipe-sub {
+  margin: 4px 48px 0 0;
+  color: #6f7f76;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.recipe-swipe-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #7a8a80;
+}
+
+.recipe-swipe-liked {
+  color: #7a8a80;
+  background: #eef2ef;
+  border-radius: 999px;
+  padding: 3px 10px;
+  transition: background-color var(--duration-fast) ease, color var(--duration-fast) ease;
+}
+
+.recipe-swipe-liked.has-likes {
+  color: var(--green-deep);
+  background: #e3f6e6;
+}
+
+.recipe-swipe-liked.is-bump {
+  animation: swipeLikedBump 320ms var(--ease-spring);
+}
+
+@keyframes swipeLikedBump {
+  40% { transform: scale(1.12); }
+}
+
+.recipe-swipe-bar {
+  height: 4px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: #e6efe8;
+  overflow: hidden;
+}
+
+.recipe-swipe-bar span {
+  display: block;
+  height: 100%;
+  background: var(--green);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform var(--duration-base) var(--ease-standard);
+}
+
+/* De stapel neemt alle ruimte die over is; de kaarten liggen erin op elkaar.
+   --drag (0 tot 1) zegt hoe ver de bovenste kaart al weggesleept is. */
+.recipe-swipe-stack {
+  --drag: 0;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 14px;
+}
+
+.swipe-card {
+  --like: 0;
+  --nope: 0;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #e6efe8;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 6px 22px rgba(47, 106, 55, 0.12);
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: grab;
+  transition: transform 420ms var(--ease-spring);
+  will-change: transform;
+}
+
+.swipe-card.is-dragging {
+  transition: none;
+  cursor: grabbing;
+}
+
+.swipe-card.is-leaving {
+  opacity: 0;
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.7, 0.3), opacity 300ms ease-in;
+}
+
+/* De volgende kaart ligt iets kleiner en lager, en komt naar voren naarmate
+   je de bovenste verder wegsleept. */
+.swipe-card.is-behind {
+  transform: translateY(calc(12px * (1 - var(--drag)))) scale(calc(0.95 + 0.05 * var(--drag)));
+  transition: transform 200ms var(--ease-out);
+  box-shadow: 0 2px 10px rgba(47, 106, 55, 0.08);
+  pointer-events: none;
+}
+
+.swipe-card.is-top.is-hint {
+  animation: swipeCardHint 1.5s var(--ease-standard) 600ms backwards;
+}
+
+@keyframes swipeCardHint {
+  0%, 100% { transform: none; }
+  25% { transform: translateX(34px) rotate(2deg); }
+  55% { transform: translateX(-26px) rotate(-1.5deg); }
+  80% { transform: none; }
+}
+
+.swipe-card-photo {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: linear-gradient(90deg, #eef7f0 0%, #f9fffb 50%, #eef7f0 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.swipe-card-photo.is-loaded,
+.swipe-card-photo.is-empty {
+  animation: none;
+}
+
+.swipe-card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+
+.swipe-card-photo.is-loaded .swipe-card-img {
+  opacity: 1;
+}
+
+.swipe-card-photo.is-empty {
+  background: linear-gradient(135deg, #e6f7e9 0%, #fbeee5 100%);
+}
+
+.swipe-card-photo.is-empty::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('icons/geen-foto.svg') center / 72px no-repeat;
+  opacity: 0.75;
+}
+
+/* 'Toevoegen' links en 'Overslaan' rechts, zichtbaar naarmate je sleept. */
+.swipe-stamp {
+  position: absolute;
+  top: 18px;
+  z-index: 2;
+  padding: 5px 12px;
+  border: 3px solid currentColor;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.swipe-stamp.is-like {
+  left: 16px;
+  color: #2c8e45;
+  opacity: var(--like);
+  transform: rotate(-12deg);
+}
+
+.swipe-stamp.is-nope {
+  right: 16px;
+  color: var(--danger);
+  opacity: var(--nope);
+  transform: rotate(12deg);
+}
+
+.swipe-card-body {
+  flex: 0 0 auto;
+  padding: 14px 16px 16px;
+}
+
+.swipe-card-kicker {
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.swipe-card-title {
+  margin: 4px 0 0;
+  color: #2f3a35;
+  font-size: 1.2rem;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.swipe-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 10px;
+  color: #58685f;
+  font-size: 13px;
+}
+
+.swipe-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.swipe-chip img {
+  width: 16px;
+  height: 16px;
+}
+
+/* Naar de bron, voor wie het hele recept eerst wil zien. Raakvlak van 44
+   hoog zonder dat de regel groter oogt. */
+.swipe-card-link {
+  margin: -12px 0 -12px auto;
+  padding: 12px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--green-deep);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.swipe-card-link img {
+  width: 14px;
+  height: 14px;
+}
+
+.recipe-swipe-actions {
+  display: flex;
+  justify-content: center;
+  gap: 44px;
+  margin-top: 14px;
+}
+
+.recipe-swipe-actions.hidden {
+  display: none;
+}
+
+.recipe-swipe-btn {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  transition: transform 0.15s var(--ease-spring);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.recipe-swipe-btn img {
+  width: 64px;
+  height: 64px;
+  display: block;
+}
+
+/* Tijdens het wegvliegen even uit, maar zonder dat ze grijs knipperen. */
+.recipe-swipe-btn:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .recipe-swipe-btn:not(:disabled):hover {
+    background: transparent;
+    transform: translateY(-2px) scale(1.04);
+  }
+
+  .recipe-swipe-done:hover {
+    background: #f1faf3;
+  }
+
+  .recipe-swipe-done.is-primary:hover {
+    background: var(--green-hover);
+  }
+}
+
+.recipe-swipe-btn:not(:disabled):active {
+  transform: scale(0.9);
+}
+
+.recipe-swipe-done {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  border: 1px solid #d9e5dd;
+  background: #ffffff;
+  color: var(--green-deep);
+  font-size: 15px;
+}
+
+.recipe-swipe-done.is-primary {
+  border-color: var(--green);
+  background: var(--green);
+  color: #ffffff;
+}
+
+.swipe-finished {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #e6efe8;
+  border-radius: var(--radius-lg);
+}
+
+.swipe-finished-icon {
+  width: 72px;
+  height: 72px;
+}
+
+.swipe-finished h4 {
+  margin: 14px 0 6px;
+  color: #2f3a35;
+  font-size: 1.25rem;
+}
+
+.swipe-finished p {
+  margin: 0;
+  color: #58685f;
+}
+
+@media (max-width: 767px) {
+  .modal.recipe-swipe-modal {
+    padding: 0;
+  }
+
+  .modal-content.recipe-swipe-modal-content {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    border-radius: 0;
+    padding: calc(16px + var(--safe-top)) 16px calc(14px + var(--safe-bottom));
+  }
+
+  .swipe-card-title {
+    font-size: 1.1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swipe-card,
+  .swipe-card.is-behind,
+  .swipe-card.is-leaving,
+  .recipe-swipe-bar span,
+  .recipe-swipe-btn {
+    transition: none;
+  }
+
+  .swipe-card-photo {
+    animation: none;
   }
 }

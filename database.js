@@ -1347,6 +1347,17 @@ function getRecipeCountForDatabase(databaseId, callback) {
   });
 }
 
+function getRecipeUrlsForDatabase(databaseId, callback) {
+  pool.query(
+    `SELECT url FROM recipes WHERE database_id = $1 AND url IS NOT NULL`,
+    [databaseId],
+    (err, result) => {
+      if (err) return callback(err);
+      callback(null, result.rows.map(row => row.url));
+    }
+  );
+}
+
 function addRecipePackToDatabase(databaseId, userId, recipes, callback) {
   const normalizedRecipes = Array.isArray(recipes) ? recipes : [];
   const run = async () => {
@@ -1904,6 +1915,7 @@ module.exports = {
   setUserRecipePackOnboardingSeen,
   getRecipeCountForDatabase,
   addRecipePackToDatabase,
+  getRecipeUrlsForDatabase,
   seedDemoData,
   getDemoDatabaseId,
   replaceDemoRecipes,

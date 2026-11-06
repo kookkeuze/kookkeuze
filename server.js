@@ -14,6 +14,7 @@ const {
 } = require('./internet-crawler');
 const { registerSeoPages, getSeoPageUrls, renderFooterRecipeLinks } = require('./seo-pages');
 const { browserFetch } = require('./browser-fetch');
+const SWIPE_RECIPES = require('./data/swipe-recipes');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -1781,6 +1782,7 @@ const {
   setUserRecipePackOnboardingSeen,
   getRecipeCountForDatabase,
   addRecipePackToDatabase,
+  getRecipeUrlsForDatabase,
   // helpers uit database.js
   setVerificationToken,
   getUserByVerificationToken,
@@ -2299,58 +2301,62 @@ app.get('/api/recipe-image', async (req, res) => {
     return res.status(400).json({ error: 'ongeldige url' });
   }
 
-  const cacheKey = pageUrl.toString();
-  const cached = recipeImageCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return res.json({ imageUrl: cached.imageUrl });
-  }
-
-  const deadline = Date.now() + RECIPE_IMAGE_BUDGET_MS;
-
   try {
-    // De HTML-pagina geeft vanaf onze server de inlogmuur met het Instagram-
-    // logo als og:image; de thumbnail komt uit dezelfde opvraag als de caption.
-    if (isInstagramUrl(cacheKey)) {
-      const post = await fetchInstagramPost(cacheKey);
-      const proxied = post && post.imageUrl
-        ? `/api/image-proxy?url=${encodeURIComponent(post.imageUrl)}&ref=${encodeURIComponent('https://www.instagram.com/')}`
-        : null;
-      recipeImageCache.set(cacheKey, {
-        imageUrl: proxied,
-        expiresAt: Date.now() + (proxied ? IMAGE_CACHE_TTL_MS : IMAGE_NEGATIVE_CACHE_TTL_MS)
-      });
-      return res.json({ imageUrl: proxied });
-    }
-
-    const html = await fetchHtmlWithRetries(cacheKey, deadline);
-    if (!html) {
-      // Niets binnen het budget. Kwam dat doordat de tijd op was, dan blokkeert
-      // deze site ons waarschijnlijk structureel: langer onthouden, anders
-      // betaalt straks weer een bezoeker de volle wachttijd.
-      const budgetOp = resterendBudget(deadline) <= 0;
-      recipeImageCache.set(cacheKey, {
-        imageUrl: null,
-        expiresAt: Date.now() + (budgetOp ? IMAGE_TIMEOUT_CACHE_TTL_MS : IMAGE_NEGATIVE_CACHE_TTL_MS)
-      });
-      return res.json({ imageUrl: null });
-    }
-
-    const imageUrl = await pickReachableImage(collectRecipeImageCandidates(html), pageUrl, deadline);
-    const proxiedImageUrl = imageUrl
-      ? `/api/image-proxy?url=${encodeURIComponent(imageUrl)}&ref=${encodeURIComponent(cacheKey)}`
-      : null;
-
-    recipeImageCache.set(cacheKey, {
-      imageUrl: proxiedImageUrl,
-      expiresAt: Date.now() + (proxiedImageUrl ? IMAGE_CACHE_TTL_MS : IMAGE_NEGATIVE_CACHE_TTL_MS)
-    });
-
-    return res.json({ imageUrl: proxiedImageUrl });
+    return res.json({ imageUrl: await resolveRecipeImage(pageUrl) });
   } catch (err) {
     console.error('❌ recipe-image error:', err);
     return res.json({ imageUrl: null });
   }
 });
+
+// Zoekt de foto van een receptpagina op en onthoudt de uitkomst. Los van de
+// route, zodat de swipe-startrecepten hun foto's al bij het opstarten kunnen
+// ophalen.
+async function resolveRecipeImage(pageUrl) {
+  const cacheKey = pageUrl.toString();
+  const cached = recipeImageCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.imageUrl;
+
+  const deadline = Date.now() + RECIPE_IMAGE_BUDGET_MS;
+
+  // De HTML-pagina geeft vanaf onze server de inlogmuur met het Instagram-
+  // logo als og:image; de thumbnail komt uit dezelfde opvraag als de caption.
+  if (isInstagramUrl(cacheKey)) {
+    const post = await fetchInstagramPost(cacheKey);
+    const proxied = post && post.imageUrl
+      ? `/api/image-proxy?url=${encodeURIComponent(post.imageUrl)}&ref=${encodeURIComponent('https://www.instagram.com/')}`
+      : null;
+    recipeImageCache.set(cacheKey, {
+      imageUrl: proxied,
+      expiresAt: Date.now() + (proxied ? IMAGE_CACHE_TTL_MS : IMAGE_NEGATIVE_CACHE_TTL_MS)
+    });
+    return proxied;
+  }
+
+  const html = await fetchHtmlWithRetries(cacheKey, deadline);
+  if (!html) {
+    // Niets binnen het budget. Kwam dat doordat de tijd op was, dan blokkeert
+    // deze site ons waarschijnlijk structureel: langer onthouden, anders
+    // betaalt straks weer een bezoeker de volle wachttijd.
+    const budgetOp = resterendBudget(deadline) <= 0;
+    recipeImageCache.set(cacheKey, {
+      imageUrl: null,
+      expiresAt: Date.now() + (budgetOp ? IMAGE_TIMEOUT_CACHE_TTL_MS : IMAGE_NEGATIVE_CACHE_TTL_MS)
+    });
+    return null;
+  }
+
+  const imageUrl = await pickReachableImage(collectRecipeImageCandidates(html), pageUrl, deadline);
+  const proxiedImageUrl = imageUrl
+    ? `/api/image-proxy?url=${encodeURIComponent(imageUrl)}&ref=${encodeURIComponent(cacheKey)}`
+    : null;
+
+  recipeImageCache.set(cacheKey, {
+    imageUrl: proxiedImageUrl,
+    expiresAt: Date.now() + (proxiedImageUrl ? IMAGE_CACHE_TTL_MS : IMAGE_NEGATIVE_CACHE_TTL_MS)
+  });
+  return proxiedImageUrl;
+}
 
 // Welk soort afbeelding dit is, bepaald aan de eerste bytes. We vertrouwen het
 // content-type van de bron bewust niet: dan kon iemand via deze proxy een
@@ -3396,15 +3402,87 @@ async function seedDemoDataset() {
   }
 }
 
-function getRecipePackSummaries() {
-  return RECIPE_PACKS.map(pack => ({
-    key: pack.key,
-    title: pack.title,
-    subtitle: pack.subtitle,
-    description: pack.description,
-    icon: pack.icon,
-    total_recipes: pack.recipes.length
-  }));
+// ===================== SWIPE-STARTRECEPTEN =================================
+// Een nieuw account krijgt een stapel van 100 recepten om te swipen (rechts =
+// toevoegen, links = overslaan). De stapel wordt per keer opnieuw geschud,
+// maar zo dat het afwisselend blijft: de avondgerechten om de beurt uit een
+// andere soort (kip, vega, vis, ...), en ongeveer elke vierde kaart een lunch
+// of toetje. De eerste kaarten zijn altijd avondeten, want daar draait het om.
+const SWIPE_RECIPES_BY_ID = new Map(SWIPE_RECIPES.map(r => [r.id, r]));
+
+function buildSwipeDeck() {
+  const dinnersByType = new Map();
+  for (const r of SWIPE_RECIPES.filter(x => x.group === 'avond')) {
+    if (!dinnersByType.has(r.dish_type)) dinnersByType.set(r.dish_type, []);
+    dinnersByType.get(r.dish_type).push(r);
+  }
+  // Elke soort gelijkmatig over de stapel verspreiden: het k-de recept van een
+  // soort met n recepten krijgt plek (k + toeval) / n. Zo komen vis en vlees
+  // net zo goed vooraan als kip en vega.
+  const dinners = [...dinnersByType.values()]
+    .flatMap(list => shuffleArray(list).map((recipe, k) => ({
+      recipe,
+      key: (k + 0.15 + Math.random() * 0.7) / list.length
+    })))
+    .sort((a, b) => a.key - b.key)
+    .map(item => item.recipe);
+  // Twee van dezelfde soort achter elkaar: de tweede een plekje opschuiven.
+  for (let i = 1; i < dinners.length - 1; i += 1) {
+    if (dinners[i].dish_type === dinners[i - 1].dish_type) {
+      [dinners[i], dinners[i + 1]] = [dinners[i + 1], dinners[i]];
+    }
+  }
+
+  // Lunch en toetjes om en om, verspreid over de hele stapel.
+  const lunches = shuffleArray(SWIPE_RECIPES.filter(x => x.group === 'lunch'));
+  const desserts = shuffleArray(SWIPE_RECIPES.filter(x => x.group === 'dessert'));
+  const extras = [];
+  while (lunches.length || desserts.length) {
+    if (lunches.length) extras.push(lunches.shift());
+    if (desserts.length) extras.push(desserts.shift());
+  }
+
+  const deck = [];
+  const lead = 3;
+  const gap = (dinners.length - lead) / extras.length;
+  let nextExtraAt = lead + gap / 2;
+  dinners.forEach((recipe, i) => {
+    deck.push(recipe);
+    while (extras.length && i + 1 >= nextExtraAt) {
+      deck.push(extras.shift());
+      nextExtraAt += gap;
+    }
+  });
+  return deck.concat(extras);
+}
+
+function getCachedRecipeImage(url) {
+  try {
+    const cached = recipeImageCache.get(new URL(url).toString());
+    return cached && cached.expiresAt > Date.now() ? cached.imageUrl : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// Haalt de foto's van alle startrecepten alvast op, zodat de kaarten bij een
+// nieuw account meteen een foto hebben. Rustig aan (een paar tegelijk) en
+// daarna elke dag opnieuw, want de cache verloopt na 24 uur.
+async function warmSwipeRecipeImages() {
+  const queue = [...SWIPE_RECIPES];
+  let found = 0;
+  const worker = async () => {
+    while (queue.length) {
+      const recipe = queue.shift();
+      try {
+        if (await resolveRecipeImage(new URL(recipe.url))) found += 1;
+      } catch (_err) {
+        // één foto die niet lukt is geen probleem; de kaart toont dan een vlak
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: 4 }, worker));
+  console.log(`✅ Swipe-recepten: ${found}/${SWIPE_RECIPES.length} foto's opgehaald.`);
 }
 
 function inferRecipeSourceLabel(recipeUrl) {
@@ -3913,11 +3991,6 @@ async function resolveDatabaseOwnerId(req) {
   return ownerUserId;
 }
 
-app.get('/api/recipe-packs', async (req, res) => {
-  if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
-  return res.json(getRecipePackSummaries());
-});
-
 app.get('/api/recipe-packs/onboarding-status', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
   try {
@@ -3947,25 +4020,48 @@ app.post('/api/recipe-packs/onboarding-complete', async (req, res) => {
   }
 });
 
-app.post('/api/recipe-packs/apply', async (req, res) => {
+// De swipe-stapel voor de actieve database. Recepten die er al in staan
+// (bijvoorbeeld bij een tweede ronde via 'Recepten ontdekken') vallen eruit.
+app.get('/api/swipe-recipes', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
-  const packKey = String(req.body?.packKey || '').trim();
-  const pack = RECIPE_PACKS.find(p => p.key === packKey);
-  if (!pack) return res.status(400).json({ error: 'Onbekend receptenpakket.' });
+  try {
+    const ownerUserId = await resolveDatabaseOwnerId(req);
+    const existing = await dbCall(getRecipeUrlsForDatabase, ownerUserId);
+    const have = new Set(existing.map(url => String(url || '').trim().toLowerCase()));
+    const recipes = buildSwipeDeck()
+      .filter(r => !have.has(r.url.toLowerCase()))
+      .map(r => ({
+        id: r.id,
+        title: r.title,
+        url: r.url,
+        source: r.source,
+        dish_type: r.dish_type,
+        meal_category: r.meal_category,
+        time_required: r.time_required,
+        calories: r.calories,
+        image_url: getCachedRecipeImage(r.url)
+      }));
+    return res.json({ recipes, total: SWIPE_RECIPES.length });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Kon de recepten niet ophalen.' });
+  }
+});
+
+// Eén geliket recept toevoegen. Alleen een id uit de vaste lijst, zodat er
+// niets anders dan deze recepten via deze route binnenkomt.
+app.post('/api/swipe-recipes/like', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
+  const recipe = SWIPE_RECIPES_BY_ID.get(String(req.body?.id || '').trim());
+  if (!recipe) return res.status(400).json({ error: 'Onbekend recept.' });
 
   try {
     const ownerUserId = await resolveDatabaseOwnerId(req);
-    const result = await dbCall(addRecipePackToDatabase, ownerUserId, req.user.id, pack.recipes);
-    return res.json({
-      message: `Pakket "${pack.title}" verwerkt.`,
-      packKey: pack.key,
-      inserted: result.inserted,
-      skipped: result.skipped,
-      total: result.total
-    });
+    const result = await dbCall(addRecipePackToDatabase, ownerUserId, req.user.id, [recipe]);
+    return res.json({ inserted: result.inserted, skipped: result.skipped });
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
-    return res.status(500).json({ error: 'Kon pakket niet toevoegen.' });
+    return res.status(500).json({ error: 'Kon het recept niet toevoegen.' });
   }
 });
 
@@ -4936,6 +5032,11 @@ async function startApp() {
 
   // Zorg dat de demo-dataset (voorbeeldrecepten voor guests) bestaat.
   await seedDemoDataset();
+
+  // Foto's van de swipe-startrecepten op de achtergrond klaarzetten, en elke
+  // 20 uur opnieuw (de fotocache verloopt na 24 uur).
+  warmSwipeRecipeImages().catch(() => {});
+  setInterval(() => warmSwipeRecipeImages().catch(() => {}), 20 * 60 * 60 * 1000).unref();
 
   // Laad crawler-index uit database (persistenter dan JSON-bestand)
   try {
