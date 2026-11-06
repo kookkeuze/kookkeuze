@@ -1182,8 +1182,6 @@ sharePanel?.addEventListener('click', async e => {
 const recipeSwipeStack = document.getElementById('recipeSwipeStack');
 const recipeSwipeTitle = document.getElementById('recipeSwipeTitle');
 const recipeSwipeSub = document.getElementById('recipeSwipeSub');
-const recipeSwipeLiked = document.getElementById('recipeSwipeLiked');
-const recipeSwipeCount = document.getElementById('recipeSwipeCount');
 const recipeSwipeActions = document.getElementById('recipeSwipeActions');
 const recipeSwipeNopeBtn = document.getElementById('recipeSwipeNopeBtn');
 const recipeSwipeLikeBtn = document.getElementById('recipeSwipeLikeBtn');
@@ -1378,23 +1376,6 @@ function flyOutSwipeCard(card, direction, dy = 0) {
   return new Promise(resolve => setTimeout(resolve, 300));
 }
 
-function updateSwipeMeta() {
-  const total = swipeDeck.length;
-  const shown = Math.min(swipeIndex + 1, total);
-  if (recipeSwipeCount) recipeSwipeCount.textContent = total ? `${shown} / ${total}` : '';
-  if (recipeSwipeLiked) {
-    recipeSwipeLiked.textContent = `${swipeLikedCount} toegevoegd`;
-    recipeSwipeLiked.classList.toggle('has-likes', swipeLikedCount > 0);
-  }
-}
-
-function bumpSwipeLikedCounter() {
-  if (!recipeSwipeLiked || swipePrefersReducedMotion()) return;
-  recipeSwipeLiked.classList.remove('is-bump');
-  void recipeSwipeLiked.offsetWidth;
-  recipeSwipeLiked.classList.add('is-bump');
-}
-
 function saveSwipeLike(recipe) {
   const save = fetch(`${API_BASE}/api/swipe-recipes/like`, {
     method: 'POST',
@@ -1406,7 +1387,6 @@ function saveSwipeLike(recipe) {
     })
     .catch(() => {
       swipeLikedCount = Math.max(0, swipeLikedCount - 1);
-      updateSwipeMeta();
       showRecipeAddedToast(`"${recipe.title}" toevoegen mislukt.`, 'error');
     })
     .finally(() => swipePendingSaves.delete(save));
@@ -1454,8 +1434,6 @@ async function commitSwipe(direction, options = {}) {
   if (direction === 'like') {
     swipeLikedCount += 1;
     saveSwipeLike(recipe);
-    updateSwipeMeta();
-    bumpSwipeLikedCounter();
   }
 
   // Tijdens het wegvliegen groeit de volgende kaart alvast naar voren.
@@ -1463,7 +1441,6 @@ async function commitSwipe(direction, options = {}) {
   await flyOutSwipeCard(card, direction, options.dy || 0);
   card.remove();
   swipeIndex += 1;
-  updateSwipeMeta();
 
   if (swipeIndex >= swipeDeck.length) {
     renderSwipeFinished();
@@ -1546,7 +1523,6 @@ async function openRecipeSwipeFlow(options = {}) {
 
   recipeSwipeModal.classList.remove('hidden');
   recipeSwipeModal.setAttribute('aria-hidden', 'false');
-  updateSwipeMeta();
   fillSwipeStack();
 
   // Bij de eerste keer even laten zien dat de kaart heen en weer kan.

@@ -10422,37 +10422,6 @@ h1, h2, h3,
   line-height: 1.4;
 }
 
-.recipe-swipe-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 14px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #7a8a80;
-}
-
-.recipe-swipe-liked {
-  color: #7a8a80;
-  background: #eef2ef;
-  border-radius: 999px;
-  padding: 3px 10px;
-  transition: background-color var(--duration-fast) ease, color var(--duration-fast) ease;
-}
-
-.recipe-swipe-liked.has-likes {
-  color: var(--green-deep);
-  background: #e3f6e6;
-}
-
-.recipe-swipe-liked.is-bump {
-  animation: swipeLikedBump 320ms var(--ease-spring);
-}
-
-@keyframes swipeLikedBump {
-  40% { transform: scale(1.12); }
-}
-
 /* De stapel neemt alle ruimte die over is; de kaarten liggen erin op elkaar.
    --drag (0 tot 1) zegt hoe ver de bovenste kaart al weggesleept is. */
 .recipe-swipe-stack {
@@ -10637,7 +10606,7 @@ h1, h2, h3,
   display: flex;
   justify-content: center;
   gap: 44px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .recipe-swipe-actions.hidden {
@@ -10676,7 +10645,7 @@ h1, h2, h3,
   }
 
   .recipe-swipe-done:hover {
-    color: var(--green-deep);
+    background: #d3f0d8;
   }
 
   .recipe-swipe-done.is-primary:hover {
@@ -10688,25 +10657,29 @@ h1, h2, h3,
   transform: scale(0.9);
 }
 
+/* Stoppen kan altijd: een rustige lichtgroene knop tussen de kaart en het
+   kruis en vinkje. Op het eindscherm wordt hij de volle groene hoofdknop. */
 .recipe-swipe-done {
   align-self: center;
   width: auto;
   min-width: 0;
-  min-height: 44px;
-  margin-top: 6px;
-  padding: 10px 20px;
+  min-height: 40px;
+  margin-top: 14px;
+  padding: 9px 20px;
   border: none;
-  background: transparent;
-  color: var(--green-hover);
-  font-size: 14px;
+  border-radius: 999px;
+  background: #e3f6e6;
+  color: var(--green-deep);
+  font-size: 13px;
 }
 
 .recipe-swipe-done.is-primary {
   align-self: stretch;
   min-height: 48px;
-  margin-top: 12px;
+  border-radius: var(--btn-radius);
   background: var(--green);
   color: #ffffff;
+  font-size: 15px;
 }
 
 .swipe-finished {
