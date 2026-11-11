@@ -456,6 +456,104 @@ function extractInstructionsText(instructions) {
   return parts.join(' ');
 }
 
+// Eén stuk bereidingstekst opknippen in losse stappen. Sites zetten er soms
+// HTML in (<p>, <li>, <br>) en nummeren zelf ("Stap 1:", "2."); dat gaat eraf,
+// want de receptpagina nummert de stappen al.
+function splitInstructionText(text) {
+  return htmlToText(String(text || ''))
+    .split(/\n+/)
+    .map(line => line
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^(stap|step)\s*\d{1,2}\s*[:.)-]?\s*/i, '')
+      .replace(/^\d{1,2}\s*[.)]\s+/, '')
+      .trim())
+    .filter(line => line.length > 1);
+}
+
+// De bereiding uit schema.org als losse stappen, in volgorde. Een HowToSection
+// ("Voor de saus") bevat zelf weer stappen; de naam van zo'n sectie slaan we
+// over, net als de naam van een stap die ook gewoon tekst heeft.
+function extractInstructionSteps(instructions) {
+  const steps = [];
+  const walk = node => {
+    if (!node) return;
+    if (typeof node === 'string') { steps.push(...splitInstructionText(node)); return; }
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    if (typeof node === 'object') {
+      if (node.itemListElement) { walk(node.itemListElement); return; }
+      const text = node.text || node.description || node.name;
+      if (text) steps.push(...splitInstructionText(text));
+    }
+  };
+  walk(instructions);
+  return steps.filter((step, i) => steps.indexOf(step) === i).slice(0, 40);
+}
+
+// Zonder schema.org: het stuk pagina onder een kopje als "Bereiding".
+function extractInstructionStepsFromHtml(html) {
+  const sectionHtml = extractSectionHtmlByHeading(html, [
+    /^bereiding(swijze)?:?$/i,
+    /^(de )?werkwijze:?$/i,
+    /^instructies?:?$/i,
+    /^zo maak je (het|dit|'?t):?$/i,
+    /^aan de slag:?$/i,
+    /^stappen(plan)?:?$/i,
+    /^(instructions?|method|directions?|preparation):?$/i
+  ]);
+  if (!sectionHtml) return [];
+
+  const listItems = [...sectionHtml.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)]
+    .flatMap(match => splitInstructionText(match[1]));
+  // Losse regels zonder lijst: alleen volzinnen, anders komen knoppen als
+  // "Print recept" mee als stap.
+  const lines = listItems.length ? listItems : splitInstructionText(sectionHtml).filter(line => line.length >= 20);
+  return lines.filter((step, i) => lines.indexOf(step) === i).slice(0, 40);
+}
+
+// "4", 4, "4 personen" of ["4", "4 porties"] → 4.
+function parseRecipeServings(recipeYield) {
+  const values = Array.isArray(recipeYield) ? recipeYield : [recipeYield];
+  for (const value of values) {
+    const match = String(value ?? '').match(/\d{1,3}/);
+    const number = match ? parseInt(match[0], 10) : 0;
+    if (number >= 1 && number <= 100) return number;
+  }
+  return null;
+}
+
+// Alles wat nodig is om van een receptpagina een eigen recept te maken:
+// ingrediënten, stappen, porties, tijd en de mogelijke foto's. Geeft null als
+// de pagina een verzamelartikel is (meerdere recepten): dan is niet te zeggen
+// welk recept bedoeld wordt en blijft het een link.
+function buildWebRecipeContent(recipe, html, pageUrl, payload) {
+  if ((payload.recipe_schema_count || 0) > 1) return null;
+
+  const fromSchema = recipe ? extractInstructionSteps(recipe.recipeInstructions) : [];
+  const jsonLdMinutes = recipe
+    ? parseDurationToMinutes(recipe.totalTime || recipe.cookTime || recipe.prepTime)
+    : null;
+
+  const imageUrls = [];
+  for (const candidate of collectRecipeImageCandidates(html)) {
+    try {
+      const absolute = new URL(candidate, pageUrl).toString();
+      if (/^https?:/i.test(absolute) && !imageUrls.includes(absolute)) imageUrls.push(absolute);
+    } catch (_err) {
+      // onbruikbare link, volgende kandidaat
+    }
+  }
+
+  return {
+    ingredients: payload.ingredients || [],
+    steps: fromSchema.length ? fromSchema : extractInstructionStepsFromHtml(html),
+    servings: recipe ? parseRecipeServings(recipe.recipeYield) : null,
+    prepMinutes: jsonLdMinutes != null ? jsonLdMinutes : extractTimeMinutesFromHtml(html),
+    imageUrls,
+    imageReferer: pageUrl.toString()
+  };
+}
+
 function collectTextFields(recipe) {
   const parts = [];
   const push = v => {
@@ -1657,7 +1755,10 @@ async function buildPinterestPayload(url) {
 }
 /* ------------------------------------------------------------------ */
 
-async function getRecipeInfoPayload(targetUrl) {
+// `deadline` (optioneel) begrenst hoe lang het ophalen mag duren. Een pagina
+// die binnen die tijd niet binnenkwam onthouden we dan niet als 'geblokkeerd':
+// met meer tijd was het misschien wel gelukt.
+async function getRecipeInfoPayload(targetUrl, deadline) {
   const cacheKey = targetUrl.toString();
   const cached = recipeInfoCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -1668,7 +1769,17 @@ async function getRecipeInfoPayload(targetUrl) {
   if (isPinterestUrl(cacheKey)) {
     const pinPayload = await buildPinterestPayload(cacheKey);
     if (!pinPayload.error) {
-      recipeInfoCache.set(cacheKey, { payload: pinPayload, expiresAt: Date.now() + RECIPE_INFO_TTL_MS });
+      // De tekst van het recept staat op de bronpagina; die is hierboven al
+      // uitgelezen en staat onder zijn eigen adres in de cache.
+      let content = null;
+      try {
+        if (pinPayload.source_url) {
+          content = recipeInfoCache.get(new URL(pinPayload.source_url).toString())?.content || null;
+        }
+      } catch (_err) {
+        content = null;
+      }
+      recipeInfoCache.set(cacheKey, { payload: pinPayload, content, expiresAt: Date.now() + RECIPE_INFO_TTL_MS });
     }
     return pinPayload;
   }
@@ -1682,7 +1793,10 @@ async function getRecipeInfoPayload(targetUrl) {
     return igPayload;
   }
 
-  const html = await fetchHtmlWithRetries(cacheKey);
+  const html = await fetchHtmlWithRetries(cacheKey, deadline);
+  if (!html && deadline) {
+    return { error: 'Kon de receptinformatie niet op tijd ophalen.' };
+  }
   if (!html) {
     // Titel uit de URL, zodat de gebruiker niet alles zelf hoeft te typen.
     // Een uur onthouden: sites als ah.nl blokkeren structureel, en anders
@@ -1714,9 +1828,32 @@ async function getRecipeInfoPayload(targetUrl) {
   const payload = buildRecipePayload(recipe, html, targetUrl, recipeSchemaCount);
   recipeInfoCache.set(cacheKey, {
     payload,
+    // Bewaard naast de formuliergegevens, zodat opslaan als eigen recept de
+    // pagina niet nog een keer hoeft op te halen.
+    content: buildWebRecipeContent(recipe, html, targetUrl, payload),
     expiresAt: Date.now() + RECIPE_INFO_TTL_MS
   });
   return payload;
+}
+
+// De inhoud van een receptpagina (of van de bron achter een pin) voor het
+// omzetten naar een eigen recept. Meestal al in de cache doordat het formulier
+// de pagina net heeft uitgelezen; anders halen we hem binnen `budgetMs` op.
+const OWN_RECIPE_FETCH_BUDGET_MS = 15000;
+
+async function getWebRecipeContent(url, budgetMs = OWN_RECIPE_FETCH_BUDGET_MS) {
+  const targetUrl = new URL(url);
+  const cacheKey = targetUrl.toString();
+  const readCache = () => {
+    const entry = recipeInfoCache.get(cacheKey);
+    return entry && entry.expiresAt > Date.now() ? entry : null;
+  };
+  let entry = readCache();
+  if (!entry) {
+    await getRecipeInfoPayload(targetUrl, Date.now() + budgetMs);
+    entry = readCache();
+  }
+  return entry?.content || null;
 }
 /* ------------------------------------------------------------ */
 
@@ -4142,12 +4279,10 @@ async function snapshotRemoteImage(imageUrl, referer) {
   }
 }
 
-// Een Instagram-recept wordt een eigen recept: ingrediënten en bereiding uit
-// de caption, de foto als snapshot en de post als bron. Zo hoef je voor het
-// recept niet meer naar Instagram. Titel en categorieën komen uit het
-// formulier (die heeft de gebruiker net gecontroleerd). Geeft null terug als
-// er niets bruikbaars in de caption staat; dan slaan we gewoon de link op.
-async function saveInstagramAsOwnRecipe(req, url, fields) {
+// Een Instagram-recept: ingrediënten en bereiding uit de caption, de
+// thumbnail als foto en de post als bron. Geeft null terug als er niets
+// bruikbaars in de caption staat.
+async function loadInstagramRecipeContent(url) {
   const post = await fetchInstagramPost(url);
   if (!post?.caption) return null;
 
@@ -4156,6 +4291,47 @@ async function saveInstagramAsOwnRecipe(req, url, fields) {
   if (!ingredients.length && !steps.length) return null;
 
   const shortcode = extractInstagramShortcode(url);
+  return {
+    ingredients,
+    steps,
+    servings: null,
+    prepMinutes: parseCaptionMinutes(post.caption),
+    imageUrls: post.imageUrl ? [post.imageUrl] : [],
+    imageReferer: 'https://www.instagram.com/',
+    sourceNote: shortcode ? `https://www.instagram.com/p/${shortcode}/` : url
+  };
+}
+
+// Hetzelfde voor elke andere link: een receptsite, een blog of een pin die
+// naar zo'n pagina wijst. Hier moeten ingrediënten én bereiding gevonden zijn;
+// met maar de helft is het recept op onze pagina niet te koken en kun je
+// beter bij de originele link blijven.
+async function loadWebRecipeContent(url) {
+  const content = await getWebRecipeContent(url);
+  if (!content || !content.ingredients.length || !content.steps.length) return null;
+  return { ...content, sourceNote: url };
+}
+
+// Hoeveel foto's we hooguit proberen voordat we het recept zonder foto laten.
+const MAX_SNAPSHOT_ATTEMPTS = 3;
+
+async function snapshotFirstImage(imageUrls, referer) {
+  for (const imageUrl of (imageUrls || []).slice(0, MAX_SNAPSHOT_ATTEMPTS)) {
+    const photo = await snapshotRemoteImage(imageUrl, referer);
+    if (photo) return photo;
+  }
+  return null;
+}
+
+// Een geplakte link wordt een eigen recept: ingrediënten en bereiding van de
+// pagina, de foto als snapshot en de link als bron. Geeft null terug als er
+// geen volledig recept uit te halen viel; dan slaan we gewoon de link op.
+async function saveLinkAsOwnRecipe(req, url, fields) {
+  const content = isInstagramUrl(url)
+    ? await loadInstagramRecipeContent(url)
+    : await loadWebRecipeContent(url);
+  if (!content) return null;
+
   const ownerUserId = await resolveDatabaseOwnerId(req);
   const created = await dbCall(addOwnRecipe, {
     title: trimToLength(fields.title, 255),
@@ -4164,23 +4340,23 @@ async function saveInstagramAsOwnRecipe(req, url, fields) {
     meal_type: normalizeRecipeField(fields.meal_type),
     time_required: normalizeRecipeField(fields.time_required),
     calories: parseOptionalPositiveInt(fields.calories, 100000),
-    ingredients: trimToLength(ingredients.join('\n'), 10000),
-    instructions: trimToLength(steps.join('\n'), 20000),
-    servings: null,
-    prep_minutes: parseCaptionMinutes(post.caption),
-    source_note: shortcode ? `https://www.instagram.com/p/${shortcode}/` : trimToLength(url, 255),
+    ingredients: trimToLength(content.ingredients.join('\n'), 10000),
+    instructions: trimToLength(content.steps.join('\n'), 20000),
+    servings: content.servings,
+    prep_minutes: parseOptionalPositiveInt(content.prepMinutes, 6000),
+    source_note: trimToLength(content.sourceNote, SOURCE_NOTE_MAX_LENGTH),
     user_id: req.user.id,
     database_id: ownerUserId
   });
 
   // Het recept staat er nu; een mislukte foto mag het niet meer tegenhouden,
   // anders zou de aanroeper terugvallen op een link en staat het er dubbel.
-  if (created?.id && post.imageUrl) {
+  if (created?.id && content.imageUrls.length) {
     try {
-      const photo = await snapshotRemoteImage(post.imageUrl, 'https://www.instagram.com/');
+      const photo = await snapshotFirstImage(content.imageUrls, content.imageReferer);
       if (photo) await dbCall(setRecipePhoto, created.id, photo.mimeType, photo.data);
     } catch (photoErr) {
-      console.warn('⚠️ foto bij Instagram-recept niet opgeslagen:', photoErr.message);
+      console.warn('⚠️ foto bij overgenomen recept niet opgeslagen:', photoErr.message);
     }
   }
   return created;
@@ -4207,17 +4383,18 @@ app.post('/api/recipes', async (req, res) => {
   const cleanTimeRequired = normalizeRecipeField(time_required);
 
   try {
-    if (isInstagramUrl(url)) {
+    // Een link naar een van onze eigen receptpagina's is al een eigen recept.
+    if (!url.startsWith('/')) {
       try {
-        const own = await saveInstagramAsOwnRecipe(req, url, req.body);
+        const own = await saveLinkAsOwnRecipe(req, url, req.body);
         if (own?.id) {
           return res.json({ message: 'Recept toegevoegd!', id: own.id, url: own.url, own: true });
         }
-      } catch (igErr) {
-        if (igErr.statusCode) throw igErr;
-        // Omzetten lukt niet (Instagram blokkeert, rare caption): dan gewoon
-        // als link opslaan, zoals voorheen.
-        console.warn('⚠️ Instagram-recept niet omgezet, opgeslagen als link:', igErr.message);
+      } catch (convertErr) {
+        if (convertErr.statusCode) throw convertErr;
+        // Omzetten lukt niet (site blokkeert, rare pagina): dan gewoon als
+        // link opslaan, zoals voorheen.
+        console.warn('⚠️ Recept niet omgezet, opgeslagen als link:', convertErr.message);
       }
     }
 
@@ -4245,6 +4422,9 @@ app.post('/api/recipes', async (req, res) => {
 // met de tekst erbij en een URL die naar onze eigen paginawijst.
 
 const OWN_RECIPE_MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+// De bron is bij een overgenomen recept de volledige link; die mag niet
+// halverwege afgekapt worden.
+const SOURCE_NOTE_MAX_LENGTH = 2048;
 const ALLOWED_PHOTO_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 function parseOptionalPositiveInt(value, max) {
@@ -4301,7 +4481,7 @@ function readOwnRecipeBody(body = {}) {
       instructions: trimToLength(body.instructions, 20000),
       servings: parseOptionalPositiveInt(body.servings, 100),
       prep_minutes: parseOptionalPositiveInt(body.prep_minutes, 6000),
-      source_note: trimToLength(body.source_note, 255)
+      source_note: trimToLength(body.source_note, SOURCE_NOTE_MAX_LENGTH)
     }
   };
 }
@@ -5150,5 +5330,10 @@ module.exports = {
   buildPageKeywordText,
   extractTimeMinutesFromHtml,
   extractCaloriesFromHtml,
-  buildRecipePayload
+  buildRecipePayload,
+  extractInstructionSteps,
+  extractInstructionStepsFromHtml,
+  parseRecipeServings,
+  getRecipeInfoPayload,
+  getWebRecipeContent
 };

@@ -756,7 +756,12 @@ function upsertExternalRecipeToDatabase(recipe, callback) {
       SELECT id
       FROM recipes
       WHERE database_id = $9
-        AND LOWER(REGEXP_REPLACE(COALESCE(url, ''), '/+$', '')) = LOWER(REGEXP_REPLACE(COALESCE($2, ''), '/+$', ''))
+        AND LOWER(REGEXP_REPLACE(COALESCE($2, ''), '/+$', '')) IN (
+          LOWER(REGEXP_REPLACE(COALESCE(url, ''), '/+$', '')),
+          -- Een overgenomen recept heeft een eigen adres; de originele link
+          -- staat dan als bron.
+          LOWER(REGEXP_REPLACE(COALESCE(source_note, ''), '/+$', ''))
+        )
       LIMIT 1
     ),
     inserted AS (
