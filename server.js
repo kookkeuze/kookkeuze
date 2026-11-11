@@ -1944,6 +1944,7 @@ const {
   deleteRecipePhoto,
   importRecipeToUserDatabase,
   upsertExternalRecipeToDatabase,
+  findRecipeIdByLink,
   listAccessibleDatabases,
   userHasDatabaseAccess,
   userCanManageDatabase,
@@ -4646,6 +4647,23 @@ app.post('/api/recipes/import-external', async (req, res) => {
 
   try {
     const ownerUserId = await resolveDatabaseOwnerId(req);
+
+    // Net als bij een geplakte link: waar mogelijk een eigen recept maken.
+    // Eerst kijken of het er al in staat, anders komt het er dubbel in.
+    const existingId = await dbCall(findRecipeIdByLink, ownerUserId, url);
+    if (existingId) {
+      return res.json({ message: 'Recept stond al in je kookboek.', id: existingId, already_exists: true });
+    }
+    try {
+      const own = await saveLinkAsOwnRecipe(req, url, req.body);
+      if (own?.id) {
+        return res.json({ message: 'Recept toegevoegd aan je kookboek.', id: own.id, url: own.url, own: true, already_exists: false });
+      }
+    } catch (convertErr) {
+      if (convertErr.statusCode) throw convertErr;
+      console.warn('⚠️ Internetrecept niet omgezet, opgeslagen als link:', convertErr.message);
+    }
+
     const savedRecipe = await dbCall(upsertExternalRecipeToDatabase, {
       title,
       url,

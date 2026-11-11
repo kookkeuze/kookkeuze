@@ -738,6 +738,25 @@ function deleteRecipePhoto(recipeId, callback) {
   });
 }
 
+// Staat deze link al in het kookboek? Als gewone link (url) of als bron van
+// een overgenomen recept (source_note). Geeft het id terug, of null.
+function findRecipeIdByLink(databaseId, link, callback) {
+  const query = `
+    SELECT id
+    FROM recipes
+    WHERE database_id = $1
+      AND LOWER(REGEXP_REPLACE(COALESCE($2, ''), '/+$', '')) IN (
+        LOWER(REGEXP_REPLACE(COALESCE(url, ''), '/+$', '')),
+        LOWER(REGEXP_REPLACE(COALESCE(source_note, ''), '/+$', ''))
+      )
+    LIMIT 1
+  `;
+  pool.query(query, [databaseId, link], (err, result) => {
+    if (err) return callback(err);
+    callback(null, result.rows[0]?.id || null);
+  });
+}
+
 function upsertExternalRecipeToDatabase(recipe, callback) {
   const {
     title,
@@ -1902,6 +1921,7 @@ module.exports = {
   getRandomRecipe,
   addRecipe,
   upsertExternalRecipeToDatabase,
+  findRecipeIdByLink,
   updateRecipe,
   deleteRecipe,
   getRecipeByIdForOwner,

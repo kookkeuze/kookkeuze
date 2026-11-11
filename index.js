@@ -1906,6 +1906,8 @@ async function ensureInternetRecipeSaved(recipe) {
 
   return {
     id: Number(data.id) > 0 ? Number(data.id) : null,
+    // Een overgenomen recept heeft een eigen adres gekregen.
+    url: data.url || null,
     alreadyExists: !!data.already_exists
   };
 }
@@ -3579,7 +3581,9 @@ async function openNotesExport(recipeUrl, recipeTitle) {
 function findRecipeInDatabase(url) {
   if (!url) return null;
   const decoded = decodeURIComponent(url);
-  return (plannerRecipes || []).find(r => r.url === url || r.url === decoded) || null;
+  // Een overgenomen recept heeft een eigen adres; de originele link staat dan
+  // als bron (source_note).
+  return (plannerRecipes || []).find(r => [r.url, r.source_note].some(link => link === url || link === decoded)) || null;
 }
 
 function closeAllRecipeExportMenus(exceptMenu = null) {
@@ -3648,11 +3652,11 @@ async function onRecipeCardClick(e) {
     openSaveInternetRecipeModal(recipe, async (filledRecipe) => {
       const saved = await ensureInternetRecipeSaved(filledRecipe);
       if (!saved) return;
-      showRecipeAddedToast('Recept toegevoegd aan je kookboek.');
+      showRecipeAddedToast(saved.alreadyExists ? 'Recept staat al in je kookboek.' : 'Recept toegevoegd aan je kookboek.');
       const previewRecipe = {
         id: saved.id || '',
         title: filledRecipe.title || 'Recept',
-        url: filledRecipe.url || '',
+        url: saved.url || filledRecipe.url || '',
         dish_type: filledRecipe.dish_type || '',
         meal_category: filledRecipe.meal_category || '',
         meal_type: filledRecipe.meal_type || '',
