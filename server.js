@@ -1945,6 +1945,8 @@ const {
   importRecipeToUserDatabase,
   upsertExternalRecipeToDatabase,
   findRecipeIdByLink,
+  listLinkRecipesForDatabase,
+  convertLinkRecipeToOwn,
   listAccessibleDatabases,
   userHasDatabaseAccess,
   userCanManageDatabase,
@@ -4272,7 +4274,10 @@ async function snapshotRemoteImage(imageUrl, referer) {
     if (!response.ok) return null;
     const data = Buffer.from(await response.arrayBuffer());
     const mimeType = sniffImageType(data);
-    if (!ALLOWED_PHOTO_MIME_TYPES.has(mimeType) || data.length > OWN_RECIPE_MAX_PHOTO_BYTES) return null;
+    // AVIF mag hier ook: steeds meer sites leveren hun foto alleen zo aan, en
+    // elke moderne browser toont het.
+    const toegestaan = ALLOWED_PHOTO_MIME_TYPES.has(mimeType) || mimeType === 'image/avif';
+    if (!toegestaan || data.length > OWN_RECIPE_MAX_PHOTO_BYTES) return null;
     return { mimeType, data };
   } catch (err) {
     console.warn('⚠️ foto-snapshot mislukt:', err.message);
@@ -4690,6 +4695,162 @@ app.post('/api/recipes/import-external', async (req, res) => {
   } catch (err) {
     if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
     return res.status(500).json({ error: 'Er ging iets mis bij het opslaan van het recept.' });
+  }
+});
+
+/* -------------------- BESTAANDE LINKS OMZETTEN -------------------- */
+// Recepten die al als link in een kookboek staan alsnog omzetten naar eigen
+// recepten. Voorlopig alleen voor accounts in LINK_CONVERT_EMAILS (komma's
+// ertussen), zodat we het eerst op een eigen kookboek kunnen uitproberen.
+//
+// Het werk loopt op de achtergrond: elk recept kost een opvraag bij een andere
+// site, en met tientallen recepten duurt dat te lang voor één verzoek. De
+// pagina vraagt de stand op. Een proefronde doet alles behalve opslaan.
+const LINK_CONVERT_EMAILS = new Set(
+  String(process.env.LINK_CONVERT_EMAILS || '')
+    .split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(Boolean)
+);
+// Rustig aan, anders blokkeert een site (Instagram voorop) ons adres.
+const LINK_CONVERT_PAUSE_MS = 800;
+const LINK_CONVERT_INSTAGRAM_PAUSE_MS = 4000;
+const LINK_CONVERT_MAX_REPORTED = 300;
+
+// Eén taak per kookboek; de laatste uitslag blijft staan tot de volgende start.
+const linkConvertJobs = new Map();
+
+function canConvertLinks(req) {
+  return !!req.user && LINK_CONVERT_EMAILS.has(String(req.user.email || '').trim().toLowerCase());
+}
+
+function linkConvertJobView(job) {
+  if (!job) return null;
+  return {
+    dryRun: job.dryRun,
+    running: !job.finishedAt,
+    total: job.total,
+    done: job.done,
+    converted: job.converted,
+    withoutPhoto: job.withoutPhoto,
+    current: job.current,
+    skipped: job.skipped,
+    error: job.error || null
+  };
+}
+
+// Geeft { ok: true } terug, of { reason } waarom dit recept een link blijft.
+async function convertOneLinkRecipe(recipe, databaseId, dryRun) {
+  const content = isInstagramUrl(recipe.url)
+    ? await loadInstagramRecipeContent(recipe.url)
+    : await loadWebRecipeContent(recipe.url);
+  if (!content) return { reason: 'Geen volledig recept uit te lezen' };
+
+  // De foto halen we op dezelfde manier op als de kaart van een linkrecept
+  // dat doet. Lukt het hier niet (de site weigert ons), dan had het recept
+  // als link ook al geen foto: omzetten kost dus niets, en we melden het.
+  const photo = content.imageUrls.length
+    ? await snapshotFirstImage(content.imageUrls, content.imageReferer)
+    : null;
+  if (dryRun) return { ok: true, photo: !!photo };
+
+  const updated = await dbCall(convertLinkRecipeToOwn, recipe.id, databaseId, {
+    ingredients: trimToLength(content.ingredients.join('\n'), 10000),
+    instructions: trimToLength(content.steps.join('\n'), 20000),
+    servings: content.servings,
+    prep_minutes: parseOptionalPositiveInt(content.prepMinutes, 6000)
+  });
+  // Intussen verwijderd of al omgezet: niets meer te doen.
+  if (!updated) return { reason: 'Recept was al gewijzigd' };
+
+  if (photo) {
+    try {
+      await dbCall(setRecipePhoto, recipe.id, photo.mimeType, photo.data);
+    } catch (photoErr) {
+      console.warn('⚠️ foto bij omgezet recept niet opgeslagen:', photoErr.message);
+    }
+  }
+  return { ok: true, photo: !!photo };
+}
+
+async function runLinkConvertJob(job, databaseId, recipes) {
+  try {
+    for (const recipe of recipes) {
+      job.current = recipe.title || recipe.url;
+      let result;
+      try {
+        result = await convertOneLinkRecipe(recipe, databaseId, job.dryRun);
+      } catch (err) {
+        console.warn(`⚠️ linkrecept ${recipe.id} niet omgezet:`, err.message);
+        result = { reason: 'Ophalen mislukte' };
+      }
+      job.done += 1;
+      if (result.ok) {
+        job.converted += 1;
+        if (!result.photo) job.withoutPhoto += 1;
+      } else if (job.skipped.length < LINK_CONVERT_MAX_REPORTED) {
+        job.skipped.push({ id: recipe.id, title: recipe.title, url: recipe.url, reason: result.reason });
+      }
+      await new Promise(resolve => setTimeout(
+        resolve,
+        isInstagramUrl(recipe.url) ? LINK_CONVERT_INSTAGRAM_PAUSE_MS : LINK_CONVERT_PAUSE_MS
+      ));
+    }
+  } catch (err) {
+    console.error('❌ omzetten van linkrecepten gestopt:', err);
+    job.error = 'Het omzetten is onverwacht gestopt. Start het opnieuw; wat al omgezet is blijft staan.';
+  } finally {
+    job.current = null;
+    job.finishedAt = Date.now();
+  }
+}
+
+// Stand van zaken: mag dit account het, hoeveel links staan er nog, en hoe
+// ver is een lopende of net afgeronde ronde.
+app.get('/api/recipes/convert-links', async (req, res) => {
+  if (!canConvertLinks(req)) return res.json({ allowed: false });
+  try {
+    const databaseId = Number(await resolveDatabaseOwnerId(req));
+    const recipes = await dbCall(listLinkRecipesForDatabase, databaseId);
+    return res.json({
+      allowed: true,
+      linkCount: recipes.length,
+      job: linkConvertJobView(linkConvertJobs.get(databaseId))
+    });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Kon de stand niet ophalen.' });
+  }
+});
+
+app.post('/api/recipes/convert-links', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Je moet ingelogd zijn.' });
+  if (!canConvertLinks(req)) return res.status(403).json({ error: 'Dit is voor jouw account nog niet beschikbaar.' });
+
+  try {
+    const databaseId = Number(await resolveDatabaseOwnerId(req));
+    if ([...linkConvertJobs.values()].some(job => !job.finishedAt)) {
+      return res.status(409).json({ error: 'Er loopt al een ronde. Wacht tot die klaar is.' });
+    }
+
+    const recipes = await dbCall(listLinkRecipesForDatabase, databaseId);
+    const job = {
+      // Alleen echt opslaan als daar uitdrukkelijk om gevraagd is.
+      dryRun: req.body?.dryRun !== false,
+      total: recipes.length,
+      done: 0,
+      converted: 0,
+      withoutPhoto: 0,
+      current: null,
+      skipped: [],
+      finishedAt: recipes.length ? null : Date.now()
+    };
+    linkConvertJobs.set(databaseId, job);
+    if (recipes.length) runLinkConvertJob(job, databaseId, recipes);
+    return res.json({ job: linkConvertJobView(job) });
+  } catch (err) {
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+    return res.status(500).json({ error: 'Kon het omzetten niet starten.' });
   }
 });
 
@@ -5353,5 +5514,6 @@ module.exports = {
   extractInstructionStepsFromHtml,
   parseRecipeServings,
   getRecipeInfoPayload,
-  getWebRecipeContent
+  getWebRecipeContent,
+  convertOneLinkRecipe
 };

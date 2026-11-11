@@ -7609,6 +7609,83 @@ html.cook-mode-open body {
   }
 }
 
+/* --- Bestaande links omzetten (in 'Samen koken', alleen voor aangezette accounts) --- */
+
+.link-convert {
+  margin-top: 18px;
+}
+
+.link-convert-info {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4b5650;
+}
+
+.link-convert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.link-convert-actions button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.link-convert-progress {
+  height: 6px;
+  background: #e8f1ea;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.link-convert-progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--green);
+  transition: width .4s ease;
+}
+
+.link-convert-skipped {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 13px;
+  color: #4b5650;
+}
+
+.link-convert-skipped:empty {
+  display: none;
+}
+
+.link-convert-skipped li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid #f0f5f1;
+}
+
+.link-convert-skipped li:last-child {
+  border-bottom: none;
+}
+
+.link-convert-skipped-head {
+  font-weight: 700;
+}
+
+.link-convert-skipped em {
+  flex-shrink: 0;
+  max-width: 50%;
+  text-align: right;
+  font-style: normal;
+  color: #7d8a7f;
+}
+
 /* Printen: alleen het recept, zonder knoppen en menubalk. */
 @media print {
   .topbar,

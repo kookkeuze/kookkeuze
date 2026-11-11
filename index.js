@@ -1115,7 +1115,124 @@ databaseMenuBtn?.addEventListener('click', async () => {
   if (!getValidToken()) return;
   await loadAccessibleDatabases();
   databaseModal?.classList.remove('hidden');
+  loadLinkConvertState();
 });
+
+/* ========= BESTAANDE LINKS OMZETTEN =========
+   Recepten die nog als link in het actieve kookboek staan alsnog omzetten
+   naar eigen recepten. De server bepaalt voor welke accounts dit aanstaat en
+   doet het werk op de achtergrond; hier tonen we alleen de stand. Een
+   proefronde laat zien wat er zou gebeuren zonder iets te wijzigen. */
+const linkConvertPanel = document.getElementById('linkConvertPanel');
+const linkConvertInfo = document.getElementById('linkConvertInfo');
+const linkConvertPreviewBtn = document.getElementById('linkConvertPreviewBtn');
+const linkConvertStartBtn = document.getElementById('linkConvertStartBtn');
+const linkConvertProgress = document.getElementById('linkConvertProgress');
+const linkConvertStatus = document.getElementById('linkConvertStatus');
+const linkConvertSkipped = document.getElementById('linkConvertSkipped');
+let linkConvertTimer = null;
+let linkConvertWasRunning = false;
+
+function renderLinkConvertState(state) {
+  if (!linkConvertPanel) return;
+  linkConvertPanel.classList.toggle('hidden', !state?.allowed);
+  if (!state?.allowed) return;
+
+  const job = state.job;
+  const running = !!job?.running;
+  const count = Number(state.linkCount || 0);
+  linkConvertInfo.textContent = count
+    ? `In dit kookboek ${count === 1 ? 'staat nog 1 recept' : `staan nog ${count} recepten`} als link. Een proefronde laat zien welke omgezet kunnen worden, zonder iets te wijzigen.`
+    : 'In dit kookboek staan geen recepten meer als link.';
+  linkConvertPreviewBtn.disabled = running || !count;
+  linkConvertStartBtn.disabled = running || !count;
+
+  linkConvertProgress.hidden = !running;
+  if (running) {
+    linkConvertProgress.firstElementChild.style.width = `${job.total ? (job.done / job.total) * 100 : 0}%`;
+  }
+
+  linkConvertStatus.classList.toggle('error', !!job?.error);
+  if (!job) {
+    linkConvertStatus.textContent = '';
+  } else if (job.error) {
+    linkConvertStatus.textContent = job.error;
+  } else if (running) {
+    linkConvertStatus.textContent = `${job.dryRun ? 'Proefronde' : 'Omzetten'}: ${job.done} van ${job.total}${job.current ? ` · ${job.current}` : ''}`;
+  } else {
+    // Zonder foto: de site weigert ons de afbeelding, als link was er ook geen.
+    const zonderFoto = job.withoutPhoto ? ` ${job.withoutPhoto} daarvan zonder foto.` : '';
+    linkConvertStatus.textContent = job.dryRun
+      ? `Proefronde klaar: ${job.converted} van ${job.total} kunnen omgezet worden.${zonderFoto} Er is niets gewijzigd.`
+      : `Klaar: ${job.converted} van ${job.total} omgezet naar een eigen recept.${zonderFoto}`;
+  }
+
+  const skipped = !running && job?.skipped?.length ? job.skipped : [];
+  linkConvertSkipped.innerHTML = skipped.length
+    ? `<li class="link-convert-skipped-head">Blijft een link (${skipped.length}):</li>` + skipped.map(item => `
+        <li><span>${escapeHtml(item.title || item.url)}</span><em>${escapeHtml(item.reason || '')}</em></li>`).join('')
+    : '';
+
+  // Net klaar met echt omzetten: de lijsten op de pagina laten meekomen.
+  if (linkConvertWasRunning && !running && job && !job.dryRun) {
+    if (typeof fetchAllRecipes === 'function') fetchAllRecipes();
+    if (typeof loadPlannerRecipes === 'function') loadPlannerRecipes().catch(() => {});
+  }
+  linkConvertWasRunning = running;
+
+  clearTimeout(linkConvertTimer);
+  if (running && !databaseModal?.classList.contains('hidden')) {
+    linkConvertTimer = setTimeout(loadLinkConvertState, 2000);
+  }
+}
+
+async function loadLinkConvertState() {
+  if (!linkConvertPanel || !getValidToken()) return;
+  try {
+    const params = new URLSearchParams();
+    appendActiveDatabaseParam(params);
+    const res = await fetch(`${API_BASE}/api/recipes/convert-links?${params.toString()}`, { headers: authHeaders() });
+    if (!res.ok) return;
+    renderLinkConvertState(await res.json());
+  } catch (_err) {
+    /* geen verbinding: het paneel blijft zoals het was */
+  }
+}
+
+async function startLinkConvert(dryRun) {
+  if (!dryRun) {
+    const ok = await openConfirmModal({
+      title: 'Links omzetten naar eigen recepten?',
+      message: 'Recepten die volledig uit te lezen zijn krijgen hun ingrediënten, bereiding en foto in Kookkeuze. De originele link blijft als bron bij het recept staan. De rest blijft een link.',
+      confirmLabel: 'Omzetten',
+      cancelLabel: 'Annuleer'
+    });
+    if (!ok) return;
+  }
+  linkConvertPreviewBtn.disabled = true;
+  linkConvertStartBtn.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/api/recipes/convert-links`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(withActiveDatabaseBody({ dryRun }))
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      linkConvertStatus.textContent = data.error || 'Starten lukte niet.';
+      linkConvertStatus.classList.add('error');
+    }
+  } catch (_err) {
+    linkConvertStatus.textContent = 'Geen verbinding met de server. Probeer het later nog eens.';
+    linkConvertStatus.classList.add('error');
+  }
+  loadLinkConvertState();
+}
+
+linkConvertPreviewBtn?.addEventListener('click', () => startLinkConvert(true));
+linkConvertStartBtn?.addEventListener('click', () => startLinkConvert(false));
+// Een ander kookboek gekozen: de stand hoort bij dat kookboek.
+document.getElementById('activeDatabaseSelect')?.addEventListener('change', () => setTimeout(loadLinkConvertState, 300));
 
 closeDatabaseModal?.addEventListener('click', () => {
   hideModal(databaseModal);

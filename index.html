@@ -1104,6 +1104,19 @@
             </div>
           </div>
         </div>
+
+        <!-- Alleen zichtbaar voor accounts waarvoor de server dit heeft aangezet. -->
+        <div id="linkConvertPanel" class="share-panel link-convert hidden">
+          <h3>Links omzetten naar eigen recepten</h3>
+          <p id="linkConvertInfo" class="link-convert-info"></p>
+          <div class="link-convert-actions">
+            <button id="linkConvertPreviewBtn" type="button" class="overview-view-btn">Proefronde</button>
+            <button id="linkConvertStartBtn" type="button" class="green-btn">Omzetten</button>
+          </div>
+          <div id="linkConvertProgress" class="link-convert-progress" hidden><span></span></div>
+          <p id="linkConvertStatus" class="share-panel-msg" aria-live="polite"></p>
+          <ul id="linkConvertSkipped" class="link-convert-skipped"></ul>
+        </div>
       </div>
     </div>
 

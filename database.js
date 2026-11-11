@@ -757,6 +757,51 @@ function findRecipeIdByLink(databaseId, link, callback) {
   });
 }
 
+// De recepten in een kookboek die nog een gewone link naar een andere site zijn.
+function listLinkRecipesForDatabase(databaseId, callback) {
+  const query = `
+    SELECT id, title, url
+    FROM recipes
+    WHERE database_id = $1
+      AND is_own_recipe = FALSE
+      AND url ~* '^https?://'
+    ORDER BY id
+  `;
+  pool.query(query, [databaseId], (err, result) => {
+    if (err) return callback(err);
+    callback(null, result.rows);
+  });
+}
+
+// Maakt van een linkrecept op zijn plek een eigen recept. Het id blijft
+// hetzelfde, dus weekmenu en notities blijven eraan hangen; de oude link gaat
+// naar source_note, zodat hij als bron zichtbaar blijft en terug te zetten is.
+// Titel en categorieën blijven zoals de gebruiker ze had.
+function convertLinkRecipeToOwn(recipeId, databaseId, content, callback) {
+  const query = `
+    UPDATE recipes
+    SET source_note = url,
+        url = '/recept/' || id,
+        is_own_recipe = TRUE,
+        ingredients = $3,
+        instructions = $4,
+        servings = $5,
+        prep_minutes = $6
+    WHERE id = $1 AND database_id = $2 AND is_own_recipe = FALSE
+    RETURNING id
+  `;
+  pool.query(query, [
+    recipeId, databaseId,
+    content.ingredients, content.instructions, content.servings, content.prep_minutes
+  ], (err, result) => {
+    if (err) {
+      console.error('Fout bij omzetten linkrecept:', err);
+      return callback(err);
+    }
+    callback(null, result.rows[0] || null);
+  });
+}
+
 function upsertExternalRecipeToDatabase(recipe, callback) {
   const {
     title,
@@ -1922,6 +1967,8 @@ module.exports = {
   addRecipe,
   upsertExternalRecipeToDatabase,
   findRecipeIdByLink,
+  listLinkRecipesForDatabase,
+  convertLinkRecipeToOwn,
   updateRecipe,
   deleteRecipe,
   getRecipeByIdForOwner,
