@@ -107,18 +107,51 @@
     return `<p class="own-recipe-source">Bron: <a href="${escapeHtml(link.toString())}" target="_blank" rel="noopener noreferrer">${escapeHtml(naam)}</a></p>`;
   }
 
+  // Voor hoeveel personen de hoeveelheden in het recept bedoeld zijn. Staat
+  // dat er niet bij (bij Instagram-recepten vaak niet), dan gaan we uit van 4
+  // en zeggen we dat erbij.
+  const STANDAARD_PERSONEN = 4;
+  let personen = STANDAARD_PERSONEN;
+  let basisPersonen = STANDAARD_PERSONEN;
+
+  function geschaald(ingredients) {
+    const factor = personen / basisPersonen;
+    return ingredients.map(item => (window.Kookstand ? Kookstand.schaalIngredient(item, factor) : item));
+  }
+
+  function personenKiezerHtml(onbekend) {
+    return `
+      <div class="own-recipe-servings">
+        <span class="own-recipe-servings-label" id="servingsLabel">Aantal personen</span>
+        <div class="cook-servings-stepper" role="group" aria-labelledby="servingsLabel">
+          <button type="button" class="cook-servings-btn" data-servings-delta="-1" aria-label="Eén persoon minder">
+            <i class="fas fa-minus" aria-hidden="true"></i>
+          </button>
+          <span class="cook-servings-value" id="servingsValue" aria-live="polite">${personen}</span>
+          <button type="button" class="cook-servings-btn" data-servings-delta="1" aria-label="Eén persoon meer">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      ${onbekend ? '<p class="own-recipe-servings-hint">Het recept noemt geen aantal personen, dus we gaan uit van 4. Klopt dat niet? Pas het aan via Bewerken.</p>' : ''}`;
+  }
+
   function renderRecipe(recipe) {
     const ingredients = toLines(recipe.ingredients);
     const steps = toLines(recipe.instructions);
+    const onbekend = !(Number(recipe.servings) > 0);
+    basisPersonen = onbekend ? STANDAARD_PERSONEN : Number(recipe.servings);
+    personen = basisPersonen;
 
     const ingredientsHtml = ingredients.length
       ? `<div class="own-recipe-block">
            <h2>Ingrediënten</h2>
+           ${personenKiezerHtml(onbekend)}
            <ul class="own-recipe-ingredients">
              ${ingredients.map((item, index) => `
                <li>
                  <input type="checkbox" id="ingr-${index}" class="own-recipe-check" />
-                 <label for="ingr-${index}">${escapeHtml(item)}</label>
+                 <label for="ingr-${index}" data-ingredient="${index}">${escapeHtml(item)}</label>
                </li>`).join('')}
            </ul>
            <button type="button" id="toShoppingListBtn" class="own-recipe-list-btn">
@@ -131,7 +164,12 @@
 
     const stepsHtml = steps.length
       ? `<div class="own-recipe-block">
-           <h2>Bereiding</h2>
+           <div class="own-recipe-steps-head">
+             <h2>Bereiding</h2>
+             <button type="button" id="startCookingBtn" class="green-btn own-recipe-cook-btn">
+               <i class="fas fa-utensils" aria-hidden="true"></i> Start met koken
+             </button>
+           </div>
            <ol class="own-recipe-steps">
              ${steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}
            </ol>
@@ -169,8 +207,42 @@
 
     document.getElementById('editRecipeBtn')?.addEventListener('click', () => renderEditForm(recipe));
     initShoppingListButton(recipe, ingredients);
+    initPersonen(ingredients);
+
+    document.getElementById('startCookingBtn')?.addEventListener('click', () => {
+      Kookstand.open({
+        titel: recipe.title || 'Recept',
+        ingredienten: ingredients,
+        stappen: steps,
+        personen,
+        basis: basisPersonen,
+        // Wat je in de kookstand kiest, geldt daarna ook op de pagina.
+        onPersonen: aantal => zetPersonen(aantal, ingredients)
+      });
+    });
 
     if (recipe.has_photo) loadPhoto(recipe.title);
+  }
+
+  function zetPersonen(aantal, ingredients) {
+    personen = Math.max(Kookstand.MIN_PERSONEN, Math.min(Kookstand.MAX_PERSONEN, aantal));
+    const waarde = document.getElementById('servingsValue');
+    if (waarde) waarde.textContent = String(personen);
+    const minder = document.querySelector('[data-servings-delta="-1"]');
+    const meer = document.querySelector('[data-servings-delta="1"]');
+    if (minder) minder.disabled = personen <= Kookstand.MIN_PERSONEN;
+    if (meer) meer.disabled = personen >= Kookstand.MAX_PERSONEN;
+    const lijst = geschaald(ingredients);
+    document.querySelectorAll('.own-recipe-ingredients label[data-ingredient]').forEach(label => {
+      label.textContent = lijst[Number(label.dataset.ingredient)] || '';
+    });
+  }
+
+  function initPersonen(ingredients) {
+    document.querySelectorAll('[data-servings-delta]').forEach(knop => {
+      knop.addEventListener('click', () => zetPersonen(personen + Number(knop.dataset.servingsDelta), ingredients));
+    });
+    zetPersonen(personen, ingredients);
   }
 
   /* ---------- Ingrediënten naar de boodschappenlijst ----------
@@ -226,7 +298,8 @@
 
       IngredientPicker.open({
         subtitle: title,
-        items: ingredients.map(name => ({ name, source_title: title })),
+        // Voor het gekozen aantal personen, niet voor wat er in het recept staat.
+        items: geschaald(ingredients).map(name => ({ name, source_title: title })),
         onConfirm: toevoegen
       });
     });
@@ -509,6 +582,7 @@
             ${multiSelectHtml('editMealType', 'Doel gerecht', DOELEN, recipe.meal_type)}
             ${multiSelectHtml('editTimeRequired', 'Tijd', TIJDEN, recipe.time_required)}
             ${numberFieldHtml('editCalories', 'Calorieën', recipe.calories, 'min="0"')}
+            ${numberFieldHtml('editServings', 'Aantal personen', recipe.servings, 'min="1" max="100"')}
           </div>
         </section>
 
@@ -647,9 +721,9 @@
       ingredients: document.getElementById('editIngredients')?.value.trim() || '',
       instructions: (stappen?.getValues() || []).join('\n'),
       // Niet in het formulier, maar wel bewaren: anders raakt een recept bij
-      // bewerken zijn bron (bijv. de Instagram-post) en porties kwijt.
+      // bewerken zijn bron (bijv. de Instagram-post) en bereidingstijd kwijt.
       source_note: vorigRecept?.source_note || '',
-      servings: vorigRecept?.servings ?? '',
+      servings: leesGetal('editServings') ?? '',
       prep_minutes: vorigRecept?.prep_minutes ?? ''
     };
     if (bewerkFoto) body.photo = bewerkFoto;

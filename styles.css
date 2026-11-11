@@ -7213,10 +7213,408 @@ body.mobile-menu-open .mobile-nav-header {
   color: var(--danger);
 }
 
+/* ==========================================================================
+   PORTIES EN KOOKSTAND
+   Aantal personen kiezen (de hoeveelheden rekenen mee) en een scherm voor
+   tijdens het koken: per stap de ingrediënten die je dan nodig hebt, de
+   huidige stap in een lichtgroene kaart.
+   ========================================================================== */
+
+.own-recipe-servings,
+.cook-servings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 8px 8px 16px;
+  background: #f4faf5;
+  border: 1px solid #e3f0e6;
+  border-radius: var(--radius-md);
+}
+
+.own-recipe-servings-label,
+.cook-servings-label {
+  white-space: nowrap;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2f3a35;
+}
+
+.own-recipe-servings-hint {
+  margin: -6px 0 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  color: #7d8a7f;
+}
+
+.cook-servings-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* De algemene knopstijl geeft elke knop minstens 100px breed; deze knoppen
+   zijn juist klein en rond. */
+.cook-servings-btn,
+.cook-mode-close,
+.cook-chip,
+.cook-nav-btn {
+  min-width: 0;
+}
+
+.cook-servings-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 14px;
+  color: var(--green-deep);
+  background: #ffffff;
+  border: 1px solid #d9efdd;
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .12s ease, border-color .18s ease;
+}
+
+.cook-servings-btn:hover:not(:disabled) {
+  border-color: var(--green);
+}
+
+.cook-servings-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.cook-servings-btn:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+.cook-servings-btn:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.cook-servings-value {
+  min-width: 34px;
+  text-align: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  color: #2f3a35;
+  font-variant-numeric: tabular-nums;
+}
+
+.own-recipe-steps-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.own-recipe-cook-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+/* --- De kookstand zelf: een volledig scherm boven de pagina --- */
+
+html.cook-mode-open,
+html.cook-mode-open body {
+  overflow: hidden;
+}
+
+.cook-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  background: #ffffff;
+  padding-top: var(--safe-top);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  animation: cook-mode-in .22s ease-out;
+}
+
+.cook-mode.is-leaving {
+  animation: cook-mode-out .2s ease-in forwards;
+}
+
+@keyframes cook-mode-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes cook-mode-out {
+  to { opacity: 0; transform: translateY(16px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cook-mode,
+  .cook-mode.is-leaving {
+    animation-duration: .01s;
+  }
+}
+
+.cook-mode-head {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+}
+
+.cook-mode-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 22px;
+  color: #2f3a35;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cook-mode-close:active {
+  background: #f0f5f1;
+}
+
+.cook-mode-close:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.cook-mode-title {
+  margin: 0;
+  /* Niet de sierletter van de andere koppen: een lange receptnaam moet
+     gewoon leesbaar blijven. */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #2f3a35;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cook-mode-progress {
+  height: 4px;
+  background: #e8f1ea;
+}
+
+.cook-mode-progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--green);
+  border-radius: 0 4px 4px 0;
+  transition: width .3s ease;
+}
+
+.cook-mode-scroll {
+  position: relative;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 16px 40px;
+}
+
+.cook-mode-scroll > * {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cook-extra {
+  margin-top: 20px;
+  display: grid;
+  gap: 10px;
+}
+
+.cook-extra h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #7d8a7f;
+}
+
+.cook-steps {
+  list-style: none;
+  margin: 16px auto 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.cook-step {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background-color .25s ease, opacity .25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cook-step.is-active {
+  background: #eef9f0;
+  cursor: default;
+}
+
+/* Wat je al gedaan hebt mag naar de achtergrond, maar moet leesbaar blijven. */
+.cook-step.is-done {
+  opacity: .55;
+}
+
+.cook-step-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.cook-step-num {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #eef9f0;
+  color: var(--green-deep);
+  font-size: 15px;
+  font-weight: 800;
+  transition: background-color .25s ease, color .25s ease;
+}
+
+.cook-step.is-active .cook-step-num {
+  background: var(--green);
+  color: #ffffff;
+}
+
+.cook-step-text {
+  margin: 0;
+  padding-top: 3px;
+  font-size: 18px;
+  line-height: 1.55;
+  color: #3a3a3a;
+}
+
+.cook-step.is-active .cook-step-text {
+  color: #1f2a24;
+}
+
+.cook-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Een ingrediënt kun je aantikken als je het erbij gepakt hebt. */
+.cook-chip {
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: #2f3a35;
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid #d9efdd;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color .18s ease, color .18s ease, border-color .18s ease;
+}
+
+.cook-chip.is-checked {
+  color: #9aa79c;
+  text-decoration: line-through;
+  background: #f7faf8;
+  border-color: #e8efe9;
+}
+
+.cook-chip:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.cook-mode-end {
+  margin-top: 28px;
+  font-family: 'EatingPasta', Arial, sans-serif;
+  font-size: 26px;
+  color: var(--green-deep);
+  text-align: center;
+}
+
+.cook-mode-foot {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 16px calc(12px + var(--safe-bottom));
+  background: #ffffff;
+  border-top: 1px solid #eef3ef;
+}
+
+.cook-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 0 18px;
+  font-size: 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.cook-nav-prev {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 700;
+  color: #4b5650;
+  background: #ffffff;
+  border: 1px solid var(--field-border);
+}
+
+.cook-nav-prev:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+.cook-nav-next {
+  border: none;
+}
+
+@media (min-width: 760px) {
+  .cook-mode-foot {
+    grid-template-columns: 160px 240px;
+    justify-content: center;
+  }
+}
+
 /* Printen: alleen het recept, zonder knoppen en menubalk. */
 @media print {
   .topbar,
   .own-recipe-actions,
+  .own-recipe-cook-btn,
+  .own-recipe-servings button,
   .own-recipe-list-btn,
   .own-recipe-list-feedback {
     display: none !important;
