@@ -14,6 +14,21 @@ const {
 } = require('./internet-crawler');
 const { registerSeoPages, getSeoPageUrls, renderFooterRecipeLinks } = require('./seo-pages');
 const { browserFetch } = require('./browser-fetch');
+const {
+  decodeHtmlEntities,
+  normalizeIngredientText,
+  dedupeIngredients
+} = require('./recipe-text');
+const {
+  normalizeFancyText,
+  splitCaptionRecipe,
+  parseIngredientsFromCaption,
+  parseInstructionsFromCaption,
+  captionLeadText,
+  cleanCaptionTitle,
+  parseTitleFromCaption
+} = require('./recipe-caption');
+const { rewriteRecipe, isRewriteEnabled } = require('./recipe-rewriter');
 const SWIPE_RECIPES = require('./data/swipe-recipes');
 
 const app  = express();
@@ -611,59 +626,6 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function normalizeIngredientText(value) {
-  if (!value) return null;
-
-  if (typeof value === 'string') {
-    // JSON-LD bevat soms HTML-entities (&amp;, &frac12;) — die decoderen we.
-    return decodeHtmlEntities(value).replace(/\s+/g, ' ').trim() || null;
-  }
-
-  if (Array.isArray(value)) {
-    return value
-      .map(item => normalizeIngredientText(item))
-      .filter(Boolean)
-      .join(', ') || null;
-  }
-
-  if (typeof value === 'object') {
-    const amount = normalizeIngredientText(value.amount || value.quantity);
-    const unit = normalizeIngredientText(value.unit || value.unitText);
-    const name = normalizeIngredientText(value.name || value.text || value.ingredient || value.food);
-    return [amount, unit, name].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim() || null;
-  }
-
-  return String(value).replace(/\s+/g, ' ').trim() || null;
-}
-
-// Filter regels die duidelijk geen ingrediënt zijn: JS/Vue-template-resten,
-// HTML-brokken, knoplabels of regels zonder letters.
-function isPlausibleIngredient(text) {
-  if (!text) return false;
-  if (text.length < 2 || text.length > 140) return false;
-  if (!/[a-zA-Zà-ÿ]/.test(text)) return false;
-  if (/[{}<>]|:class|:key|===|=>|\$\{|\|\||&&|@click|v-if|v-for|function\s*\(|aria-|data-v-/.test(text)) return false;
-  const trimmed = text.trim();
-  if (/^ingredi[eë]nten?\b\s*[:]/i.test(trimmed)) return false;
-  if (/^(ingredi[eë]nten?|porties?|minder porties|meer porties|voor|aantal personen|personen|persoon|stuks?|servings?)$/i.test(trimmed)) return false;
-  return true;
-}
-
-function dedupeIngredients(items) {
-  const seen = new Set();
-
-  return items
-    .filter(Boolean)
-    .filter(isPlausibleIngredient)
-    .filter(item => {
-      const key = item.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, 80);
-}
-
 function extractRecipeIngredients(recipe) {
   const rawIngredients = recipe.recipeIngredient || recipe.ingredients || recipe.ingredient;
   const ingredients = Array.isArray(rawIngredients)
@@ -671,40 +633,6 @@ function extractRecipeIngredients(recipe) {
     : (rawIngredients ? [rawIngredients] : []);
 
   return dedupeIngredients(ingredients.map(item => normalizeIngredientText(item)));
-}
-
-function decodeHtmlEntities(value) {
-  if (!value) return '';
-
-  const namedEntities = {
-    amp: '&',
-    apos: "'",
-    quot: '"',
-    nbsp: ' ',
-    lt: '<',
-    gt: '>',
-    rsquo: "'",
-    lsquo: "'",
-    rdquo: '"',
-    ldquo: '"',
-    ndash: '-',
-    mdash: '-',
-    hellip: '...',
-    frac14: '1/4',
-    frac12: '1/2',
-    frac34: '3/4'
-  };
-
-  return String(value)
-    .replace(/&#(\d+);/g, (_match, dec) => {
-      const codePoint = Number(dec);
-      return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : '';
-    })
-    .replace(/&#x([0-9a-f]+);/gi, (_match, hex) => {
-      const codePoint = parseInt(hex, 16);
-      return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : '';
-    })
-    .replace(/&([a-z]+);/gi, (match, name) => namedEntities[name.toLowerCase()] ?? match);
 }
 
 function htmlToText(fragment) {
@@ -1234,14 +1162,6 @@ const INSTAGRAM_POST_TTL_MS = 60 * 60 * 1000;
 const INSTAGRAM_POST_FAIL_TTL_MS = 2 * 60 * 1000;
 const instagramPostCache = new Map();
 
-// Makers schrijven kopjes vaak in "sierletters" (𝘐𝘯𝘨𝘳𝘦𝘥𝘪𝘦𝘯𝘵𝘦𝘯, 𝗕𝗲𝗿𝗲𝗶𝗱𝗶𝗻𝗴):
-// Unicode-wiskundesymbolen die op letters lijken. Die zetten we om naar gewone
-// letters, anders herkent de parser geen enkel kopje. Alleen dat blok, want
-// NFKC op de hele tekst zou ook ½ in 1⁄2 veranderen.
-function normalizeFancyText(text) {
-  return String(text || '').replace(/[\u{1D400}-\u{1D7FF}]/gu, ch => ch.normalize('NFKC'));
-}
-
 async function loadInstagramPost(url) {
   const shortcode = extractInstagramShortcode(url);
   const attempts = shortcode
@@ -1275,182 +1195,6 @@ function fetchInstagramPost(url) {
   return entry.promise;
 }
 
-// Verwijder leidende opsommingstekens én emoji/symbolen van een regel.
-function stripLeadingBullet(line) {
-  return String(line || '')
-    .replace(/^[\s\-•*–·▪◦●○]+/, '')
-    .replace(/^(?:\p{Extended_Pictographic}|[←-➿⬀-⯿️‍])+\s*/u, '')
-    .trim();
-}
-
-function startsWithEmoji(line) {
-  return /^(?:\p{Extended_Pictographic}|[←-➿⬀-⯿])/u.test(String(line || ''));
-}
-
-function looksLikeIngredientLine(line) {
-  const t = (line || '').trim();
-  if (t.length < 2 || t.length > 140) return false;
-  const hadBullet = /^[-•*–·▪◦●○]/.test(t) || startsWithEmoji(t);
-  const core = stripLeadingBullet(t);
-  if (/^[\d¼½¾⅓⅔⅛⅜⅝⅞]/.test(core)) return true;            // begint met hoeveelheid
-  // Korte regel met opsommingsteken zonder getal (bijv. "🧀 geraspte kaas"),
-  // maar geen volzin (instructies eindigen op leesteken / zijn lang).
-  if (hadBullet && /[a-zA-Zà-ÿ]/.test(core) && core.split(/\s+/).length <= 6 && !/[.!?]$/.test(core)) {
-    return true;
-  }
-  return false;
-}
-
-// Kopje dat het begin van de ingrediëntenlijst markeert.
-const INGREDIENTS_HEADER_RE = /^(ingredi[eë]nten?|ingredients?|wat (je |heb je )?nodig|what you(?:'?ll)? need|boodschappen|benodigdheden|je hebt nodig|dit heb je nodig)\b/i;
-// Kopje dat het einde markeert (bereiding, voedingswaarde, afsluiting).
-const SECTION_STOP_RE = /^(bereiding|bereidingswijze|werkwijze|instructie|instructions?|method|directions?|stappen|stap\b|aanpak|how to|preparation|voorbereiding|nutrition|voedingswaarde|macro|per (serving|portie|burrito)|total per|total\b|smakelijk|eet smakelijk|enjoy)\b/i;
-// Regels die we binnen de lijst overslaan: hashtags, voedingswaarde, calls-to-action.
-const INGREDIENT_SKIP_RE = /^(#|calorie|protein|eiwit|carb|koolhydr|fats?\b|vet\b|kcal|follow|link in bio|tag\b|save this|comment|sla dit|deel (dit|het)|volg |bewaar)/i;
-// Een regel macro's zonder kopje erboven ("648 kcal, 61 khd, 63 eiwit, 17 vet").
-const NUTRITION_LINE_RE = /\d\s*k?cal\b.*\b(eiwit|prote|khd|koolh|carb|vet|fat)/i;
-// Genummerde bereidingsstap ("1. Verhit olie…", "2) Voeg…"): de bereiding is
-// begonnen, ook als er geen "Bereiding"-kopje boven staat. "1.5 kg" valt hier
-// niet onder (geen spatie + letter na de punt).
-const STEP_LINE_RE = /^\d{1,2}\s*[.)]\s+\p{L}/u;
-
-// Sub-kopje binnen de ingrediënten ("Saus", "Afwerking", "Voor de saus:", "To make ...:").
-// Een regel die op ':' eindigt is altijd een kopje; verder een vaste lijst losse labels.
-function isIngredientSubHeader(line) {
-  const t = line.trim();
-  if (/:\s*$/.test(t)) return true;
-  return /^(saus|sauce|dressing|dressings|afwerking|topping|toppings|garnering|garnish|garneer|marinade|kruiden|voor de\b.*|voor het\b.*|to make\b.*|for the\b.*|extra'?s?|optioneel|optional|serveren|serveer|erbij|dipsaus)\s*$/i.test(t);
-}
-
-function parseIngredientsFromCaption(caption) {
-  const lines = caption.split(/\r?\n/).map(l => l.trim());
-  const headerIdx = lines.findIndex(l => INGREDIENTS_HEADER_RE.test(l));
-  const items = [];
-
-  // Sectie-modus: er is een expliciet "Ingrediënten"-kopje. Alles tussen dat
-  // kopje en de bereiding telt als ingrediënt, ook regels zonder hoeveelheid
-  // ("Peper en zout"). Sub-kopjes en lege regels slaan we over.
-  if (headerIdx >= 0) {
-    for (let i = headerIdx + 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line) continue;
-      if (SECTION_STOP_RE.test(line) || STEP_LINE_RE.test(line)) break;
-      if (isIngredientSubHeader(line) || INGREDIENT_SKIP_RE.test(line) || NUTRITION_LINE_RE.test(line)) continue;
-      const cleaned = normalizeIngredientText(stripLeadingBullet(line));
-      if (cleaned) items.push(cleaned);
-    }
-    if (items.length) return dedupeIngredients(items);
-  }
-
-  // Fallback: geen kopje. Pak regels die op een opsommingsteken/getal/emoji
-  // beginnen, tot een bereidings-/voedingswaardekopje.
-  let stopped = false;
-  for (const line of lines) {
-    if (!line) continue;
-    if (SECTION_STOP_RE.test(line) || STEP_LINE_RE.test(line)) { stopped = true; continue; }
-    if (stopped || INGREDIENT_SKIP_RE.test(line) || NUTRITION_LINE_RE.test(line)) continue;
-    if (!looksLikeIngredientLine(line)) continue;
-    const cleaned = normalizeIngredientText(stripLeadingBullet(line));
-    if (cleaned) items.push(cleaned);
-  }
-  return dedupeIngredients(items);
-}
-
-// De bereiding uit een caption, als losse stappen. Eerst een kopje als
-// "Bereiding:" of "Zo maak je het"; anders de eerste genummerde stap ("1.
-// Verhit…"). Hashtags, voedingswaarde en calls-to-action aan het eind horen
-// er niet bij.
-const STEPS_HEADER_RE = /^(bereiding|bereidingswijze|werkwijze|instructies?|instructions?|method|directions?|stappen|stappenplan|aan de slag|zo maak je (het|dit)|how to make|preparation)\b/i;
-const STEPS_STOP_RE = /^(#|nutrition|voedingswaarde|macro|per (serving|portie)|total per|calorie|kcal|eet smakelijk|smakelijk|enjoy|follow|link in bio|save this|sla dit|bewaar|deel (dit|het)|volg |tag\b|comment|dubbeltik|drop een)/i;
-
-function cleanStepLine(line) {
-  return stripLeadingBullet(line)
-    .replace(/^(stap|step)\s*\d{1,2}\s*[:.)-]?\s*/i, '')
-    .replace(/^\d{1,2}\s*[.)]\s+/, '')
-    .trim();
-}
-
-function parseInstructionsFromCaption(caption) {
-  const lines = caption.split(/\r?\n/).map(l => l.trim());
-  let start = lines.findIndex(l => STEPS_HEADER_RE.test(stripLeadingBullet(l)));
-  if (start >= 0) {
-    start += 1;
-  } else {
-    start = lines.findIndex(l => STEP_LINE_RE.test(l) || /^(stap|step)\s*\d/i.test(l));
-  }
-  if (start < 0) return [];
-
-  const steps = [];
-  for (let i = start; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line) continue;
-    if (STEPS_STOP_RE.test(stripLeadingBullet(line))) break;
-    // Kopjes binnen de bereiding ("Saus:") slaan we over; de stappen eronder
-    // zeggen zelf al waar ze over gaan.
-    if (isIngredientSubHeader(line) && line.length < 40) continue;
-    const text = cleanStepLine(line);
-    if (!text) continue;
-    const isNumbered = STEP_LINE_RE.test(line) || /^(stap|step)\s*\d/i.test(line);
-    // Een vervolgregel zonder nummer, na een genummerde stap, hoort bij die
-    // stap (captions breken lange zinnen soms af).
-    if (!isNumbered && steps.length && /^[a-zà-ÿ]/.test(text)) {
-      steps[steps.length - 1] = `${steps[steps.length - 1]} ${text}`;
-    } else {
-      steps.push(text);
-    }
-  }
-  return steps.slice(0, 40);
-}
-
-function cleanCaptionTitle(text) {
-  if (!text) return null;
-  let name = text
-    .replace(/\s*\(\s*(voor\s*)?\d+\s*(à|-|tot)?\s*\d*\s*persone?n?\s*\)\s*$/i, '') // "(2 personen)" eraf
-    .replace(/^[^\p{L}\p{N}]+/u, '')
-    .replace(/[^\p{L}\p{N})]+$/u, '')
-    // Advertentielabel achteraan ("… 💛 ad", "(ad)", "#gesponsord").
-    .replace(/\s+[#(\[]?(ad|adv|advertentie|reclame|sponsored|gesponsord)[)\]]?$/i, '')
-    .replace(/[^\p{L}\p{N})]+$/u, '')
-    .trim();
-  // Een titel in hoofdletters ("VANILLE SKYR CHEESECAKE") wordt gewone zinsopbouw.
-  if (/\p{Lu}{3}/u.test(name) && !/\p{Ll}/u.test(name)) {
-    name = name.charAt(0) + name.slice(1).toLowerCase();
-  }
-  if (name.length < 3) return null;
-  if (name.length > 90) name = name.slice(0, 90).replace(/\s+\S*$/, '').trim();
-  return normalizeIngredientText(name) || null;
-}
-
-function parseTitleFromCaption(caption, ogTitle) {
-  const lines = caption.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-
-  // 1) Expliciete "Recept: <naam>"-regel heeft voorrang (de echte receptnaam).
-  for (const line of lines) {
-    const m = line.match(/^recept\s*[:\-]\s*(.+)$/i);
-    if (m) {
-      const name = cleanCaptionTitle(m[1]);
-      if (name) return name;
-    }
-  }
-
-  // 2) Eerste 'echte' regel: geen vraag of engagement-bait.
-  for (const line of lines) {
-    if (line.includes('?')) continue;                       // "Zou jij dit maken?"
-    if (/^(follow|link in bio|don'?t forget|comment|tag a|save this|recipe below|sla dit|deel (dit|het)|volg |bewaar|drop een|dubbeltik)/i
-      .test(line.replace(/^[^\p{L}\p{N}]+/u, ''))) continue;
-    if (INGREDIENTS_HEADER_RE.test(line) || SECTION_STOP_RE.test(line)) break;
-    const name = cleanCaptionTitle(line);
-    if (name) return name;
-  }
-
-  // 3) Fallback: og:title.
-  if (ogTitle) {
-    const name = cleanCaptionTitle(ogTitle.split(/\s+on instagram/i)[0]);
-    if (name) return name;
-  }
-  return null;
-}
-
 function parseCaloriesFromCaption(caption) {
   const m = caption.match(/calorie[ëe]?s?\s*[:\-]?\s*(\d{2,4})/i) || caption.match(/(\d{2,4})\s*k?cal\b/i);
   return m ? parseInt(m[1], 10) : null;
@@ -1472,14 +1216,6 @@ function parseCaptionMinutes(caption) {
     total += /^(uur|uren|hour|hrs?)/i.test(m[3]) ? value * 60 : value;
   }
   return total > 0 ? Math.round(total) : null;
-}
-
-// De tekst vóór de ingrediëntenlijst: receptnaam en intro. Losse ingrediënten
-// zoals "bouillon" mogen de soort gerecht niet bepalen ("Soep").
-function captionLeadText(caption) {
-  const lines = caption.split(/\r?\n/);
-  const end = lines.findIndex(l => INGREDIENTS_HEADER_RE.test(l.trim()) || looksLikeIngredientLine(l));
-  return (end >= 0 ? lines.slice(0, end) : lines).join('\n');
 }
 
 const MAIN_DISH_TYPES = new Set(['Ovenschotel', 'Pasta', 'Rijst', 'Wraps', 'Hartige taart', 'Kip', 'Rund', 'Varken', 'Vis']);
@@ -1861,6 +1597,12 @@ if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
   console.warn('⚠️ Brevo API configuratie incompleet: verificatie-mails kunnen niet verstuurd worden.');
 } else {
   console.log('✅ Brevo API mail geconfigureerd.');
+}
+
+if (isRewriteEnabled()) {
+  console.log('✅ Overgenomen recepten worden in eigen woorden herschreven (Claude).');
+} else {
+  console.warn('⚠️ ANTHROPIC_API_KEY ontbreekt: overgenomen recepten worden niet herschreven.');
 }
 
 async function sendBrevoEmail({ to, subject, html, text, replyTo }) {
@@ -4292,15 +4034,17 @@ async function loadInstagramRecipeContent(url) {
   const post = await fetchInstagramPost(url);
   if (!post?.caption) return null;
 
-  const ingredients = parseIngredientsFromCaption(post.caption);
-  const steps = parseInstructionsFromCaption(post.caption);
+  const { ingredients, steps, servings } = splitCaptionRecipe(post.caption);
   if (!ingredients.length && !steps.length) return null;
 
   const shortcode = extractInstagramShortcode(url);
   return {
     ingredients,
     steps,
-    servings: null,
+    // Uit een caption gehaald: de splitsing kan er een regel naast zitten,
+    // dus bij het herschrijven mag een stap uit de ingrediënten verhuizen.
+    fromCaption: true,
+    servings,
     prepMinutes: parseCaptionMinutes(post.caption),
     imageUrls: post.imageUrl ? [post.imageUrl] : [],
     imageReferer: 'https://www.instagram.com/',
@@ -4329,14 +4073,33 @@ async function snapshotFirstImage(imageUrls, referer) {
   return null;
 }
 
+// De bereiding niet letterlijk van de maker overnemen: Claude schrijft de
+// stappen in eigen woorden (zie recipe-rewriter.js). Bij een caption mag een
+// verkeerd ingedeelde regel daarbij van de ingrediënten naar de stappen.
+// Lukt het niet, of staat er geen sleutel, dan blijven de uitgelezen stappen.
+async function rewriteOwnRecipeContent(content, title, budgetMs) {
+  const rewritten = await rewriteRecipe(
+    { title, ingredients: content.ingredients, steps: content.steps },
+    { fixIngredients: !content.fromCaption, budgetMs }
+  );
+  return rewritten ? { ...content, ingredients: rewritten.ingredients, steps: rewritten.steps } : content;
+}
+
+// Iemand wacht op het opslaan; daarna houden we de uitgelezen stappen.
+const REWRITE_BUDGET_SAVE_MS = 45000;
+// Het omzetten van bestaande links loopt op de achtergrond en mag langer.
+const REWRITE_BUDGET_CONVERT_MS = 90000;
+
 // Een geplakte link wordt een eigen recept: ingrediënten en bereiding van de
-// pagina, de foto als snapshot en de link als bron. Geeft null terug als er
-// geen volledig recept uit te halen viel; dan slaan we gewoon de link op.
+// pagina (in eigen woorden), de foto als snapshot en de link als bron. Geeft
+// null terug als er geen volledig recept uit te halen viel; dan slaan we
+// gewoon de link op.
 async function saveLinkAsOwnRecipe(req, url, fields) {
-  const content = isInstagramUrl(url)
+  const loaded = isInstagramUrl(url)
     ? await loadInstagramRecipeContent(url)
     : await loadWebRecipeContent(url);
-  if (!content) return null;
+  if (!loaded) return null;
+  const content = await rewriteOwnRecipeContent(loaded, fields.title, REWRITE_BUDGET_SAVE_MS);
 
   const ownerUserId = await resolveDatabaseOwnerId(req);
   const created = await dbCall(addOwnRecipe, {
@@ -4741,10 +4504,11 @@ function linkConvertJobView(job) {
 
 // Geeft { ok: true } terug, of { reason } waarom dit recept een link blijft.
 async function convertOneLinkRecipe(recipe, databaseId, dryRun) {
-  const content = isInstagramUrl(recipe.url)
+  const loaded = isInstagramUrl(recipe.url)
     ? await loadInstagramRecipeContent(recipe.url)
     : await loadWebRecipeContent(recipe.url);
-  if (!content) return { reason: 'Geen volledig recept uit te lezen' };
+  if (!loaded) return { reason: 'Geen volledig recept uit te lezen' };
+  let content = loaded;
 
   // De foto halen we op dezelfde manier op als de kaart van een linkrecept
   // dat doet. Lukt het hier niet (de site weigert ons), dan had het recept
@@ -4754,6 +4518,7 @@ async function convertOneLinkRecipe(recipe, databaseId, dryRun) {
     : null;
   if (dryRun) return { ok: true, photo: !!photo };
 
+  content = await rewriteOwnRecipeContent(loaded, recipe.title, REWRITE_BUDGET_CONVERT_MS);
   const updated = await dbCall(convertLinkRecipeToOwn, recipe.id, databaseId, {
     ingredients: trimToLength(content.ingredients.join('\n'), 10000),
     instructions: trimToLength(content.steps.join('\n'), 20000),
@@ -5515,5 +5280,7 @@ module.exports = {
   parseRecipeServings,
   getRecipeInfoPayload,
   getWebRecipeContent,
+  loadInstagramRecipeContent,
+  rewriteOwnRecipeContent,
   convertOneLinkRecipe
 };
