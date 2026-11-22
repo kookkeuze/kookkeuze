@@ -228,6 +228,20 @@ html {
   color-scheme: light;
 }
 
+/* App-modus (geopend vanaf het beginscherm, zie app-modus.js): geen
+   dubbeltik- of knijpzoom en niet opzij kunnen schuiven, net als een app.
+   pan-x blijft toegestaan zodat swipe-carrousels blijven werken. */
+html.app-modus {
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html.app-modus body {
+  overscroll-behavior-x: none;
+}
+
 /* Container voor de hele pagina */
 .container {
   width: 95%;

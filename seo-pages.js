@@ -1007,6 +1007,7 @@ function renderPage(page, recipes) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="/app-modus.js"></script>
   <link rel="icon" type="image/png" href="/Logo/favicon-kookkeuze.png" />
   <meta name="theme-color" content="#63D671" />
   <meta name="color-scheme" content="light" />

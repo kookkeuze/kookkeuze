@@ -1,8 +1,9 @@
-const CACHE_NAME = 'kookkeuze-static-v30';
+const CACHE_NAME = 'kookkeuze-static-v31';
 
 // Bestanden die altijd vers opgehaald worden (network-first)
 const NETWORK_FIRST = ['/', '/index.html', '/styles.css', '/index.js',
-                       '/ingredient-picker.js', '/recept.js', '/kookstand.js'];
+                       '/ingredient-picker.js', '/recept.js', '/kookstand.js',
+                       '/app-modus.js'];
 
 // Statische assets die zelden veranderen (cache-first)
 const CACHE_FIRST_ASSETS = [
